@@ -6,8 +6,8 @@ import { signToken } from "../lib/jwt.js";
 export const register = async (request: Request, response: Response) => {
   try {
     const { username, email, password } = request.body;
-    const cleanedUsername = username.trim();
-    const cleanedEmail = email.trim().toLowerCase();
+    const cleanedUsername: string = username.trim();
+    const cleanedEmail: string = email.trim().toLowerCase();
 
     if (!cleanedUsername || !cleanedEmail || !password) {
       return response.status(400).json({ message: "All fields are required." });
@@ -19,8 +19,8 @@ export const register = async (request: Request, response: Response) => {
     if (checkAccountExist) {
       return response.status(400).json({ message: "Email already exists." });
     }
-    const hashPassword = await bcrypt.hash(password, 10);
-    const newAccount = await prisma.account.create({
+    const hashPassword: string = await bcrypt.hash(password, 10);
+    await prisma.account.create({
       data: {
         username: cleanedUsername,
         email: cleanedEmail,
@@ -30,7 +30,7 @@ export const register = async (request: Request, response: Response) => {
 
     return response
       .status(201)
-      .json({ message: "Account created successfully.", account: newAccount });
+      .json({ message: "Account created successfully." });
   } catch (error) {
     console.error("Error during registration:", error);
     return response.status(500).json({
