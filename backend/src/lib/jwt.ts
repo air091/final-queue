@@ -14,7 +14,7 @@ if (!JWT_EXPIRES_IN) {
 }
 
 type JwtAccessPayload = JwtPayload & {
-  sub: number;
+  sub: string;
   username: string;
   email: string;
 };

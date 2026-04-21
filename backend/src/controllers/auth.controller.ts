@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
+import { signToken } from "../lib/jwt.js";
 
 export const register = async (request: Request, response: Response) => {
   try {
@@ -61,7 +62,20 @@ export const login = async (request: Request, response: Response) => {
         .json({ message: "Invalid email or password." });
     }
 
-    return response.json({ message: "Login successful.", account });
+    const token = signToken({
+      sub: account.id,
+      username: account.username,
+      email: account.email,
+    });
+
+    response.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 15, // 15 minutes
+    });
+
+    return response.json({ message: "Login successful." });
   } catch (error) {
     console.error("Error during login:", error);
     return response.status(500).json({
@@ -72,10 +86,31 @@ export const login = async (request: Request, response: Response) => {
 
 export const logout = async (request: Request, response: Response) => {
   try {
-    // Implement logout logic here (e.g., invalidate session or token)
+    response.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/", // important if you set it when creating cookie
+    });
+
     return response.json({ message: "Logout successful." });
   } catch (error) {
     console.error("Error during logout:", error);
+    return response.status(500).json({
+      message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const getCurrentUser = async (request: Request, response: Response) => {
+  try {
+    if (!request.user) {
+      return response.status(401).json({ message: "Unauthorized" });
+    }
+
+    return response.json({ user: request.user });
+  } catch (error) {
+    console.error("Error during get current user:", error);
     return response.status(500).json({
       message: error instanceof Error ? error.message : "Internal Server Error",
     });

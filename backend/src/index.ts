@@ -1,10 +1,17 @@
 import dotenv from "dotenv";
 import express from "express";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
 const PORT: number = Number(process.env.PORT);
+
+app.use(express.json());
+app.use(cookieParser());
+
+import authRoutes from "./routers/auth.routes.js";
+app.use("/api/auth", authRoutes);
 
 async function startServer() {
   try {
