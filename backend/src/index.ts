@@ -11,7 +11,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 import authRoutes from "./routers/auth.routes.js";
+import communityRoutes from "./routers/community.routes.js";
+
 app.use("/api/auth", authRoutes);
+app.use("/api/community", communityRoutes);
 
 async function startServer() {
   try {

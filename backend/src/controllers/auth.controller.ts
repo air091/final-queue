@@ -10,14 +10,18 @@ export const register = async (request: Request, response: Response) => {
     const cleanedEmail: string = email.trim().toLowerCase();
 
     if (!cleanedUsername || !cleanedEmail || !password) {
-      return response.status(400).json({ message: "All fields are required." });
+      return response
+        .status(400)
+        .json({ success: false, message: "All fields are required." });
     }
 
     const checkAccountExist = await prisma.account.findUnique({
       where: { email: cleanedEmail },
     });
     if (checkAccountExist) {
-      return response.status(400).json({ message: "Email already exists." });
+      return response
+        .status(400)
+        .json({ success: false, message: "Email already exists." });
     }
     const hashPassword: string = await bcrypt.hash(password, 10);
     await prisma.account.create({
@@ -30,10 +34,11 @@ export const register = async (request: Request, response: Response) => {
 
     return response
       .status(201)
-      .json({ message: "Account created successfully." });
+      .json({ success: true, message: "Account created successfully." });
   } catch (error) {
     console.error("Error during registration:", error);
     return response.status(500).json({
+      success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
@@ -51,7 +56,7 @@ export const login = async (request: Request, response: Response) => {
     if (!account) {
       return response
         .status(400)
-        .json({ message: "Invalid email or password." });
+        .json({ success: false, message: "Invalid email or password." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, account.password);
@@ -59,7 +64,7 @@ export const login = async (request: Request, response: Response) => {
     if (!isPasswordValid) {
       return response
         .status(400)
-        .json({ message: "Invalid email or password." });
+        .json({ success: false, message: "Invalid email or password." });
     }
 
     const token = signToken({
@@ -75,10 +80,11 @@ export const login = async (request: Request, response: Response) => {
       maxAge: 1000 * 60 * 15, // 15 minutes
     });
 
-    return response.json({ message: "Login successful." });
+    return response.json({ success: true, message: "Login successful." });
   } catch (error) {
     console.error("Error during login:", error);
     return response.status(500).json({
+      success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
@@ -93,10 +99,11 @@ export const logout = async (request: Request, response: Response) => {
       path: "/", // important if you set it when creating cookie
     });
 
-    return response.json({ message: "Logout successful." });
+    return response.json({ success: true, message: "Logout successful." });
   } catch (error) {
     console.error("Error during logout:", error);
     return response.status(500).json({
+      success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
@@ -105,13 +112,16 @@ export const logout = async (request: Request, response: Response) => {
 export const getCurrentUser = async (request: Request, response: Response) => {
   try {
     if (!request.user) {
-      return response.status(401).json({ message: "Unauthorized" });
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
     }
 
-    return response.json({ user: request.user });
+    return response.json({ success: true, user: request.user });
   } catch (error) {
     console.error("Error during get current user:", error);
     return response.status(500).json({
+      success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
