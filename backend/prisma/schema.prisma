@@ -66,7 +66,7 @@ model HostedPlayers {
   playerId              String
   status                PlayerStatus @default(waiting)
   addedAt               DateTime @default(now())
-  requestedAt           DateTime?
+  requestedAt           DateTime @default(now())
   acceptedAt            DateTime? 
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   player               Account @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)

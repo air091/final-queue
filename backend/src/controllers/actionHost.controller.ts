@@ -111,7 +111,6 @@ export const playerRequestToJoinMatch = async (
       data: {
         hostId: host.id,
         playerId: user.sub,
-        requestedAt: new Date(),
       },
     });
 
