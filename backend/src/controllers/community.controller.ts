@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma.js";
 import type { Request, Response } from "express";
 
-type Params = {
+export type Params = {
   communityId: string;
 };
 
@@ -28,7 +28,7 @@ export const createCommunity = async (request: Request, response: Response) => {
         profileUrl,
         communityName: cleanCommunityName,
         description,
-        adminId: user.id,
+        adminId: user.sub,
       },
     });
 
