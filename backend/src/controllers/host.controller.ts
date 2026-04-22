@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
+import { HostStatus } from "../generated/prisma/enums.js";
 import type { Params } from "./community.controller.js";
 
 export const host = async (request: Request<Params>, response: Response) => {
@@ -139,6 +140,51 @@ export const deleteHost = async (
     });
   } catch (error) {
     console.error("Error deleting host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+// FOR PLAYERS
+
+export const getAvailableHosts = async (
+  request: Request,
+  response: Response,
+) => {
+  try {
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    // get hosts
+    const hosts = await prisma.host.findMany({
+      where: { status: HostStatus.available },
+      select: {
+        status: true,
+        hostName: true,
+        sportName: true,
+        community: {
+          select: {
+            profileUrl: true,
+            communityName: true,
+            adminId: true,
+            admin: {
+              select: {
+                profileUrl: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return response.status(200).json({ success: false, hosts });
+  } catch (error) {
+    console.error("Error getting available hosts:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
