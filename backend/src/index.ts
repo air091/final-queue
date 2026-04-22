@@ -12,9 +12,11 @@ app.use(cookieParser());
 
 import authRoutes from "./routers/auth.routes.js";
 import communityRoutes from "./routers/community.routes.js";
+import actionHostRoutes from "./routers/actionHost.routes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/community", communityRoutes);
+app.use("/api/", actionHostRoutes);
 
 async function startServer() {
   try {

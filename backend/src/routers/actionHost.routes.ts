@@ -1,0 +1,18 @@
+import express, { Router } from "express";
+
+import { authenticate } from "../middlewares/auth.middleware.js";
+import {
+  getAvailableHosts,
+  playerRequestToJoinMatch,
+} from "../controllers/actionHost.controller.js";
+const router: Router = express.Router();
+// PUBLIC HOST
+
+router.get("/public/hosts/available", authenticate, getAvailableHosts);
+router.post(
+  "/actions/request/community/:communityId/hosts/:hostId",
+  authenticate,
+  playerRequestToJoinMatch,
+);
+
+export default router;

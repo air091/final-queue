@@ -1,0 +1,128 @@
+import type { Request, Response } from "express";
+import type { Params } from "./community.controller.js";
+import prisma from "../lib/prisma.js";
+import { HostStatus } from "../generated/prisma/enums.js";
+
+export const getAvailableHosts = async (
+  request: Request,
+  response: Response,
+) => {
+  try {
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    // get hosts
+    const hosts = await prisma.host.findMany({
+      where: { status: HostStatus.available },
+      select: {
+        id: true,
+        communityId: true,
+        community: {
+          select: {
+            profileUrl: true,
+            communityName: true,
+            adminId: true,
+            admin: {
+              select: {
+                profileUrl: true,
+                username: true,
+              },
+            },
+          },
+        },
+        hostName: true,
+        sportName: true,
+        status: true,
+        hostedPlayers: {
+          select: {
+            playerId: true,
+            player: {
+              select: {
+                profileUrl: true,
+                username: true,
+              },
+            },
+            status: true,
+            addedAt: true,
+            requestedAt: true,
+            acceptedAt: true,
+          },
+        },
+      },
+    });
+
+    const count = await prisma.hostedPlayers.count();
+    return response
+      .status(200)
+      .json({ success: true, hosts, playersCount: count });
+  } catch (error) {
+    console.error("Error getting available hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const playerRequestToJoinMatch = async (
+  request: Request<Params>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    if (!hostId)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const host = await prisma.host.findUnique({
+      where: { id: hostId, communityId: community.id },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    await prisma.hostedPlayers.create({
+      data: {
+        hostId: host.id,
+        playerId: user.sub,
+        requestedAt: new Date(),
+      },
+    });
+
+    return response
+      .status(201)
+      .json({ success: true, message: "Successfully requested to join" });
+  } catch (error) {
+    console.error("Error requesting to join hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
