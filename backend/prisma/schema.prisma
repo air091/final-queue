@@ -35,6 +35,8 @@ model Community {
   updatedAt             DateTime @updatedAt
   admin                 Account @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   hosts                 Host[]
+
+  @@index([adminId])
 }
 
 enum HostStatus {
@@ -52,6 +54,8 @@ model Host {
   updatedAt             DateTime @updatedAt
   community             Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   hostedPlayers         HostedPlayers[]
+
+  @@index([communityId])
 }
 
 enum PlayerStatus {
@@ -61,13 +65,18 @@ enum PlayerStatus {
 }
 
 model HostedPlayers {
-  id                    String @id @default(uuid())
-  hostId                String
-  playerId              String
-  status                PlayerStatus @default(waiting)
-  addedAt               DateTime @default(now())
-  requestedAt           DateTime @default(now())
-  acceptedAt            DateTime? 
+  id                   String @id @default(uuid())
+  hostId               String
+  playerId             String
+  status               PlayerStatus @default(waiting)
+  addedAt              DateTime @default(now())
+  requestedAt          DateTime @default(now())
+  acceptedAt           DateTime? 
+  rejectedAt           DateTime?
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   player               Account @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([hostId, playerId])
+  @@index([hostId])
+  @@index([playerId])
 }

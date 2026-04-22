@@ -125,3 +125,68 @@ export const playerRequestToJoinMatch = async (
     });
   }
 };
+
+export const acceptPlayer = async (
+  request: Request<Params>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    // community
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.id },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    // host
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    // player
+    const updatedPlayer = await prisma.hostedPlayers.updateMany({
+      where: { hostId: host.id, playerId: playerId },
+      data: { acceptedAt: new Date() },
+    });
+
+    if (updatedPlayer.count === 0) {
+      return response.status(404).json({
+        success: false,
+        message: "Player not found or already accepted",
+      });
+    }
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Player accepted" });
+  } catch (error) {
+    console.error("Error requesting to join hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

@@ -4,6 +4,7 @@ import type { Request, Response } from "express";
 export type Params = {
   communityId: string;
   hostId?: string;
+  playerId?: string;
 };
 
 export const createCommunity = async (request: Request, response: Response) => {

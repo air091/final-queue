@@ -2,6 +2,7 @@ import express, { Router } from "express";
 
 import { authenticate } from "../middlewares/auth.middleware.js";
 import {
+  acceptPlayer,
   getAvailableHosts,
   playerRequestToJoinMatch,
 } from "../controllers/actionHost.controller.js";
@@ -13,6 +14,12 @@ router.post(
   "/actions/request/community/:communityId/hosts/:hostId",
   authenticate,
   playerRequestToJoinMatch,
+);
+
+router.post(
+  "/actions/accept/community/:communityId/hosts/:hostId",
+  authenticate,
+  acceptPlayer,
 );
 
 export default router;
