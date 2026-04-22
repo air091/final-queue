@@ -17,7 +17,7 @@ router.post(
 );
 
 router.post(
-  "/actions/accept/community/:communityId/hosts/:hostId",
+  "/actions/accept/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   acceptPlayer,
 );

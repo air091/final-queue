@@ -54,10 +54,31 @@ export const getAvailableHosts = async (
       },
     });
 
+    const formattedHosts = hosts.map((host) => {
+      const requested = host.hostedPlayers.filter(
+        (player) => player.requestedAt !== null && player.acceptedAt === null,
+      );
+
+      const accepted = host.hostedPlayers.filter(
+        (player) => player.acceptedAt !== null && player.requestedAt !== null,
+      );
+
+      const requestedCounts = requested.length;
+      const acceptedCounts = accepted.length;
+
+      return {
+        ...host,
+        requestedPlayers: requested,
+        acceptedPlayers: accepted,
+        requestedCounts,
+        acceptedCounts,
+      };
+    });
+
     const count = await prisma.hostedPlayers.count();
     return response
       .status(200)
-      .json({ success: true, hosts, playersCount: count });
+      .json({ success: true, formattedHosts, playersCount: count });
   } catch (error) {
     console.error("Error getting available hosts:", error);
     return response.status(500).json({
@@ -84,7 +105,7 @@ export const playerRequestToJoinMatch = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
-    const community = await prisma.community.findUnique({
+    const community = await prisma.community.findFirst({
       where: { id: communityId },
     });
 
@@ -146,7 +167,7 @@ export const acceptPlayer = async (
 
     // community
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
       select: { id: true },
     });
 
