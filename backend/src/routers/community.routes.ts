@@ -21,6 +21,6 @@ router.delete("/:communityId", authenticate, deleteCommunity);
 
 router.post("/:communityId/host", authenticate, host);
 router.get("/:communityId/hosts", authenticate, getHosts);
-router.delete("/:communityId/hosts", authenticate, deleteHost);
+router.delete("/:communityId/host/:hostId", authenticate, deleteHost);
 
 export default router;

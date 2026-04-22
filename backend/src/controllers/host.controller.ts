@@ -98,7 +98,7 @@ export const deleteHost = async (
   response: Response,
 ) => {
   try {
-    const { communityId } = request.params;
+    const { communityId, hostId } = request.params;
     const user = request.user;
     if (!user)
       return response
@@ -114,8 +114,22 @@ export const deleteHost = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    if (!hostId)
+      return response
+        .status(404)
+        .json({ success: false, message: "Hosted match not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Hosted match not found" });
+
     const deletedHost = await prisma.host.deleteMany({
-      where: { communityId: community.id },
+      where: { id: host.id, communityId: community.id },
     });
 
     return response.status(200).json({

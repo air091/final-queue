@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 
 export type Params = {
   communityId: string;
+  hostId?: string;
 };
 
 export const createCommunity = async (request: Request, response: Response) => {
@@ -57,7 +58,7 @@ export const getCommunities = async (request: Request, response: Response) => {
     }
 
     const communities = await prisma.community.findMany({
-      where: { adminId: user.id },
+      where: { adminId: user.sub },
       select: {
         id: true,
         profileUrl: true,
