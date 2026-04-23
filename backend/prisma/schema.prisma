@@ -82,3 +82,13 @@ model HostedPlayers {
   @@index([hostId])
   @@index([playerId])
 }
+
+model match {
+  id                  String @id @default(uuid())
+  name                String
+}
+
+model queue {
+  id                  String @id @default(uuid())
+  name                String
+}
