@@ -234,3 +234,163 @@ export const addPlayerToCourt = async (
     });
   }
 };
+
+type AssignParams = {
+  hostedPlayerId: string;
+};
+
+type Body = {
+  courtId: string;
+  position: number;
+};
+
+export const assignPlayerPositionCourt = async (
+  request: Request<AssignParams, {}, Body>,
+  response: Response,
+) => {
+  try {
+    const user = request.user;
+    if (!user) {
+      return response.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const { hostedPlayerId } = request.params;
+    const { courtId, position } = request.body;
+
+    // -----------------------------------
+    // 1. Validate input
+    // -----------------------------------
+    if (!courtId || position == null) {
+      return response.status(400).json({
+        success: false,
+        message: "courtId and position are required",
+      });
+    }
+
+    if (position < 1 || position > 4) {
+      return response.status(400).json({
+        success: false,
+        message: "Position must be between 1 to 4",
+      });
+    }
+
+    // -----------------------------------
+    // 2. Validate player
+    // -----------------------------------
+    const hostedPlayer = await prisma.hostedPlayer.findUnique({
+      where: { id: hostedPlayerId },
+      select: { id: true, hostId: true },
+    });
+
+    if (!hostedPlayer) {
+      return response.status(404).json({
+        success: false,
+        message: "Hosted player not found",
+      });
+    }
+
+    // -----------------------------------
+    // 3. Validate court
+    // -----------------------------------
+    const court = await prisma.court.findUnique({
+      where: { id: courtId },
+      select: { id: true, hostId: true },
+    });
+
+    if (!court) {
+      return response.status(404).json({
+        success: false,
+        message: "Court not found",
+      });
+    }
+
+    // -----------------------------------
+    // 4. Ensure same host
+    // -----------------------------------
+    if (hostedPlayer.hostId !== court.hostId) {
+      return response.status(400).json({
+        success: false,
+        message: "Player and court must belong to same host",
+      });
+    }
+
+    // -----------------------------------
+    // 5. Check position conflict
+    // -----------------------------------
+    const positionTaken = await prisma.courtAssignment.findFirst({
+      where: {
+        courtId,
+        position,
+        NOT: {
+          hostedPlayerId,
+        },
+      },
+    });
+
+    if (positionTaken) {
+      return response.status(400).json({
+        success: false,
+        message: "Position already taken",
+      });
+    }
+
+    // -----------------------------------
+    // 6. UPSERT (move or create)
+    // -----------------------------------
+    const assignment = await prisma.courtAssignment.upsert({
+      where: {
+        hostedPlayerId, // find existing assignment
+      },
+      update: {
+        courtId,
+        position,
+        updatedAt: new Date(),
+      },
+      create: {
+        hostedPlayerId,
+        courtId,
+        position,
+      },
+      select: {
+        id: true,
+        position: true,
+        court: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        hostedPlayer: {
+          select: {
+            id: true,
+            player: {
+              select: {
+                id: true,
+                username: true,
+                profileUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // -----------------------------------
+    // 7. Response
+    // -----------------------------------
+    return response.status(200).json({
+      success: true,
+      message: "Player assigned successfully",
+      data: assignment,
+    });
+  } catch (error) {
+    console.error("Error assigning player to court:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

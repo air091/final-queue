@@ -10,6 +10,8 @@ import { deleteHost, getHosts, host } from "../controllers/host.controller.js";
 import {
   createMatchCourt,
   createQueueCourt,
+  getMatchCourts,
+  getQueueCourts,
 } from "../controllers/court.controller.js";
 
 const router: Router = express.Router();
@@ -29,10 +31,20 @@ router.delete("/:communityId/host/:hostId", authenticate, deleteHost);
 
 // COURT
 
-router.post("/:communityId/hosts/:hostId", authenticate, createMatchCourt);
+router.get("/:communityId/hosts/:hostId/courts", authenticate, getMatchCourts);
+router.post(
+  "/:communityId/hosts/:hostId/courts/add",
+  authenticate,
+  createMatchCourt,
+);
 
 // QUEUE
 
-router.post("/:communityId/hosts/:hostId", authenticate, createQueueCourt);
+router.get("/:communityId/hosts/:hostId/queues", authenticate, getQueueCourts);
+router.post(
+  "/:communityId/hosts/:hostId/queues/add",
+  authenticate,
+  createQueueCourt,
+);
 
 export default router;
