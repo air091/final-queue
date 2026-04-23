@@ -85,10 +85,12 @@ model HostedPlayers {
 
 model match {
   id                  String @id @default(uuid())
+  hostId              String
   name                String
 }
 
 model queue {
   id                  String @id @default(uuid())
+  hostId              String
   name                String
 }
