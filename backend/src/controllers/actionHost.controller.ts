@@ -34,9 +34,9 @@ export const getAvailableHosts = async (
           },
         },
         hostName: true,
-        sportName: true,
+        sport: true,
         status: true,
-        hostedPlayers: {
+        players: {
           select: {
             player: {
               select: {
@@ -55,27 +55,23 @@ export const getAvailableHosts = async (
     });
 
     const formattedHosts = hosts.map((host) => {
-      const requested = host.hostedPlayers.filter(
-        (player) => player.requestedAt !== null && player.acceptedAt === null,
+      const requested = host.players.filter(
+        (player) => player.requestedAt && !player.acceptedAt,
       );
 
-      const accepted = host.hostedPlayers.filter(
-        (player) => player.acceptedAt !== null && player.requestedAt !== null,
-      );
-
-      const requestedCounts = requested.length;
-      const acceptedCounts = accepted.length;
+      const accepted = host.players.filter((player) => player.acceptedAt);
 
       return {
         ...host,
         requestedPlayers: requested,
         acceptedPlayers: accepted,
-        requestedCounts,
-        acceptedCounts,
+        requestedCounts: requested.length,
+        acceptedCounts: accepted.length,
+        totalPlayers: host.players.length,
       };
     });
 
-    const count = await prisma.hostedPlayers.count();
+    const count = await prisma.hostedPlayer.count();
     return response
       .status(200)
       .json({ success: true, formattedHosts, playersCount: count });
@@ -136,7 +132,7 @@ export const playerRequestToJoinMatch = async (
         .json({ success: false, message: "Host not found" });
 
     // 🚨 CHECK IF ALREADY EXISTS
-    const existing = await prisma.hostedPlayers.findFirst({
+    const existing = await prisma.hostedPlayer.findFirst({
       where: {
         hostId: host.id,
         playerId: user.sub,
@@ -151,7 +147,7 @@ export const playerRequestToJoinMatch = async (
       });
     }
 
-    await prisma.hostedPlayers.create({
+    await prisma.hostedPlayer.create({
       data: {
         hostId: host.id,
         playerId: user.sub,
@@ -211,7 +207,7 @@ export const acceptPlayer = async (
         .json({ success: false, message: "Host not found" });
 
     // player
-    const updatedPlayer = await prisma.hostedPlayers.updateMany({
+    const updatedPlayer = await prisma.hostedPlayer.updateMany({
       where: { hostId: host.id, playerId: playerId },
       data: { acceptedAt: new Date() },
     });
