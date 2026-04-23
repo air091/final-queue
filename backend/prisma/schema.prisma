@@ -23,7 +23,7 @@ model Account {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   communities           Community[]
-  hostedPlayers         HostedPlayers[]
+  hostedPlayers         HostedPlayer[]
 }
 
 model Community {
@@ -49,12 +49,16 @@ model Host {
   id                    String @id @default(uuid())
   communityId           String
   hostName              String
-  sportName             String
+  sport                 String?
   status                HostStatus @default(available)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
   community             Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  hostedPlayers         HostedPlayers[]
+  
+  players               HostedPlayer[] 
+  courts                Court[]
+  queues                Queue[]
 
   @@index([communityId])
 }
@@ -65,32 +69,72 @@ enum PlayerStatus {
   court
 }
 
-model HostedPlayers {
+model HostedPlayer {
   id                   String @id @default(uuid())
   hostId               String
   playerId             String
-  status               PlayerStatus @default(waiting)
   addedAt              DateTime @default(now())
   requestedAt          DateTime @default(now())
   acceptedAt           DateTime? 
   rejectedAt           DateTime?
   updatedAt            DateTime @updatedAt @default(now())
+
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   player               Account @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  queueEntry           QueueEntry?
+  courtAssignment      CourtAssignment?
 
   @@unique([hostId, playerId])
   @@index([hostId])
   @@index([playerId])
 }
 
-model match {
+model Queue {
   id                  String @id @default(uuid())
   hostId              String
   name                String
+
+  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  entries             QueueEntry[]
+
+  @@index([hostId])
 }
 
-model queue {
+model QueueEntry {
+  id                  String @id @default(uuid())
+  hostedPlayerId      String
+  queueId             String
+  position            Int
+  createdAt           DateTime @default(now())
+
+  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade)
+  queue               Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, position])
+  @@unique([hostedPlayerId])
+  @@index([queueId])
+}
+
+model Court {
   id                  String @id @default(uuid())
   hostId              String
   name                String
+
+  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  assignments         CourtAssignment[]
+
+  @@index([hostId])
+}
+
+model CourtAssignment {
+  id                  String @id @default(uuid())
+  hostedPlayerId      String @unique
+  courtId             String
+  assignedAt          DateTime @default(now())
+
+  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade)
+  court               Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
 }

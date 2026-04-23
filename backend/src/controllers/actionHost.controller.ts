@@ -227,7 +227,21 @@ export const acceptPlayer = async (
       .status(200)
       .json({ success: true, message: "Player accepted" });
   } catch (error) {
-    console.error("Error requesting to join hosts:", error);
+    console.error("Error accepting player to hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const addPlayerToCourt = async (
+  request: Request,
+  response: Response,
+) => {
+  try {
+  } catch (error) {
+    console.error("Error adding player to court:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
