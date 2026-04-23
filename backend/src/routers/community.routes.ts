@@ -7,6 +7,10 @@ import {
 } from "../controllers/community.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { deleteHost, getHosts, host } from "../controllers/host.controller.js";
+import {
+  createMatchCourt,
+  createQueueCourt,
+} from "../controllers/court.controller.js";
 
 const router: Router = express.Router();
 
@@ -22,5 +26,13 @@ router.delete("/:communityId", authenticate, deleteCommunity);
 router.post("/:communityId/host", authenticate, host);
 router.get("/:communityId/hosts", authenticate, getHosts);
 router.delete("/:communityId/host/:hostId", authenticate, deleteHost);
+
+// COURT
+
+router.post("/:communityId/hosts/:hostId", authenticate, createMatchCourt);
+
+// QUEUE
+
+router.post("/:communityId/hosts/:hostId", authenticate, createQueueCourt);
 
 export default router;
