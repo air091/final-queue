@@ -39,10 +39,10 @@ export const createMatchCourt = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
-    const court = await prisma.match.create({
+    const court = await prisma.court.create({
       data: {
         hostId: host.id,
-        name: `Court ${(await prisma.match.count()) + 1}`,
+        name: `Court ${(await prisma.court.count()) + 1}`,
       },
     });
 
@@ -98,7 +98,7 @@ export const createQueueCourt = async (
     const queue = await prisma.queue.create({
       data: {
         hostId: host.id,
-        name: `Queue ${(await prisma.match.count()) + 1}`,
+        name: `Queue ${(await prisma.queue.count()) + 1}`,
       },
     });
 

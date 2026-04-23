@@ -37,7 +37,7 @@ export const host = async (request: Request<Params>, response: Response) => {
       data: {
         hostName: `Host ${count + 1}`,
         communityId: community.id,
-        sportName: cleanSportName,
+        sport: cleanSportName,
       },
     });
 
@@ -67,8 +67,13 @@ export const getHosts = async (
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
+    if (!communityId)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
     });
 
     if (!community)
@@ -76,14 +81,64 @@ export const getHosts = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    // get hosts
     const hosts = await prisma.host.findMany({
       where: { communityId: community.id },
+      select: {
+        id: true,
+        hostName: true,
+        sport: true,
+        community: {
+          select: {
+            profileUrl: true,
+            communityName: true,
+          },
+        },
+        status: true,
+        players: {
+          select: {
+            id: true,
+            player: {
+              select: {
+                id: true,
+                profileUrl: true,
+                username: true,
+              },
+            },
+            requestedAt: true,
+            acceptedAt: true,
+          },
+        },
+        createdAt: true,
+      },
+    });
+
+    const formattedHostPlayer = hosts.map((host) => {
+      const requested = host.players.filter(
+        (player) => player.requestedAt && !player.acceptedAt,
+      );
+      const accepted = host.players.filter((player) => player.acceptedAt);
+      return {
+        id: host.id,
+        hostName: host.hostName,
+        sport: host.sport,
+        status: host.status,
+        community: host.community,
+        createdAt: host.createdAt,
+
+        requestedPlayers: requested,
+        acceptedPlayers: accepted,
+
+        requestedCount: requested.length,
+        acceptedCount: accepted.length,
+        totalPlayers: host.players.length,
+      };
     });
 
     return response.status(200).json({
       success: true,
       message: "Hosts retrieved successfully",
-      data: hosts,
+      data: formattedHostPlayer,
     });
   } catch (error) {
     console.error("Error getting hosts:", error);

@@ -13,7 +13,7 @@ const router: Router = express.Router();
 // COMMUNITY
 
 router.post("/create", authenticate, createCommunity);
-router.get("/:communityId", authenticate, getCommunities);
+router.get("/", authenticate, getCommunities);
 router.patch("/:communityId", authenticate, setCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
 

@@ -16,28 +16,20 @@ export const getAvailableHosts = async (
 
     // get hosts
     const hosts = await prisma.host.findMany({
-      where: { status: HostStatus.available },
       select: {
         id: true,
-        community: {
-          select: {
-            id: true,
-            profileUrl: true,
-            communityName: true,
-            admin: {
-              select: {
-                id: true,
-                profileUrl: true,
-                username: true,
-              },
-            },
-          },
-        },
         hostName: true,
         sport: true,
+        community: {
+          select: {
+            profileUrl: true,
+            communityName: true,
+          },
+        },
         status: true,
         players: {
           select: {
+            id: true,
             player: {
               select: {
                 id: true,
@@ -45,36 +37,34 @@ export const getAvailableHosts = async (
                 username: true,
               },
             },
-            status: true,
-            addedAt: true,
             requestedAt: true,
             acceptedAt: true,
           },
         },
+        createdAt: true,
       },
     });
 
-    const formattedHosts = hosts.map((host) => {
-      const requested = host.players.filter(
-        (player) => player.requestedAt && !player.acceptedAt,
-      );
-
+    const formattedHostPlayer = hosts.map((host) => {
       const accepted = host.players.filter((player) => player.acceptedAt);
-
       return {
-        ...host,
-        requestedPlayers: requested,
+        id: host.id,
+        hostName: host.hostName,
+        sport: host.sport,
+        status: host.status,
+        community: host.community,
+        createdAt: host.createdAt,
+
         acceptedPlayers: accepted,
-        requestedCounts: requested.length,
-        acceptedCounts: accepted.length,
+
+        acceptedCount: accepted.length,
         totalPlayers: host.players.length,
       };
     });
 
-    const count = await prisma.hostedPlayer.count();
     return response
       .status(200)
-      .json({ success: true, formattedHosts, playersCount: count });
+      .json({ success: true, hosts: formattedHostPlayer });
   } catch (error) {
     console.error("Error getting available hosts:", error);
     return response.status(500).json({
