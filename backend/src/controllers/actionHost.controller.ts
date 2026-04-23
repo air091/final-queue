@@ -19,14 +19,14 @@ export const getAvailableHosts = async (
       where: { status: HostStatus.available },
       select: {
         id: true,
-        communityId: true,
         community: {
           select: {
+            id: true,
             profileUrl: true,
             communityName: true,
-            adminId: true,
             admin: {
               select: {
+                id: true,
                 profileUrl: true,
                 username: true,
               },
@@ -38,9 +38,9 @@ export const getAvailableHosts = async (
         status: true,
         hostedPlayers: {
           select: {
-            playerId: true,
             player: {
               select: {
+                id: true,
                 profileUrl: true,
                 username: true,
               },
@@ -114,6 +114,13 @@ export const playerRequestToJoinMatch = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    if (community.adminId === user.sub) {
+      return response.status(403).json({
+        success: false,
+        message: "Admin cannot request to join their own host",
+      });
+    }
+
     if (!hostId)
       return response
         .status(404)
@@ -127,6 +134,22 @@ export const playerRequestToJoinMatch = async (
       return response
         .status(404)
         .json({ success: false, message: "Host not found" });
+
+    // 🚨 CHECK IF ALREADY EXISTS
+    const existing = await prisma.hostedPlayers.findFirst({
+      where: {
+        hostId: host.id,
+        playerId: user.sub,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return response.status(400).json({
+        success: false,
+        message: "You already requested or joined this host",
+      });
+    }
 
     await prisma.hostedPlayers.create({
       data: {
