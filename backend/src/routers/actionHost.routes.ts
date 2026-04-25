@@ -3,7 +3,7 @@ import express, { Router } from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   acceptPlayer,
-  assignPlayerPositionCourt,
+  assignPlayerToCourt,
   getAvailableHosts,
   playerRequestToJoinMatch,
 } from "../controllers/actionHost.controller.js";
@@ -27,15 +27,15 @@ router.post(
 // ASSIGN PLAYERS TO COURT & QUEUE
 
 router.post(
-  "/actions/courts/assign/:hostedPlayerId",
+  "/actions/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
   authenticate,
-  assignPlayerPositionCourt,
+  assignPlayerToCourt,
 );
 
-router.post(
-  "/actions/queues/:queueId/assign/:hostedPlayerId",
-  authenticate,
-  assignPlayerPositionCourt,
-);
+// router.post(
+//   "/actions/queues/:queueId/assign/:hostedPlayerId",
+//   authenticate,
+//   assignPlayerToCourt,
+// );
 
 export default router;

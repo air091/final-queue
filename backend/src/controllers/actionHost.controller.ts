@@ -235,156 +235,118 @@ export const addPlayerToCourt = async (
   }
 };
 
-type AssignParams = {
+type AssignPlayerParams = {
+  communityId: string;
+  hostId: string;
+  courtId: string;
   hostedPlayerId: string;
 };
 
-type Body = {
-  courtId: string;
-  position: number;
-};
-
-export const assignPlayerPositionCourt = async (
-  request: Request<AssignParams, {}, Body>,
+export const assignPlayerToCourt = async (
+  request: Request<AssignPlayerParams>,
   response: Response,
 ) => {
   try {
     const user = request.user;
-    if (!user) {
-      return response.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const { communityId, hostId, courtId, hostedPlayerId } = request.params;
+
+    if (!communityId || !hostId || !courtId || !hostedPlayerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
     }
 
-    const { hostedPlayerId } = request.params;
-    const { courtId, position } = request.body;
-
-    // -----------------------------------
-    // 1. Validate input
-    // -----------------------------------
-    if (!courtId || position == null) {
-      return response.status(400).json({
-        success: false,
-        message: "courtId and position are required",
-      });
+    const { position } = request.body;
+    if (typeof position !== "number" || position < 1 || position > 4) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid position" });
     }
 
-    if (position < 1 || position > 4) {
-      return response.status(400).json({
-        success: false,
-        message: "Position must be between 1 to 4",
-      });
-    }
-
-    // -----------------------------------
-    // 2. Validate player
-    // -----------------------------------
-    const hostedPlayer = await prisma.hostedPlayer.findUnique({
-      where: { id: hostedPlayerId },
-      select: { id: true, hostId: true },
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
     });
 
-    if (!hostedPlayer) {
-      return response.status(404).json({
-        success: false,
-        message: "Hosted player not found",
-      });
-    }
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
 
-    // -----------------------------------
-    // 3. Validate court
-    // -----------------------------------
-    const court = await prisma.court.findUnique({
-      where: { id: courtId },
-      select: { id: true, hostId: true },
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
     });
 
-    if (!court) {
-      return response.status(404).json({
-        success: false,
-        message: "Court not found",
-      });
-    }
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
 
-    // -----------------------------------
-    // 4. Ensure same host
-    // -----------------------------------
-    if (hostedPlayer.hostId !== court.hostId) {
-      return response.status(400).json({
-        success: false,
-        message: "Player and court must belong to same host",
-      });
-    }
+    const player = await prisma.hostedPlayer.findFirst({
+      where: { id: hostedPlayerId, hostId: host.id, acceptedAt: { not: null } },
+      select: { id: true },
+    });
 
-    // -----------------------------------
-    // 5. Check position conflict
-    // -----------------------------------
-    const positionTaken = await prisma.courtAssignment.findFirst({
+    if (!player)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found or not accepted" });
+
+    const court = await prisma.court.findFirst({
+      where: { id: courtId, hostId: host.id },
+      select: { id: true },
+    });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
+
+    const existingAssignment = await prisma.courtAssignment.findFirst({
+      where: { hostedPlayerId: player.id },
+    });
+
+    const occupied = await prisma.courtAssignment.findFirst({
       where: {
-        courtId,
+        courtId: court.id,
         position,
-        NOT: {
-          hostedPlayerId,
-        },
       },
     });
 
-    if (positionTaken) {
+    if (occupied && occupied.hostedPlayerId !== player.id) {
       return response.status(400).json({
         success: false,
-        message: "Position already taken",
+        message: "Position already occupied",
       });
     }
 
-    // -----------------------------------
-    // 6. UPSERT (move or create)
-    // -----------------------------------
-    const assignment = await prisma.courtAssignment.upsert({
-      where: {
-        hostedPlayerId, // find existing assignment
-      },
-      update: {
-        courtId,
-        position,
-        updatedAt: new Date(),
-      },
-      create: {
-        hostedPlayerId,
-        courtId,
-        position,
-      },
-      select: {
-        id: true,
-        position: true,
-        court: {
-          select: {
-            id: true,
-            name: true,
-          },
+    if (existingAssignment) {
+      await prisma.courtAssignment.update({
+        where: { id: existingAssignment.id },
+        data: {
+          courtId: court.id,
+          position,
         },
-        hostedPlayer: {
-          select: {
-            id: true,
-            player: {
-              select: {
-                id: true,
-                username: true,
-                profileUrl: true,
-              },
-            },
-          },
+      });
+    } else {
+      await prisma.courtAssignment.create({
+        data: {
+          hostedPlayerId: player.id,
+          courtId: court.id,
+          position,
         },
-      },
-    });
+      });
+    }
 
-    // -----------------------------------
-    // 7. Response
-    // -----------------------------------
     return response.status(200).json({
       success: true,
-      message: "Player assigned successfully",
-      data: assignment,
+      message: "Player assigned to court successfully",
     });
   } catch (error) {
     console.error("Error assigning player to court:", error);

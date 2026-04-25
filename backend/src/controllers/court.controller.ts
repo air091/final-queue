@@ -39,6 +39,18 @@ export const getMatchCourts = async (
 
     const courts = await prisma.court.findMany({
       where: { hostId: host.id },
+      select: {
+        id: true,
+        name: true,
+        assignments: {
+          select: {
+            id: true,
+            hostedPlayerId: true,
+            position: true,
+            assignedAt: true,
+          },
+        },
+      },
     });
     return response
       .status(200)
