@@ -147,39 +147,6 @@ export const startCourtGame = async (
         },
       },
     });
-
-    if (courts.length < 2) {
-      return response.status(404).json({
-        success: false,
-        message: "Not enough courts",
-      });
-    }
-
-    const [left, right] = courts;
-
-    const leftValid =
-      left?.assignments.some((assignment) => assignment.position === 1) &&
-      left.assignments.some((assignment) => assignment.position === 2);
-
-    const rightValid =
-      right?.assignments.some((assignment) => assignment.position === 3) &&
-      right.assignments.some((assignment) => assignment.position === 4);
-
-    if (!leftValid || !rightValid)
-      return response.status(400).json({
-        success: false,
-        message: "Both courts must have at least 2 players assigned",
-      });
-
-    await prisma.court.updateMany({
-      where: { id: { in: [left?.id, right?.id] } },
-      data: { startedAt: new Date() },
-    });
-
-    return response.status(200).json({
-      success: true,
-      message: "Game started successfully",
-    });
   } catch (error) {
     console.error("Error start match court host:", error);
     return response.status(500).json({
