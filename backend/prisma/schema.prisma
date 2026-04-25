@@ -120,6 +120,8 @@ model Court {
   id                  String @id @default(uuid())
   hostId              String
   name                String
+  startedAt           DateTime?
+  endedAt             DateTime?
 
   host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
   assignments         CourtAssignment[]
