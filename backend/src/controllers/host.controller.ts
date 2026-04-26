@@ -142,22 +142,29 @@ export const getHostById = async (
         .json({ success: false, message: "Community not found" });
 
     // get hosts
-    const host = await prisma.host.findMany({
+    const host = await prisma.host.findFirst({
       where: { id: hostId, communityId: community.id },
       select: {
         id: true,
         hostName: true,
         sport: true,
+        status: true,
+        createdAt: true,
         community: {
           select: {
             profileUrl: true,
             communityName: true,
           },
         },
-        status: true,
-        players: {
+        // REQUESTS
+        requestedPlayers: {
+          where: {
+            requestedAt: { not: null },
+            acceptedAt: null,
+          },
           select: {
             id: true,
+            requestedAt: true,
             player: {
               select: {
                 id: true,
@@ -165,40 +172,38 @@ export const getHostById = async (
                 username: true,
               },
             },
-            requestedAt: true,
-            acceptedAt: true,
           },
         },
-        createdAt: true,
+        // ACCEPTED PLAYERS
+        acceptedPlayers: {
+          where: {
+            acceptedAt: { not: null },
+          },
+          select: {
+            id: true,
+            acceptedAt: true,
+            player: {
+              select: {
+                id: true,
+                profileUrl: true,
+                username: true,
+              },
+            },
+          },
+        },
+        _count: { select: { players: true } },
       },
     });
 
-    const formattedHostPlayer = host.map((host) => {
-      const requested = host.players.filter(
-        (player) => player.requestedAt && !player.acceptedAt,
-      );
-      const accepted = host.players.filter((player) => player.acceptedAt);
-      return {
-        id: host.id,
-        hostName: host.hostName,
-        sport: host.sport,
-        status: host.status,
-        community: host.community,
-        createdAt: host.createdAt,
-
-        requestedPlayers: requested,
-        acceptedPlayers: accepted,
-
-        requestedCount: requested.length,
-        acceptedCount: accepted.length,
-        totalPlayers: host.players.length,
-      };
-    });
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
 
     return response.status(200).json({
       success: true,
       message: "Host retrieved successfully",
-      host: formattedHostPlayer,
+      host,
     });
   } catch (error) {
     console.error("Error getting host:", error);
@@ -208,6 +213,97 @@ export const getHostById = async (
     });
   }
 };
+
+type AcceptedPlayersInHostParams = {
+  communityId: string;
+  hostId: string;
+};
+
+// export const getAcceptedPlayersInHost = async (
+//   request: Request<AcceptedPlayersInHostParams>,
+//   response: Response,
+// ) => {
+//   try {
+//     const { communityId, hostId } = request.params;
+//     const user = request.user;
+//     if (!user)
+//       return response
+//         .status(401)
+//         .json({ success: false, message: "Unauthorized" });
+
+//     if (!communityId || !hostId)
+//       return response
+//         .status(404)
+//         .json({ success: false, message: "Missing required params" });
+
+//     const community = await prisma.community.findFirst({
+//       where: { id: communityId, adminId: user.sub },
+//     });
+
+//     if (!community)
+//       return response
+//         .status(404)
+//         .json({ success: false, message: "Community not found" });
+
+//     // get hosts
+//     const host = await prisma.host.findMany({
+//       where: { id: hostId, communityId: community.id },
+//       select: {
+//         id: true,
+//         status: true,
+//         players: {
+//           select: {
+//             id: true,
+//             player: {
+//               select: {
+//                 id: true,
+//                 profileUrl: true,
+//                 username: true,
+//               },
+//             },
+//             requestedAt: true,
+//             acceptedAt: true,
+//           },
+//         },
+//         createdAt: true,
+//       },
+//     });
+
+//     const formattedHostPlayer = host.map((host) => {
+//       const requested = host.players.filter(
+//         (player) => player.requestedAt && !player.acceptedAt,
+//       );
+//       const accepted = host.players.filter((player) => player.acceptedAt);
+//       return {
+//         id: host.id,
+//         hostName: host.hostName,
+//         sport: host.sport,
+//         status: host.status,
+//         community: host.community,
+//         createdAt: host.createdAt,
+
+//         requestedPlayers: requested,
+//         acceptedPlayers: accepted,
+
+//         requestedCount: requested.length,
+//         acceptedCount: accepted.length,
+//         totalPlayers: host.players.length,
+//       };
+//     });
+
+//     return response.status(200).json({
+//       success: true,
+//       message: "Host retrieved successfully",
+//       host: formattedHostPlayer,
+//     });
+//   } catch (error) {
+//     console.error("Error getting accepted players in host:", error);
+//     return response.status(500).json({
+//       success: false,
+//       message: error instanceof Error ? error.message : "Internal server error",
+//     });
+//   }
+// };
 
 export const deleteHost = async (
   request: Request<Params>,

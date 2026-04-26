@@ -56,27 +56,24 @@ model Host {
 
   community             Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   
-  players               HostedPlayer[] 
+  players               HostedPlayer[]
   courts                Court[]
   queues                Queue[]
 
   @@index([communityId])
 }
 
-enum PlayerStatus {
-  waiting
-  queued
-  court
+enum HostedPlayerStatus {
+  requested
+  accepted
+  rejected
 }
 
 model HostedPlayer {
   id                   String @id @default(uuid())
   hostId               String
   playerId             String
-  addedAt              DateTime @default(now())
-  requestedAt          DateTime @default(now())
-  acceptedAt           DateTime? 
-  rejectedAt           DateTime?
+  status               HostedPlayerStatus @default(requested)
   updatedAt            DateTime @updatedAt
 
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -86,8 +83,7 @@ model HostedPlayer {
   courtAssignment      CourtAssignment?
 
   @@unique([hostId, playerId])
-  @@index([hostId])
-  @@index([playerId])
+  @@index([hostId, status, playerId])
 }
 
 model Queue {
