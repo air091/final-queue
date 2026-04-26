@@ -55,8 +55,12 @@ export const host = async (request: Request<Params>, response: Response) => {
   }
 };
 
+type GetHostsParamsType = {
+  communityId: string;
+};
+
 export const getHosts = async (
-  request: Request<Params>,
+  request: Request<GetHostsParamsType>,
   response: Response,
 ) => {
   try {
@@ -70,7 +74,7 @@ export const getHosts = async (
     if (!communityId)
       return response
         .status(404)
-        .json({ success: false, message: "Community not found" });
+        .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
       where: { id: communityId, adminId: user.sub },
@@ -84,6 +88,62 @@ export const getHosts = async (
     // get hosts
     const hosts = await prisma.host.findMany({
       where: { communityId: community.id },
+      select: {
+        id: true,
+        hostName: true,
+        sport: true,
+        status: true,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Hosts retrieved successfully",
+      hosts,
+    });
+  } catch (error) {
+    console.error("Error getting hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+type GetHostByIdParams = {
+  communityId: string;
+  hostId: string;
+};
+
+export const getHostById = async (
+  request: Request<GetHostByIdParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(404)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    // get hosts
+    const host = await prisma.host.findMany({
+      where: { id: hostId, communityId: community.id },
       select: {
         id: true,
         hostName: true,
@@ -113,7 +173,7 @@ export const getHosts = async (
       },
     });
 
-    const formattedHostPlayer = hosts.map((host) => {
+    const formattedHostPlayer = host.map((host) => {
       const requested = host.players.filter(
         (player) => player.requestedAt && !player.acceptedAt,
       );
@@ -137,11 +197,11 @@ export const getHosts = async (
 
     return response.status(200).json({
       success: true,
-      message: "Hosts retrieved successfully",
-      data: formattedHostPlayer,
+      message: "Host retrieved successfully",
+      host: formattedHostPlayer,
     });
   } catch (error) {
-    console.error("Error getting hosts:", error);
+    console.error("Error getting host:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

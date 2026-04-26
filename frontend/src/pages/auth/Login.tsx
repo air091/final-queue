@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type LoginCredentialsType = {
   email: string;
@@ -11,10 +12,11 @@ export default function Login() {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
 
   const loginAPI = async () => {
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:4000/api/auth/login",
         {
           email: credentials.email,
@@ -24,10 +26,12 @@ export default function Login() {
           withCredentials: true,
         },
       );
-
-      console.log("Login", response);
+      setCredentials({ email: "", password: "" });
+      navigate("/");
     } catch (error) {
-      console.error("Login api failed:", error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data?.message);
+      else console.error("Login api failed:", error);
     }
   };
 
