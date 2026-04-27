@@ -114,7 +114,7 @@ export default function Community() {
                 <tr
                   key={communityHost.id}
                   onClick={() =>
-                    navigate(`/community/${id}/host/${communityHost.id}`)
+                    navigate(`/community/${id}/hosts/${communityHost.id}`)
                   }
                   className="hover:bg-stone-300 cursor-pointer"
                 >

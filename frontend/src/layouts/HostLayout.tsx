@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
-import Sidebar from "../components/home_components/Sidebar";
+import Sidebar from "../components/host_components/Sidebar";
 
-export default function HomeLayout() {
+export default function HostLayout() {
   return (
     <div className="w-full max-w-480 border mx-auto my-0 flex gap-x-4">
       <Sidebar />
