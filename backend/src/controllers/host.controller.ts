@@ -141,59 +141,62 @@ export const getHostById = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
-    // get hosts
-    const host = await prisma.host.findFirst({
-      where: { id: hostId, communityId: community.id },
-      select: {
-        id: true,
-        hostName: true,
-        sport: true,
-        status: true,
-        createdAt: true,
-        community: {
-          select: {
-            profileUrl: true,
-            communityName: true,
+    // get host
+    const [host, requestedPlayers, acceptedPlayers] = await Promise.all([
+      prisma.host.findFirst({
+        where: { id: hostId, communityId: community.id },
+        select: {
+          id: true,
+          hostName: true,
+          sport: true,
+          status: true,
+          createdAt: true,
+          community: {
+            select: {
+              profileUrl: true,
+              communityName: true,
+            },
           },
+          _count: { select: { players: true } },
         },
-        // REQUESTS
-        requestedPlayers: {
-          where: {
-            requestedAt: { not: null },
-            acceptedAt: null,
-          },
-          select: {
-            id: true,
-            requestedAt: true,
-            player: {
-              select: {
-                id: true,
-                profileUrl: true,
-                username: true,
-              },
+      }),
+
+      // requests
+      prisma.hostedPlayer.findMany({
+        where: {
+          hostId,
+          status: "requested",
+        },
+        select: {
+          id: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
             },
           },
         },
-        // ACCEPTED PLAYERS
-        acceptedPlayers: {
-          where: {
-            acceptedAt: { not: null },
-          },
-          select: {
-            id: true,
-            acceptedAt: true,
-            player: {
-              select: {
-                id: true,
-                profileUrl: true,
-                username: true,
-              },
+      }),
+
+      // accepts
+      prisma.hostedPlayer.findMany({
+        where: {
+          hostId,
+          status: "accepted",
+        },
+        select: {
+          id: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
             },
           },
         },
-        _count: { select: { players: true } },
-      },
-    });
+      }),
+    ]);
 
     if (!host)
       return response
@@ -203,7 +206,9 @@ export const getHostById = async (
     return response.status(200).json({
       success: true,
       message: "Host retrieved successfully",
-      host,
+      ...host,
+      requestedPlayers,
+      acceptedPlayers,
     });
   } catch (error) {
     console.error("Error getting host:", error);

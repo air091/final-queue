@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import type { Params } from "./community.controller.js";
 import prisma from "../lib/prisma.js";
 import { HostStatus } from "../generated/prisma/enums.js";
+import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
 export const getAvailableHosts = async (
   request: Request,
@@ -74,7 +75,7 @@ export const getAvailableHosts = async (
   }
 };
 
-export const playerRequestToJoinMatch = async (
+export const playerRequestToJoinHost = async (
   request: Request<Params>,
   response: Response,
 ) => {
@@ -197,17 +198,40 @@ export const acceptPlayer = async (
         .json({ success: false, message: "Host not found" });
 
     // player
-    const updatedPlayer = await prisma.hostedPlayer.updateMany({
-      where: { hostId: host.id, playerId: playerId },
-      data: { acceptedAt: new Date() },
+    const existing = await prisma.hostedPlayer.findUnique({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: playerId,
+        },
+      },
     });
 
-    if (updatedPlayer.count === 0) {
+    if (!existing) {
       return response.status(404).json({
         success: false,
-        message: "Player not found or already accepted",
+        message: "Player not found",
       });
     }
+
+    if (existing.status !== HostedPlayerStatus.requested) {
+      return response.status(400).json({
+        success: false,
+        message: "Player is not in requested state",
+      });
+    }
+
+    await prisma.hostedPlayer.update({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: playerId,
+        },
+      },
+      data: {
+        status: HostedPlayerStatus.accepted,
+      },
+    });
 
     return response
       .status(200)

@@ -5,7 +5,7 @@ import {
   acceptPlayer,
   assignPlayerToCourt,
   getAvailableHosts,
-  playerRequestToJoinMatch,
+  playerRequestToJoinHost,
 } from "../controllers/actionHost.controller.js";
 const router: Router = express.Router();
 
@@ -15,7 +15,7 @@ router.get("/public/hosts/available", authenticate, getAvailableHosts);
 router.post(
   "/actions/request/community/:communityId/hosts/:hostId",
   authenticate,
-  playerRequestToJoinMatch,
+  playerRequestToJoinHost,
 );
 
 router.post(
