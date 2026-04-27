@@ -36,19 +36,19 @@ export default function Sidebar() {
         <li>
           <NavLink
             to="/community/create"
-            className="block hover:bg-amber-200 px-4 py-1 text-center"
+            className="block hover:bg-amber-200 px-4 py-1 text-center rounded-md"
           >
             Create community
           </NavLink>
         </li>
-        <hr />
+        <hr className="my-2" />
         {communities.length > 0 ? (
           communities.map((community) => (
             <li key={community.id}>
               <NavLink
                 to={`/community/${community.id}`}
                 className={({ isActive }) =>
-                  `flex items-center border gap-x-3 py-1 px-3
+                  `flex items-center border gap-x-3 py-1 px-3 rounded-md
                     ${isActive ? "bg-amber-300" : "hover:bg-amber-200"}`
                 }
               >

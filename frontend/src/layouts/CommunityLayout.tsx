@@ -5,7 +5,7 @@ export default function CommunityLayout() {
   return (
     <div className="w-full max-w-[1920px] border mx-auto my-0 flex gap-x-4">
       <Sidebar />
-      <main>
+      <main className="w-full">
         <Outlet />
       </main>
     </div>
