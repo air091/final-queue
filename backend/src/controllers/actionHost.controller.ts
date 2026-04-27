@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import type { Params } from "./community.controller.js";
 import prisma from "../lib/prisma.js";
-import { HostStatus } from "../generated/prisma/enums.js";
 import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
 export const getAvailableHosts = async (
