@@ -3,7 +3,7 @@ import Sidebar from "../components/community/Sidebar";
 
 export default function CommunityLayout() {
   return (
-    <div className="w-full max-w-[1920px] border mx-auto my-0 flex gap-x-4">
+    <div className="w-full max-w-480 border mx-auto my-0 flex gap-x-4">
       <Sidebar />
       <main className="w-full">
         <Outlet />

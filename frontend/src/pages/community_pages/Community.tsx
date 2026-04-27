@@ -72,7 +72,7 @@ export default function Community() {
     <div className="w-full">
       <header className="flex items-center gap-x-4 w-full px-4 py-2">
         <div>
-          <div className="w-[64px] h-[64px] border rounded-full">
+          <div className="w-16 h-16 border rounded-full">
             <img
               src={community?.profileUrl}
               alt={community?.communityName}
@@ -85,7 +85,7 @@ export default function Community() {
             {community?.communityName}
           </span>
           <span className="flex items-center gap-x-1">
-            <div className="w-[16px] h-[16px] border rounded-full">
+            <div className="w-4 h-4 border rounded-full">
               <img
                 src={community?.admin.profileUrl}
                 alt={community?.admin.username}

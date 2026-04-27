@@ -3,7 +3,7 @@ import Sidebar from "../components/home/Sidebar";
 
 export default function HomeLayout() {
   return (
-    <div className="w-full max-w-[1920px] border mx-auto my-0 flex gap-x-4">
+    <div className="w-full max-w-480 border mx-auto my-0 flex gap-x-4">
       <Sidebar />
       <main>
         <Outlet />

@@ -12,7 +12,7 @@ export default function Sidebar() {
     },
   ];
   return (
-    <nav className="w-[160px]">
+    <nav className="w-50">
       <ul>
         {navLinks.map((link) => (
           <li key={link.name}>

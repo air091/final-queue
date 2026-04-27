@@ -31,7 +31,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <nav className="w-[200px]">
+    <nav className="w-50">
       <ul>
         <li>
           <NavLink
@@ -52,7 +52,7 @@ export default function Sidebar() {
                     ${isActive ? "bg-amber-300" : "hover:bg-amber-200"}`
                 }
               >
-                <div className="border w-[32px] h-[32px] rounded-full">
+                <div className="border w-8 h-8 rounded-full">
                   <img
                     src={community.profileUrl}
                     alt={community.communityName}
