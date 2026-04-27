@@ -10,6 +10,7 @@ import {
   deleteHost,
   getHostById,
   getHosts,
+  getHostWithPlayers,
   host,
 } from "../controllers/host.controller.js";
 import {
@@ -33,6 +34,11 @@ router.delete("/:communityId", authenticate, deleteCommunity);
 router.post("/:communityId/host", authenticate, host);
 router.get("/:communityId/hosts", authenticate, getHosts);
 router.get("/:communityId/hosts/:hostId", authenticate, getHostById);
+router.get(
+  "/:communityId/hosts/:hostId/players",
+  authenticate,
+  getHostWithPlayers,
+);
 router.delete("/:communityId/host/:hostId", authenticate, deleteHost);
 
 // COURT

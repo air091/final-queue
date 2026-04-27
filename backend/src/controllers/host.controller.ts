@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
-import { HostStatus } from "../generated/prisma/enums.js";
 import type { Params } from "./community.controller.js";
 
 export const host = async (request: Request<Params>, response: Response) => {
@@ -212,6 +211,90 @@ export const getHostById = async (
     });
   } catch (error) {
     console.error("Error getting host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const getHostWithPlayers = async (
+  request: Request<GetHostByIdParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId && !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const [host, acceptedPlayers] = await Promise.all([
+      prisma.host.findFirst({
+        where: { id: hostId, communityId: community.id },
+        select: {
+          id: true,
+          hostName: true,
+          sport: true,
+          status: true,
+          createdAt: true,
+          community: {
+            select: {
+              profileUrl: true,
+              communityName: true,
+            },
+          },
+          _count: { select: { players: true } },
+        },
+      }),
+
+      prisma.hostedPlayer.findMany({
+        where: {
+          hostId,
+          status: "accepted",
+        },
+        select: {
+          id: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    return response.status(200).json({
+      success: true,
+      message: "Host retrieved successfully",
+      ...host,
+      acceptedPlayers,
+    });
+  } catch (error) {
+    console.error("Error getting host with players:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
