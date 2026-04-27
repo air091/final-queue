@@ -80,6 +80,65 @@ export const getCommunities = async (request: Request, response: Response) => {
   }
 };
 
+type GetCommunityByIdParams = {
+  communityId: string;
+};
+export const getCommunityById = async (
+  request: Request<GetCommunityByIdParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: {
+        id: true,
+        profileUrl: true,
+        communityName: true,
+        description: true,
+        admin: {
+          select: {
+            id: true,
+            profileUrl: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    return response.status(200).json({
+      success: true,
+      message: "Community fetched successfully",
+      community,
+    });
+  } catch (error) {
+    console.error("Error getting community by id:", error);
+    return response.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
+    });
+  }
+};
+
 export const setCommunity = async (
   request: Request<Params>,
   response: Response,

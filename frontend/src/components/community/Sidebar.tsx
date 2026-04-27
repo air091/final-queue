@@ -47,7 +47,10 @@ export default function Sidebar() {
             <li key={community.id}>
               <NavLink
                 to={`/community/${community.id}`}
-                className="flex items-center border gap-x-3 py-1 px-3 hover:bg-amber-200"
+                className={({ isActive }) =>
+                  `flex items-center border gap-x-3 py-1 px-3
+                    ${isActive ? "bg-amber-300" : "hover:bg-amber-200"}`
+                }
               >
                 <div className="border w-[32px] h-[32px] rounded-full">
                   <img

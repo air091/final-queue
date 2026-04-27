@@ -17,7 +17,7 @@ const router = createBrowserRouter([
     element: <HomeLayout />,
     children: [
       {
-        path: "/",
+        index: true,
         element: <Home />,
       },
     ],
@@ -27,11 +27,11 @@ const router = createBrowserRouter([
     element: <CommunityLayout />,
     children: [
       {
-        path: "community",
+        path: ":id",
         element: <Community />,
       },
       {
-        path: "/community/create",
+        path: "create",
         element: <CreateCommunity />,
       },
     ],

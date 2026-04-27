@@ -4,6 +4,7 @@ import {
   getCommunities,
   setCommunity,
   deleteCommunity,
+  getCommunityById,
 } from "../controllers/community.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import {
@@ -26,6 +27,7 @@ const router: Router = express.Router();
 
 router.post("/create", authenticate, createCommunity);
 router.get("/", authenticate, getCommunities);
+router.get("/:communityId", authenticate, getCommunityById);
 router.patch("/:communityId", authenticate, setCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
 
