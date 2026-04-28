@@ -168,6 +168,7 @@ export const getHostById = async (
         },
         select: {
           id: true,
+          status: true,
           player: {
             select: {
               id: true,
@@ -186,6 +187,7 @@ export const getHostById = async (
         },
         select: {
           id: true,
+          status: true,
           player: {
             select: {
               id: true,
