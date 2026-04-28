@@ -213,13 +213,6 @@ export const acceptPlayer = async (
       });
     }
 
-    if (existing.status !== HostedPlayerStatus.requested) {
-      return response.status(400).json({
-        success: false,
-        message: "Player is not in requested state",
-      });
-    }
-
     await prisma.hostedPlayer.update({
       where: {
         hostId_playerId: {
@@ -298,13 +291,6 @@ export const rejectPlayer = async (
       return response.status(404).json({
         success: false,
         message: "Player not found",
-      });
-    }
-
-    if (existing.status !== HostedPlayerStatus.requested) {
-      return response.status(400).json({
-        success: false,
-        message: "Player is not in requested state",
       });
     }
 
