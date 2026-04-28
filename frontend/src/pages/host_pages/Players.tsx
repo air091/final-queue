@@ -43,6 +43,30 @@ export default function Players() {
     getPlayersInHost();
   }, []);
 
+  const handleAcceptPlayer = async (playerId: string) => {
+    // rollback
+    const previousPlayers = players;
+
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.player.id === playerId ? { ...p, status: "accepted" } : p,
+      ),
+    );
+
+    try {
+      await axios.post(
+        `http://localhost:4000/api/actions/accept/community/${communityId}/hosts/${hostId}/${playerId}`,
+        {},
+        { withCredentials: true },
+      );
+    } catch (error) {
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error(error);
+    }
+  };
+
   return (
     <>
       <header className="flex items-center justify-between">
@@ -58,12 +82,12 @@ export default function Players() {
         </div>
       </header>
       <div>
-        <table>
+        <table className="border w-full">
           <thead>
             <tr>
-              <th>Player</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th className="text-start">Player</th>
+              <th className="text-start">Status</th>
+              <th className="text-start">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -96,16 +120,19 @@ export default function Players() {
                   </td>
 
                   <td>
-                    <div className="flex items-center gap-x-2">
-                      <FaCheck
-                        size={28}
-                        className="bg-green-200 p-1 rounded-md cursor-pointer"
-                      />
-                      <FcCancel
-                        size={28}
-                        className="bg-rose-200 p-1 rounded-md cursor-pointer"
-                      />
-                    </div>
+                    {p.status === "accepted" ? null : (
+                      <div className="flex items-center gap-x-2">
+                        <FaCheck
+                          size={28}
+                          onClick={() => handleAcceptPlayer(p.player.id)}
+                          className="bg-green-200 p-1 rounded-md cursor-pointer hover:bg-green-400"
+                        />
+                        <FcCancel
+                          size={28}
+                          className="bg-rose-200 p-1 rounded-md cursor-pointer hover:bg-rose-400"
+                        />
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
