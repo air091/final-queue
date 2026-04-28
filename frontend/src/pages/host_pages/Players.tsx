@@ -32,6 +32,7 @@ export default function Players() {
       setPlayers([
         ...response.data.acceptedPlayers,
         ...response.data.requestedPlayers,
+        ...response.data.rejectedPlayers,
       ]);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -67,29 +68,29 @@ export default function Players() {
     }
   };
 
-  // const handleRejectPlayer = async (playerId: string) => {
-  //   // rollback
-  //   const previousPlayers = players;
+  const handleRejectPlayer = async (playerId: string) => {
+    // rollback
+    const previousPlayers = players;
 
-  //   setPlayers((prev) =>
-  //     prev.map((p) =>
-  //       p.player.id === playerId ? { ...p, status: "rejected" } : p,
-  //     ),
-  //   );
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.player.id === playerId ? { ...p, status: "rejected" } : p,
+      ),
+    );
 
-  //   try {
-  //     await axios.post(
-  //       `http://localhost:4000/api/actions/accept/community/${communityId}/hosts/${hostId}/${playerId}`,
-  //       {},
-  //       { withCredentials: true },
-  //     );
-  //   } catch (error) {
-  //     setPlayers(previousPlayers);
+    try {
+      await axios.post(
+        `http://localhost:4000/api/actions/reject/community/${communityId}/hosts/${hostId}/${playerId}`,
+        {},
+        { withCredentials: true },
+      );
+    } catch (error) {
+      setPlayers(previousPlayers);
 
-  //     if (axios.isAxiosError(error)) console.error(error);
-  //     else console.error(error);
-  //   }
-  // };
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error(error);
+    }
+  };
 
   return (
     <>
@@ -105,22 +106,28 @@ export default function Players() {
           />
         </div>
       </header>
-      <div>
-        <table className="border w-full">
+      <div className="p-1">
+        <table className="table-auto border-collapse w-full">
           <thead>
             <tr>
-              <th className="text-start">Player</th>
-              <th className="text-start">Status</th>
-              <th className="text-start">Actions</th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2">
+                Player
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+                Status
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {players.length > 0 ? (
               players.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="flex items-center gap-x-2">
-                      <div className="border w-[32px] h-[32px] rounded-full">
+                <tr key={p.id} className="hover:bg-stone-100">
+                  <td className="py-1.5 px-2">
+                    <div className="flex items-center gap-x-2 text-[14px]">
+                      <div className="border w-[28px] h-[28px] rounded-full">
                         <img
                           src={p.player.profileUrl}
                           alt={p.player.username}
@@ -130,39 +137,46 @@ export default function Players() {
                       <span>{p.player.username}</span>
                     </div>
                   </td>
-
-                  <td>
+                  <td className="py-1.5 px-2">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-md ${
-                        p.status === "accepted"
-                          ? "bg-green-200 border border-green-500"
-                          : "bg-rose-200 border border-rose-500"
-                      }`}
+                      className={`inline-block px-2 py-0.5 rounded-md  text-[12px] cursor-default
+                        ${
+                          p.status === "accepted"
+                            ? "bg-green-200 border border-green-500"
+                            : p.status === "requested"
+                              ? "bg-yellow-200 border border-yellow-500"
+                              : "bg-rose-200 border border-rose-500"
+                        }`}
                     >
                       {p.status}
                     </span>
                   </td>
-
-                  <td>
-                    {p.status === "accepted" ? null : (
-                      <div className="flex items-center gap-x-2">
+                  <td className="py-1.5 px-2">
+                    <div className="flex items-center gap-x-2">
+                      {p.status !== "accepted" && (
                         <FaCheck
                           size={28}
+                          title="Accept"
                           onClick={() => handleAcceptPlayer(p.player.id)}
                           className="bg-green-200 p-1 rounded-md cursor-pointer hover:bg-green-400"
                         />
+                      )}
+
+                      {p.status !== "rejected" && (
                         <FcCancel
                           size={28}
+                          title="Reject"
+                          onClick={() => handleRejectPlayer(p.player.id)}
                           className="bg-rose-200 p-1 rounded-md cursor-pointer hover:bg-rose-400"
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={3} className="text-center">
+                <td colSpan={3} className="text-center py-1.5 px-2">
                   No players yet
                 </td>
               </tr>
