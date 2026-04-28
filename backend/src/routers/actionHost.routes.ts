@@ -6,6 +6,7 @@ import {
   assignPlayerToCourt,
   getAvailableHosts,
   playerRequestToJoinHost,
+  rejectPlayer,
 } from "../controllers/actionHost.controller.js";
 const router: Router = express.Router();
 
@@ -22,6 +23,12 @@ router.post(
   "/actions/accept/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   acceptPlayer,
+);
+
+router.post(
+  "/actions/reject/community/:communityId/hosts/:hostId/:playerId",
+  authenticate,
+  rejectPlayer,
 );
 
 // ASSIGN PLAYERS TO COURT & QUEUE

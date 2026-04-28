@@ -67,6 +67,30 @@ export default function Players() {
     }
   };
 
+  // const handleRejectPlayer = async (playerId: string) => {
+  //   // rollback
+  //   const previousPlayers = players;
+
+  //   setPlayers((prev) =>
+  //     prev.map((p) =>
+  //       p.player.id === playerId ? { ...p, status: "rejected" } : p,
+  //     ),
+  //   );
+
+  //   try {
+  //     await axios.post(
+  //       `http://localhost:4000/api/actions/accept/community/${communityId}/hosts/${hostId}/${playerId}`,
+  //       {},
+  //       { withCredentials: true },
+  //     );
+  //   } catch (error) {
+  //     setPlayers(previousPlayers);
+
+  //     if (axios.isAxiosError(error)) console.error(error);
+  //     else console.error(error);
+  //   }
+  // };
+
   return (
     <>
       <header className="flex items-center justify-between">

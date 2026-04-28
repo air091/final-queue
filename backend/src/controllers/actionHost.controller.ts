@@ -244,6 +244,94 @@ export const acceptPlayer = async (
   }
 };
 
+export const rejectPlayer = async (
+  request: Request<Params>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    // community
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    // host
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    // player
+    const existing = await prisma.hostedPlayer.findUnique({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: playerId,
+        },
+      },
+    });
+
+    if (!existing) {
+      return response.status(404).json({
+        success: false,
+        message: "Player not found",
+      });
+    }
+
+    if (existing.status !== HostedPlayerStatus.requested) {
+      return response.status(400).json({
+        success: false,
+        message: "Player is not in requested state",
+      });
+    }
+
+    await prisma.hostedPlayer.update({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: playerId,
+        },
+      },
+      data: {
+        status: HostedPlayerStatus.rejected,
+      },
+    });
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Player rejected" });
+  } catch (error) {
+    console.error("Error accepting player to hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const addPlayerToCourt = async (
   request: Request,
   response: Response,

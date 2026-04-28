@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
+import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
 export const host = async (request: Request<Params>, response: Response) => {
   try {
@@ -141,63 +142,83 @@ export const getHostById = async (
         .json({ success: false, message: "Community not found" });
 
     // get host
-    const [host, requestedPlayers, acceptedPlayers] = await Promise.all([
-      prisma.host.findFirst({
-        where: { id: hostId, communityId: community.id },
-        select: {
-          id: true,
-          hostName: true,
-          sport: true,
-          status: true,
-          createdAt: true,
-          community: {
-            select: {
-              profileUrl: true,
-              communityName: true,
+    const [host, requestedPlayers, acceptedPlayers, rejectedPlayers] =
+      await Promise.all([
+        prisma.host.findFirst({
+          where: { id: hostId, communityId: community.id },
+          select: {
+            id: true,
+            hostName: true,
+            sport: true,
+            status: true,
+            createdAt: true,
+            community: {
+              select: {
+                profileUrl: true,
+                communityName: true,
+              },
             },
+            _count: { select: { players: true } },
           },
-          _count: { select: { players: true } },
-        },
-      }),
+        }),
 
-      // requests
-      prisma.hostedPlayer.findMany({
-        where: {
-          hostId,
-          status: "requested",
-        },
-        select: {
-          id: true,
-          status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
+        // requests
+        prisma.hostedPlayer.findMany({
+          where: {
+            hostId,
+            status: HostedPlayerStatus.requested,
+          },
+          select: {
+            id: true,
+            status: true,
+            player: {
+              select: {
+                id: true,
+                username: true,
+                profileUrl: true,
+              },
             },
           },
-        },
-      }),
+        }),
 
-      // accepts
-      prisma.hostedPlayer.findMany({
-        where: {
-          hostId,
-          status: "accepted",
-        },
-        select: {
-          id: true,
-          status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
+        // accepts
+        prisma.hostedPlayer.findMany({
+          where: {
+            hostId,
+            status: HostedPlayerStatus.accepted,
+          },
+          select: {
+            id: true,
+            status: true,
+            player: {
+              select: {
+                id: true,
+                username: true,
+                profileUrl: true,
+              },
             },
           },
-        },
-      }),
-    ]);
+        }),
+
+        // rejects
+        prisma.hostedPlayer.findMany({
+          where: {
+            hostId,
+            status: HostedPlayerStatus.rejected,
+          },
+          select: {
+            id: true,
+            status: true,
+            player: {
+              select: {
+                id: true,
+                username: true,
+                profileUrl: true,
+              },
+            },
+          },
+        }),
+      ]);
 
     if (!host)
       return response
@@ -210,6 +231,7 @@ export const getHostById = async (
       ...host,
       requestedPlayers,
       acceptedPlayers,
+      rejectedPlayers,
     });
   } catch (error) {
     console.error("Error getting host:", error);
