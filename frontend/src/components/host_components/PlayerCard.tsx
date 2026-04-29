@@ -1,4 +1,4 @@
-import { useSortable } from "@dnd-kit/sortable";
+import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import type { AcceptedPlayers } from "../../pages/host_pages/Match";
@@ -8,8 +8,14 @@ type PlayerCardProps = {
 };
 
 export default function PlayerCard({ player }: PlayerCardProps) {
-  const { setNodeRef, attributes, listeners, transform, transition } =
-    useSortable({ id: player.id });
+  const { setNodeRef, attributes, listeners, transform, isDragging } =
+    useDraggable({
+      id: player.id,
+      data: {
+        type: "player",
+        hostedPlayerId: player.id,
+      },
+    });
 
   return (
     <div
@@ -18,14 +24,15 @@ export default function PlayerCard({ player }: PlayerCardProps) {
       {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
-        transition,
+        opacity: isDragging ? 0.6 : 1,
       }}
-      className="border w-fit flex items-center gap-x-10 py-1 px-1 cursor-pointer hover:bg-stone-200 rounded-full"
+      className="border w-fit flex items-center gap-x-10 py-1 px-1 cursor-grab active:cursor-grabbing hover:bg-stone-200 rounded-full"
     >
       <div className="flex items-center gap-x-2">
         <div className="w-[28px] h-[28px] rounded-full border">
           <img
             src={player.player.profileUrl}
+            alt={player.player.username}
             className="block w-full h-full object-contain rounded-full"
           />
         </div>

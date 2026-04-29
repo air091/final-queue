@@ -386,7 +386,11 @@ export const assignPlayerToCourt = async (
         .json({ success: false, message: "Host not found" });
 
     const player = await prisma.hostedPlayer.findFirst({
-      where: { id: hostedPlayerId, hostId: host.id, acceptedAt: { not: null } },
+      where: {
+        id: hostedPlayerId,
+        hostId: host.id,
+        status: HostedPlayerStatus.accepted,
+      },
       select: { id: true },
     });
 

@@ -1,3 +1,4 @@
+import { useDroppable } from "@dnd-kit/core";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import type { AcceptedPlayers, CourtType } from "../../pages/host_pages/Match";
 
@@ -12,6 +13,34 @@ const COURT_SLOTS = [
   { position: 3, label: "Team A" },
   { position: 4, label: "Team B" },
 ];
+
+type CourtSlotProps = {
+  courtId: string;
+  position: number;
+  label: string;
+};
+
+function CourtSlot({ courtId, position, label }: CourtSlotProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `court-slot-${courtId}-${position}`,
+    data: {
+      type: "court-slot",
+      courtId,
+      position,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`border w-full h-[46px] flex items-center justify-center rounded-md transition-colors ${
+        isOver ? "bg-stone-200 border-stone-500" : ""
+      }`}
+    >
+      <span>{label}</span>
+    </div>
+  );
+}
 
 export default function CourtCard({ court, players }: CourtCardProps) {
   const getSlotLabel = (position: number) => {
@@ -45,12 +74,12 @@ export default function CourtCard({ court, players }: CourtCardProps) {
       </header>
       <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3">
         {COURT_SLOTS.map((slot) => (
-          <div
+          <CourtSlot
             key={slot.position}
-            className="border w-full h-[46px] flex items-center justify-center rounded-md"
-          >
-            <span>{getSlotLabel(slot.position)}</span>
-          </div>
+            courtId={court.id}
+            position={slot.position}
+            label={getSlotLabel(slot.position)}
+          />
         ))}
       </main>
     </div>
