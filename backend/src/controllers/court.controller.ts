@@ -120,35 +120,62 @@ export const createMatchCourt = async (
   }
 };
 
-type StartGameType = {
+type DeleteCourtParams = {
+  communityId: string;
   hostId: string;
+  courtId: string;
 };
 
-export const startCourtGame = async (
-  request: Request<StartGameType>,
+export const deleteMatchCourt = async (
+  request: Request<DeleteCourtParams>,
   response: Response,
 ) => {
   try {
-    const { hostId } = request.params;
-    if (!hostId)
+    const { communityId, hostId, courtId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !courtId)
       return response
         .status(400)
         .json({ success: false, message: "Missing params" });
 
-    const courts = await prisma.court.findMany({
-      where: { hostId },
-      select: {
-        id: true,
-        assignments: {
-          select: {
-            hostedPlayerId: true,
-            position: true,
-          },
-        },
-      },
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
     });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const deletedCourt = await prisma.court.delete({
+      where: { id: courtId, hostId: host.id },
+    });
+
+    if (!deletedCourt)
+      return response
+        .status(404)
+        .json({ success: false, message: "No court found" });
+    return response
+      .status(200)
+      .json({ success: false, message: "Court deleted successfully" });
   } catch (error) {
-    console.error("Error start match court host:", error);
+    console.error("Error delete match court host:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

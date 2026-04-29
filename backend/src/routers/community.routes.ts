@@ -17,6 +17,7 @@ import {
 import {
   createMatchCourt,
   createQueueCourt,
+  deleteMatchCourt,
   getMatchCourts,
   getQueueCourts,
 } from "../controllers/court.controller.js";
@@ -50,6 +51,11 @@ router.post(
   "/:communityId/hosts/:hostId/courts/add",
   authenticate,
   createMatchCourt,
+);
+router.delete(
+  "/:communityId/hosts/:hostId/courts/:courtId",
+  authenticate,
+  deleteMatchCourt,
 );
 
 // QUEUE
