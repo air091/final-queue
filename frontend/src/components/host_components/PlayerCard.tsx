@@ -5,12 +5,16 @@ import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
+  draggableId?: string;
 };
 
-export default function PlayerCard({ player }: PlayerCardProps) {
+export default function PlayerCard({
+  player,
+  draggableId = `player-list-${player.id}`,
+}: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
     useDraggable({
-      id: player.id,
+      id: draggableId,
       data: {
         type: "player",
         hostedPlayerId: player.id,
@@ -26,7 +30,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.6 : 1,
       }}
-      className="border w-fit flex items-center gap-x-10 py-1 px-1 cursor-grab active:cursor-grabbing hover:bg-stone-200 rounded-full"
+      className="border w-full flex items-center justify-between gap-x-10 py-1 px-1 cursor-grab active:cursor-grabbing hover:bg-stone-200 rounded-full"
     >
       <div className="flex items-center gap-x-2">
         <div className="w-[28px] h-[28px] rounded-full border">

@@ -37,7 +37,6 @@ export default function Community() {
         `http://localhost:4000/api/community/${id}`,
         { withCredentials: true },
       );
-      console.log(response);
       setCommunity(response.data.community);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -56,7 +55,6 @@ export default function Community() {
         `http://localhost:4000/api/community/${id}/hosts/`,
         { withCredentials: true },
       );
-      console.log(response);
       setCommunityHosts(response.data.hosts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);

@@ -1,5 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { HiOutlineDotsVertical } from "react-icons/hi";
+import PlayerCard from "./PlayerCard";
 import type { AcceptedPlayers, CourtType } from "../../pages/host_pages/Match";
 
 type CourtCardProps = {
@@ -18,9 +19,10 @@ type CourtSlotProps = {
   courtId: string;
   position: number;
   label: string;
+  player?: AcceptedPlayers;
 };
 
-function CourtSlot({ courtId, position, label }: CourtSlotProps) {
+function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `court-slot-${courtId}-${position}`,
     data: {
@@ -33,32 +35,36 @@ function CourtSlot({ courtId, position, label }: CourtSlotProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`border w-full h-[46px] flex items-center justify-center rounded-md transition-colors ${
+      className={`border w-full min-h-[48px] flex items-center justify-center rounded-md transition-colors px-2 py-1 ${
         isOver ? "bg-stone-200 border-stone-500" : ""
       }`}
     >
-      <span>{label}</span>
+      {player ? (
+        <div className="w-full">
+          <PlayerCard
+            player={player}
+            draggableId={`court-player-${courtId}-${position}-${player.id}`}
+          />
+        </div>
+      ) : (
+        <span>{label}</span>
+      )}
     </div>
   );
 }
 
 export default function CourtCard({ court, players }: CourtCardProps) {
-  const getSlotLabel = (position: number) => {
+  const getAssignedPlayer = (position: number) => {
     const assignment = court.assignments.find(
       (item) => item.position === position,
     );
-    if (!assignment) {
-      return (
-        COURT_SLOTS.find((slot) => slot.position === position)?.label ?? ""
-      );
-    }
 
-    return (
-      players.find((player) => player.id === assignment.hostedPlayerId)?.player
-        .username ??
-      COURT_SLOTS.find((slot) => slot.position === position)?.label ??
-      ""
-    );
+    if (!assignment) return undefined;
+    return players.find((player) => player.id === assignment.hostedPlayerId);
+  };
+
+  const getSlotLabel = (position: number) => {
+    return COURT_SLOTS.find((slot) => slot.position === position)?.label ?? "";
   };
 
   return (
@@ -79,6 +85,7 @@ export default function CourtCard({ court, players }: CourtCardProps) {
             courtId={court.id}
             position={slot.position}
             label={getSlotLabel(slot.position)}
+            player={getAssignedPlayer(slot.position)}
           />
         ))}
       </main>

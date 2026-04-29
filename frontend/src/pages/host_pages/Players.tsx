@@ -28,7 +28,6 @@ export default function Players() {
           withCredentials: true,
         },
       );
-      console.log(response);
       setPlayers([
         ...response.data.acceptedPlayers,
         ...response.data.requestedPlayers,

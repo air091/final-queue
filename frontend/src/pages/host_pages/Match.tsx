@@ -70,7 +70,9 @@ const getUpdatedCourts = (
       assignments: [
         ...nextAssignments,
         {
-          id: existingAssignment?.id ?? `${court.id}-${hostedPlayerId}-${position}`,
+          id:
+            existingAssignment?.id ??
+            `${court.id}-${hostedPlayerId}-${position}`,
           hostedPlayerId,
           position,
         },
@@ -103,7 +105,6 @@ export default function Match() {
         `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts`,
         { withCredentials: true },
       );
-      console.log(response.data.courts);
       setCourts(response.data.courts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -136,7 +137,9 @@ export default function Match() {
     if (dropData?.type !== "court-slot") return;
 
     const previousCourts = courts;
-    const hostedPlayerId = String(active.id);
+    const hostedPlayerId =
+      (active.data.current?.hostedPlayerId as string | undefined) ??
+      String(active.id);
     const updatedCourts = getUpdatedCourts(
       previousCourts,
       hostedPlayerId,
@@ -155,7 +158,8 @@ export default function Match() {
     } catch (error) {
       setCourts(previousCourts);
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     }
   };
@@ -172,7 +176,7 @@ export default function Match() {
             <header>
               <h5>Players</h5>
             </header>
-            <main className="border border-red-500 w-full max-w-fit grid grid-cols-2 gap-2 p-2">
+            <main className="border border-red-500 w-[360px] grid grid-cols-2 gap-2 p-2">
               {players.length > 0 ? (
                 players.map((p) => <PlayerCard key={p.id} player={p} />)
               ) : (
@@ -190,7 +194,7 @@ export default function Match() {
                 ))}
                 <button
                   type="button"
-                  className="w-[420px] h-[92px] border cursor-pointer hover:bg-stone-200 rounded-md"
+                  className="w-[420px] h-[120px] border cursor-pointer hover:bg-stone-200 rounded-md"
                 >
                   Add court
                 </button>

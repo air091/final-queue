@@ -17,7 +17,6 @@ export default function Sidebar() {
       const response = await axios.get("http://localhost:4000/api/community", {
         withCredentials: true,
       });
-      console.log(response);
       setCommunities(response.data.communities);
     } catch (error) {
       if (axios.isAxiosError(error))
