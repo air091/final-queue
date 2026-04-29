@@ -84,6 +84,9 @@ export default function Match() {
   const { communityId, hostId } = useParams();
   const [players, setPlayers] = useState<AcceptedPlayers[]>([]);
   const [courts, setCourts] = useState<CourtType[]>([]);
+  const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
+    string | null
+  >(null);
   const sensors = useSensors(useSensor(PointerSensor));
 
   const getPlayersAPI = async () => {
@@ -164,6 +167,26 @@ export default function Match() {
     }
   };
 
+  const handlePlayerDropdown = (playerHostedId: string) => {
+    setPlayerActiveDropdown((prev) =>
+      prev === playerHostedId ? null : playerHostedId,
+    );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const dropdowns = document.querySelectorAll("[data-dropdown]");
+      const clickedInsideDropdown = Array.from(dropdowns).some((el) =>
+        el.contains(target),
+      );
+
+      if (!clickedInsideDropdown) setPlayerActiveDropdown(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <>
       <header>
@@ -178,7 +201,14 @@ export default function Match() {
             </header>
             <main className="border border-red-500 w-[360px] grid grid-cols-2 gap-2 p-2">
               {players.length > 0 ? (
-                players.map((p) => <PlayerCard key={p.id} player={p} />)
+                players.map((p) => (
+                  <PlayerCard
+                    key={p.id}
+                    player={p}
+                    activeDropdown={playerActiveDropdown}
+                    onToggleDropdown={handlePlayerDropdown}
+                  />
+                ))
               ) : (
                 <p>No players yet</p>
               )}

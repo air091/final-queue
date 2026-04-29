@@ -2,14 +2,20 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import type { AcceptedPlayers } from "../../pages/host_pages/Match";
+import PlayerSettingsDropdown from "./PlayerDropdown";
+import { useRef } from "react";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
+  activeDropdown: string | null;
+  onToggleDropdown: (hostedPlayerId: string) => void;
   draggableId?: string;
 };
 
 export default function PlayerCard({
   player,
+  activeDropdown,
+  onToggleDropdown,
   draggableId = `player-list-${player.id}`,
 }: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
@@ -20,6 +26,7 @@ export default function PlayerCard({
         hostedPlayerId: player.id,
       },
     });
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
@@ -42,8 +49,14 @@ export default function PlayerCard({
         </div>
         <span>{player.player.username}</span>
       </div>
-      <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full">
-        <HiOutlineDotsVertical />
+      <div
+        data-dropdown
+        ref={dropdownRef}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="relative cursor-pointer hover:bg-stone-400 p-1 rounded-full"
+      >
+        <HiOutlineDotsVertical onClick={() => onToggleDropdown(player.id)} />
+        {activeDropdown === player.id && <PlayerSettingsDropdown />}
       </div>
     </div>
   );
