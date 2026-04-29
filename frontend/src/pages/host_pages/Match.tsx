@@ -1,7 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { HiOutlineDotsVertical } from "react-icons/hi";
 import { DndContext } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -9,6 +8,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import PlayerCard from "../../components/host_components/PlayerCard";
+import CourtCard from "../../components/host_components/CourtCard";
 
 type PlayerType = {
   id: string;
@@ -27,10 +27,10 @@ type PlayerAssignedInCourt = {
   position: number;
 };
 
-type CourtType = {
+export type CourtType = {
   id: string;
   name: string;
-  assignments: PlayerAssignedInCourt;
+  assignments: PlayerAssignedInCourt[];
 };
 
 export default function Match() {
@@ -115,33 +115,8 @@ export default function Match() {
             {/* court */}
             <div className="flex justify-center gap-3 flex-wrap p-2">
               {courts.map((court) => (
-                <div key={court.id} className="border w-[420px] p-2 rounded-md">
-                  <header className="flex items-center justify-between">
-                    <span>{court.name}</span>
-                    <div className="flex items-center gap-x-2">
-                      {/* <span>{court.}</span> */}
-                      <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
-                        <HiOutlineDotsVertical />
-                      </div>
-                    </div>
-                  </header>
-                  <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3">
-                    <div className="border w-full h-[46px] flex items-center justify-center rounded-md">
-                      <span>Team A</span>
-                    </div>
-                    <div className="border w-full h-[46px] flex items-center justify-center rounded-md">
-                      <span>Team B</span>
-                    </div>
-                    <div className="border w-full h-[46px] flex items-center justify-center rounded-md">
-                      <span>Team A</span>
-                    </div>
-                    <div className="border w-full h-[46px] flex items-center justify-center rounded-md">
-                      <span>Team B</span>
-                    </div>
-                  </main>
-                </div>
+                <CourtCard key={court.id} court={court} players={players} />
               ))}
-
               <button
                 type="button"
                 className="w-[420px] h-[92px] border cursor-pointer hover:bg-stone-200 rounded-md"
