@@ -166,6 +166,78 @@ export const rejectPlayer = async (
   }
 };
 
+type BanPlayerParams = {
+  communityId: string;
+  hostId: string;
+  hostedPlayerId: string;
+};
+
+export const banPlayer = async (
+  request: Request<BanPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, hostedPlayerId } = request.params;
+    if (!communityId || !hostId || !hostedPlayerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const existingPlayer = await prisma.hostedPlayer.findFirst({
+      where: {
+        id: hostedPlayerId,
+        hostId: host.id,
+        status: HostedPlayerStatus.accepted,
+      },
+      select: { id: true },
+    });
+    if (!existingPlayer)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    await prisma.hostedPlayer.update({
+      where: { id: existingPlayer.id },
+      data: { status: HostedPlayerStatus.banned },
+    });
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Player banned" });
+  } catch (error) {
+    console.error("Error accepting player to hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 type AssignPlayerParams = {
   communityId: string;
   hostId: string;
