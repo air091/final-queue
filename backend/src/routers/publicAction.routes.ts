@@ -11,7 +11,7 @@ const router: Router = express.Router();
 router.get("/hosts/available", authenticate, getAvailableHosts);
 
 router.post(
-  "/actions/request/community/:communityId/hosts/:hostId",
+  "/request/community/:communityId/hosts/:hostId",
   authenticate,
   playerRequestToJoinHost,
 );

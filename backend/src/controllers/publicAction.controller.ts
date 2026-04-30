@@ -63,10 +63,10 @@ export const playerRequestToJoinHost = async (
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!communityId)
+    if (!communityId || !hostId)
       return response
         .status(404)
-        .json({ success: false, message: "Community not found" });
+        .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
       where: { id: communityId },
@@ -83,11 +83,6 @@ export const playerRequestToJoinHost = async (
         message: "Admin cannot request to join their own host",
       });
     }
-
-    if (!hostId)
-      return response
-        .status(404)
-        .json({ success: false, message: "Host not found" });
 
     const host = await prisma.host.findUnique({
       where: { id: hostId, communityId: community.id },
