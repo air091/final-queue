@@ -11,7 +11,7 @@ import {
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
 
-type PlayerType = {
+export type PlayerType = {
   id: string;
   username: string;
   profileUrl: string;

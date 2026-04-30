@@ -53,10 +53,17 @@ export default function PlayerCard({
         data-dropdown
         ref={dropdownRef}
         onPointerDown={(e) => e.stopPropagation()}
-        className="relative cursor-pointer hover:bg-stone-400 p-1 rounded-full"
+        className="relative"
       >
-        <HiOutlineDotsVertical onClick={() => onToggleDropdown(player.id)} />
-        {activeDropdown === player.id && <PlayerSettingsDropdown />}
+        <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
+          <HiOutlineDotsVertical onClick={() => onToggleDropdown(player.id)} />
+        </div>
+        {activeDropdown === player.id && (
+          <PlayerSettingsDropdown
+            hostedPlayerId={player.id}
+            player={player.player}
+          />
+        )}
       </div>
     </div>
   );
