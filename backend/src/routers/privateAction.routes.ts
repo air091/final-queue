@@ -9,19 +9,19 @@ import {
 const router: Router = express.Router();
 
 router.post(
-  "/actions/accept/community/:communityId/hosts/:hostId/:playerId",
+  "/accept/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   acceptPlayer,
 );
 
 router.post(
-  "/actions/reject/community/:communityId/hosts/:hostId/:playerId",
+  "/reject/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   rejectPlayer,
 );
 
 router.post(
-  "/actions/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
+  "/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
   authenticate,
   assignPlayerToCourt,
 );

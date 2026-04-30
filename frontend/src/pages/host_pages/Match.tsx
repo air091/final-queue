@@ -126,7 +126,7 @@ export default function Match() {
     position: number,
   ) => {
     await axios.post(
-      `http://localhost:4000/api/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+      `http://localhost:4000/api/private/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
       { position },
       { withCredentials: true },
     );

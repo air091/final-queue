@@ -55,7 +55,7 @@ export default function Players() {
 
     try {
       await axios.post(
-        `http://localhost:4000/api/actions/accept/community/${communityId}/hosts/${hostId}/${playerId}`,
+        `http://localhost:4000/api/private/actions/accept/community/${communityId}/hosts/${hostId}/${playerId}`,
         {},
         { withCredentials: true },
       );
@@ -79,7 +79,7 @@ export default function Players() {
 
     try {
       await axios.post(
-        `http://localhost:4000/api/actions/reject/community/${communityId}/hosts/${hostId}/${playerId}`,
+        `http://localhost:4000/api/private/actions/reject/community/${communityId}/hosts/${hostId}/${playerId}`,
         {},
         { withCredentials: true },
       );
