@@ -4,8 +4,15 @@ import prisma from "../lib/prisma.js";
 import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
 // HOST ADMIN ACTION
+
+type HostedPlayerParams = {
+  communityId: string;
+  hostId: string;
+  playerId: string; // requests
+};
+
 export const acceptPlayer = async (
-  request: Request<Params>,
+  request: Request<HostedPlayerParams>,
   response: Response,
 ) => {
   try {
@@ -65,7 +72,7 @@ export const acceptPlayer = async (
       where: {
         hostId_playerId: {
           hostId: host.id,
-          playerId: playerId,
+          playerId: existing.playerId,
         },
       },
       data: {
@@ -86,7 +93,7 @@ export const acceptPlayer = async (
 };
 
 export const rejectPlayer = async (
-  request: Request<Params>,
+  request: Request<HostedPlayerParams>,
   response: Response,
 ) => {
   try {
@@ -132,6 +139,7 @@ export const rejectPlayer = async (
           hostId: host.id,
           playerId: playerId,
         },
+        status: HostedPlayerStatus.requested,
       },
     });
 
@@ -146,7 +154,7 @@ export const rejectPlayer = async (
       where: {
         hostId_playerId: {
           hostId: host.id,
-          playerId: playerId,
+          playerId: existing.playerId,
         },
       },
       data: {
