@@ -221,10 +221,16 @@ export const banPlayer = async (
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    await prisma.hostedPlayer.update({
-      where: { id: existingPlayer.id },
-      data: { status: HostedPlayerStatus.banned },
-    });
+    await prisma.$transaction([
+      prisma.hostedPlayer.update({
+        where: { id: existingPlayer.id },
+        data: { status: HostedPlayerStatus.banned },
+      }),
+
+      prisma.courtAssignment.deleteMany({
+        where: { hostedPlayerId: existingPlayer.id },
+      }),
+    ]);
 
     return response
       .status(200)

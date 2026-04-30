@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   acceptPlayer,
   assignPlayerToCourt,
+  banPlayer,
   rejectPlayer,
 } from "../controllers/privateAction.controller.js";
 
@@ -18,6 +19,12 @@ router.post(
   "/reject/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   rejectPlayer,
+);
+
+router.post(
+  "/ban/community/:communityId/hosts/:hostId/:playerId",
+  authenticate,
+  banPlayer,
 );
 
 router.post(
