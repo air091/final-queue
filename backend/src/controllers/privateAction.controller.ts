@@ -133,12 +133,10 @@ export const rejectPlayer = async (
         .json({ success: false, message: "Host not found" });
 
     // player
-    const existing = await prisma.hostedPlayer.findUnique({
+    const existing = await prisma.hostedPlayer.findFirst({
       where: {
-        hostId_playerId: {
-          hostId: host.id,
-          playerId: playerId,
-        },
+        hostId: host.id,
+        playerId: playerId,
         status: HostedPlayerStatus.requested,
       },
     });
@@ -151,15 +149,8 @@ export const rejectPlayer = async (
     }
 
     await prisma.hostedPlayer.update({
-      where: {
-        hostId_playerId: {
-          hostId: host.id,
-          playerId: existing.playerId,
-        },
-      },
-      data: {
-        status: HostedPlayerStatus.rejected,
-      },
+      where: { id: existing.id },
+      data: { status: HostedPlayerStatus.rejected },
     });
 
     return response
@@ -177,7 +168,7 @@ export const rejectPlayer = async (
 type BanPlayerParams = {
   communityId: string;
   hostId: string;
-  hostedPlayerId: string;
+  playerId: string;
 };
 
 export const banPlayer = async (
@@ -185,8 +176,8 @@ export const banPlayer = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
-    if (!communityId || !hostId || !hostedPlayerId) {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -216,27 +207,27 @@ export const banPlayer = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
-    const existingPlayer = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.hostedPlayer.findFirst({
       where: {
-        id: hostedPlayerId,
         hostId: host.id,
+        playerId: playerId,
         status: HostedPlayerStatus.accepted,
       },
-      select: { id: true },
+      select: { id: true, playerId: true },
     });
-    if (!existingPlayer)
+    if (!existing)
       return response
         .status(404)
         .json({ success: false, message: "Player not found" });
 
     await prisma.$transaction([
       prisma.hostedPlayer.update({
-        where: { id: existingPlayer.id },
+        where: { id: existing.id, playerId: existing.playerId },
         data: { status: HostedPlayerStatus.banned },
       }),
 
       prisma.courtAssignment.deleteMany({
-        where: { hostedPlayerId: existingPlayer.id },
+        where: { hostedPlayerId: existing.id },
       }),
     ]);
 
