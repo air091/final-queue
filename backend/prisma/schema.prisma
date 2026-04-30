@@ -12,14 +12,28 @@ datasource db {
   provider = "postgresql"
 }
 
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+  elite
+}
+
+enum AccountStatus {
+  active
+  waiting
+  inqueue
+  playing
+}
+
 model Account {
   id                    String @id @default(uuid())
-  skillLevel            String?
+  skillLevel            SkillLevel @default(beginner)
   profileUrl            String?
   username              String
   email                 String @unique
   password              String
-  status                String?
+  status                AccountStatus @default(active)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   communities           Community[]
