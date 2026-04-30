@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PlayerCard from "./PlayerCard";
 import type { AcceptedPlayers, CourtType } from "../../pages/host_pages/Match";
+import { useEffect, useState } from "react";
 
 type CourtCardProps = {
   court: CourtType;
@@ -31,6 +32,29 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
       position,
     },
   });
+  const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
+    string | null
+  >(null);
+
+  const handlePlayerDropdown = (playerHostedId: string) => {
+    setPlayerActiveDropdown((prev) =>
+      prev === playerHostedId ? null : playerHostedId,
+    );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const dropdowns = document.querySelectorAll("[data-dropdown]");
+      const clickedInsideDropdown = Array.from(dropdowns).some((el) =>
+        el.contains(target),
+      );
+
+      if (!clickedInsideDropdown) setPlayerActiveDropdown(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div
@@ -44,6 +68,8 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
           <PlayerCard
             player={player}
             draggableId={`court-player-${courtId}-${position}-${player.id}`}
+            activeDropdown={playerActiveDropdown}
+            onToggleDropdown={handlePlayerDropdown}
           />
         </div>
       ) : (
