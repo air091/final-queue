@@ -59,6 +59,8 @@ enum HostStatus {
   unavailable
 }
 
+// HOST RELATIONSHIP
+
 model Host {
   id                    String @id @default(uuid())
   communityId           String
@@ -101,6 +103,8 @@ model HostedPlayer {
   @@index([hostId, status, playerId])
 }
 
+// QUEUE RELATIONSHIP
+
 model Queue {
   id                  String @id @default(uuid())
   hostId              String
@@ -126,6 +130,8 @@ model QueueEntry {
   @@unique([hostedPlayerId])
   @@index([queueId])
 }
+
+// COURT RELATIONSHIP
 
 model Court {
   id                  String @id @default(uuid())
