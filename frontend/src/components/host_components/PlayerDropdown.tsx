@@ -34,7 +34,7 @@ export default function PlayerSettingsDropdown({
   return (
     <div className="absolute top-7 left-0 boZrder p-2 z-50 bg-white rounded-md w-[168px] cursor-default border grid gap-y-2">
       <div>
-        <h2 className="font-semibold text-[12px] text-stone-400 leading-[14px]">
+        <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
           Player settings
         </h2>
         <h4 className="font-semibold">{player.username}</h4>

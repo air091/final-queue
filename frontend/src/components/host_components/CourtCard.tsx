@@ -52,6 +52,7 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
 
       if (!clickedInsideDropdown) setPlayerActiveDropdown(null);
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -70,6 +71,7 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
             draggableId={`court-player-${courtId}-${position}-${player.id}`}
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
+            isInSlot={true}
           />
         </div>
       ) : (

@@ -4,12 +4,14 @@ import { HiOutlineDotsVertical } from "react-icons/hi";
 import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 import PlayerSettingsDropdown from "./PlayerDropdown";
 import { useRef } from "react";
+import { TbArrowBack } from "react-icons/tb";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
   activeDropdown: string | null;
   onToggleDropdown: (hostedPlayerId: string) => void;
   draggableId?: string;
+  isInSlot?: boolean;
 };
 
 export default function PlayerCard({
@@ -17,6 +19,7 @@ export default function PlayerCard({
   activeDropdown,
   onToggleDropdown,
   draggableId = `player-list-${player.id}`,
+  isInSlot = false,
 }: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
     useDraggable({
@@ -49,21 +52,33 @@ export default function PlayerCard({
         </div>
         <span>{player.player.username}</span>
       </div>
-      <div
-        data-dropdown
-        ref={dropdownRef}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="relative"
-      >
-        <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
-          <HiOutlineDotsVertical onClick={() => onToggleDropdown(player.id)} />
-        </div>
-        {activeDropdown === player.id && (
-          <PlayerSettingsDropdown
-            hostedPlayerId={player.id}
-            player={player.player}
-          />
+      <div className="flex items-center">
+        {isInSlot && (
+          <div
+            onPointerDown={(e) => e.stopPropagation()}
+            className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
+          >
+            <TbArrowBack />
+          </div>
         )}
+        <div
+          data-dropdown
+          ref={dropdownRef}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="relative"
+        >
+          <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
+            <HiOutlineDotsVertical
+              onClick={() => onToggleDropdown(player.id)}
+            />
+          </div>
+          {activeDropdown === player.id && (
+            <PlayerSettingsDropdown
+              hostedPlayerId={player.id}
+              player={player.player}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

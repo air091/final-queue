@@ -372,7 +372,8 @@ export const assignPlayerToCourt = async (
 type RemovePlayerFromCourtParams = {
   communityId: string;
   hostId: string;
-  playerId: string;
+  courtId: string;
+  hostedPlayerId: string;
 };
 
 export const removePlayerFromCourt = async (
@@ -380,8 +381,8 @@ export const removePlayerFromCourt = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, playerId } = request.params;
-    if (!communityId || !hostId || !playerId) {
+    const { communityId, hostId, courtId, hostedPlayerId } = request.params;
+    if (!communityId || !hostId || !courtId || !hostedPlayerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -411,15 +412,25 @@ export const removePlayerFromCourt = async (
     if (!host)
       return response
         .status(404)
-        .json({ success: false, message: "Community not found" });
+        .json({ success: false, message: "Host not found" });
+
+    const court = await prisma.court.findFirst({
+      where: { id: courtId, hostId: host.id },
+      select: { id: true },
+    });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
 
     const existing = await prisma.hostedPlayer.findFirst({
       where: {
+        id: hostedPlayerId,
         hostId: host.id,
-        playerId: playerId,
         status: HostedPlayerStatus.accepted,
       },
-      select: { id: true, playerId: true },
+      select: { id: true },
     });
 
     if (!existing)
@@ -427,8 +438,22 @@ export const removePlayerFromCourt = async (
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    await prisma.courtAssignment.deleteMany({
-      where: { hostedPlayerId: existing.id },
+    const assignment = await prisma.courtAssignment.findFirst({
+      where: {
+        courtId: court.id,
+        hostedPlayerId: existing.id,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment)
+      return response.status(404).json({
+        success: false,
+        message: "Player is not assigned to this court",
+      });
+
+    await prisma.courtAssignment.delete({
+      where: { id: assignment.id },
     });
 
     return response

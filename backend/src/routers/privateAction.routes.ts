@@ -5,6 +5,7 @@ import {
   assignPlayerToCourt,
   banPlayer,
   rejectPlayer,
+  removePlayerFromCourt,
 } from "../controllers/privateAction.controller.js";
 
 const router: Router = express.Router();
@@ -31,6 +32,12 @@ router.post(
   "/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
   authenticate,
   assignPlayerToCourt,
+);
+
+router.post(
+  "/courts/remove/slot/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
+  authenticate,
+  removePlayerFromCourt,
 );
 
 export default router;
