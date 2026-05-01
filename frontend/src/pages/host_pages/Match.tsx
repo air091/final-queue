@@ -35,6 +35,7 @@ export type AcceptedPlayers = {
   id: string;
   status: "accepted";
   matchStatus: MatchPlayerStatus;
+  timerStartedAt: string | null;
   player: PlayerType;
   queueEntry: QueueEntryType | null;
   courtAssignment: CourtAssignmentType | null;
@@ -49,6 +50,8 @@ type PlayerAssignedInCourt = {
 export type CourtType = {
   id: string;
   name: string;
+  startedAt: string | null;
+  endedAt: string | null;
   assignments: PlayerAssignedInCourt[];
 };
 
@@ -67,6 +70,12 @@ const getDerivedMatchStatus = (
   if (player.queueEntry) return "inQueue";
   return "waiting";
 };
+
+const normalizeAcceptedPlayers = (players: AcceptedPlayers[]) =>
+  players.map((player) => ({
+    ...player,
+    matchStatus: player.matchStatus ?? getDerivedMatchStatus(player),
+  }));
 
 const getUpdatedCourts = (
   currentCourts: CourtType[],
@@ -124,6 +133,29 @@ const getCourtsWithoutPlayer = (
       : court,
   );
 
+const getStartedCourt = (currentCourts: CourtType[], courtId: string) =>
+  currentCourts.map((court) =>
+    court.id === courtId
+      ? {
+          ...court,
+          startedAt: new Date().toISOString(),
+          endedAt: null,
+        }
+      : court,
+  );
+
+const getEndedCourt = (currentCourts: CourtType[], courtId: string) =>
+  currentCourts.map((court) =>
+    court.id === courtId
+      ? {
+          ...court,
+          startedAt: null,
+          endedAt: new Date().toISOString(),
+          assignments: [],
+        }
+      : court,
+  );
+
 const getPlayersWithCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
   hostedPlayerId: string,
@@ -143,6 +175,26 @@ const getPlayersWithCourtAssignment = (
         }
       : player,
   );
+
+const getPlayersWithResetTimer = (
+  currentPlayers: AcceptedPlayers[],
+  hostedPlayerIds: string[],
+  nextStatus: MatchPlayerStatus,
+) => {
+  const now = new Date().toISOString();
+
+  return currentPlayers.map((player) =>
+    hostedPlayerIds.includes(player.id)
+      ? {
+          ...player,
+          courtAssignment:
+            nextStatus === "playing" ? player.courtAssignment : null,
+          matchStatus: nextStatus,
+          timerStartedAt: now,
+        }
+      : player,
+  );
+};
 
 const getPlayersWithoutCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
@@ -189,7 +241,7 @@ export default function Match() {
         `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/players`,
         { withCredentials: true },
       );
-      setPlayers(response.data.acceptedPlayers);
+      setPlayers(normalizeAcceptedPlayers(response.data.acceptedPlayers));
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
       else console.error(error);
@@ -235,6 +287,24 @@ export default function Match() {
       {},
       { withCredentials: true },
     );
+  };
+
+  const startCourtGameAPI = async (courtId: string) => {
+    await axios.post(
+      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/start`,
+      {},
+      { withCredentials: true },
+    );
+  };
+
+  const endCourtGameAPI = async (courtId: string) => {
+    const response = await axios.post(
+      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/end`,
+      {},
+      { withCredentials: true },
+    );
+
+    return response.data as { hostedPlayerIds: string[] };
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -315,6 +385,63 @@ export default function Match() {
     }
   };
 
+  const handleStartCourtGame = async (courtId: string) => {
+    const previousCourts = courts;
+    const startedCourt = previousCourts.find((court) => court.id === courtId);
+    const hostedPlayerIds =
+      startedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
+      [];
+    const previousPlayers = players;
+
+    setCourts(getStartedCourt(previousCourts, courtId));
+    setPlayers(
+      getPlayersWithResetTimer(previousPlayers, hostedPlayerIds, "playing"),
+    );
+
+    try {
+      await startCourtGameAPI(courtId);
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
+  const handleEndCourtGame = async (courtId: string) => {
+    const previousCourts = courts;
+    const previousPlayers = players;
+    const endedCourt = previousCourts.find((court) => court.id === courtId);
+    const hostedPlayerIds =
+      endedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
+      [];
+
+    setCourts(getEndedCourt(previousCourts, courtId));
+    setPlayers(
+      getPlayersWithResetTimer(previousPlayers, hostedPlayerIds, "waiting"),
+    );
+
+    try {
+      const response = await endCourtGameAPI(courtId);
+      setPlayers((currentPlayers) =>
+        getPlayersWithResetTimer(
+          currentPlayers,
+          response.hostedPlayerIds,
+          "waiting",
+        ),
+      );
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -332,7 +459,7 @@ export default function Match() {
   const filteredPlayers = players.filter((player) =>
     activePlayerStatus === "all"
       ? true
-      : getDerivedMatchStatus(player) === activePlayerStatus,
+      : player.matchStatus === activePlayerStatus,
   );
 
   return (
@@ -389,6 +516,8 @@ export default function Match() {
                     court={court}
                     players={players}
                     onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
+                    onStartCourtGame={handleStartCourtGame}
+                    onEndCourtGame={handleEndCourtGame}
                   />
                 ))}
                 <button

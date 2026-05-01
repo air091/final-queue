@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 import PlayerSettingsDropdown from "./PlayerDropdown";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TbArrowBack } from "react-icons/tb";
 
 type PlayerCardProps = {
@@ -34,11 +34,36 @@ export default function PlayerCard({
       },
     });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const handleRemoveClick = () => {
     if (!courtId || !onRemoveFromCourt) return;
     onRemoveFromCourt(player.id, courtId);
   };
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const formattedTimer = (() => {
+    if (!player.timerStartedAt) return "00:00:00";
+
+    const startedAt = new Date(player.timerStartedAt).getTime();
+    const elapsedMs = Math.max(0, now - startedAt);
+    const totalSeconds = Math.floor(elapsedMs / 1000);
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+      2,
+      "0",
+    );
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+
+    return `${hours}:${minutes}:${seconds}`;
+  })();
 
   return (
     <div
@@ -59,7 +84,14 @@ export default function PlayerCard({
             className="block w-full h-full object-contain rounded-full"
           />
         </div>
-        <span>{player.player.username}</span>
+        <div>
+          <span className="block font-semibold leading-[12px]">
+            {player.player.username}
+          </span>
+          <span className="block font-semibold text-[10px] text-stone-500">
+            {formattedTimer}
+          </span>
+        </div>
       </div>
       <div className="flex items-center">
         {isInSlot && (

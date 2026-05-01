@@ -88,6 +88,7 @@ model HostedPlayer {
   hostId               String
   playerId             String
   status               HostedPlayerStatus @default(requested)
+  timerStartedAt       DateTime?
   updatedAt            DateTime @updatedAt
 
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -97,6 +98,8 @@ model HostedPlayer {
   // waiting  => no queueEntry and no courtAssignment
   // inQueue  => queueEntry exists
   // playing  => courtAssignment exists
+  // timerStartedAt continues from waiting into queue,
+  // resets when a game starts, and resets again when a game ends.
   queueEntry           QueueEntry?
   courtAssignment      CourtAssignment?
 

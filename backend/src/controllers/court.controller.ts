@@ -42,6 +42,8 @@ export const getMatchCourts = async (
       select: {
         id: true,
         name: true,
+        startedAt: true,
+        endedAt: true,
         assignments: {
           select: {
             id: true,
@@ -57,6 +59,230 @@ export const getMatchCourts = async (
       .json({ success: true, message: "Court fetched success", courts });
   } catch (error) {
     console.error("Error fetching match court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+type StartCourtParams = {
+  communityId: string;
+  hostId: string;
+  courtId: string;
+};
+
+export const startMatchCourt = async (
+  request: Request<StartCourtParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, courtId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !courtId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const court = await prisma.court.findFirst({
+      where: { id: courtId, hostId: host.id },
+      select: {
+        id: true,
+        startedAt: true,
+        assignments: {
+          select: {
+            position: true,
+            hostedPlayerId: true,
+          },
+        },
+      },
+    });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
+
+    if (court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Game already started",
+      });
+
+    const hasTeamAPlayer = court.assignments.some(
+      (assignment) => assignment.position === 1 || assignment.position === 3,
+    );
+    const hasTeamBPlayer = court.assignments.some(
+      (assignment) => assignment.position === 2 || assignment.position === 4,
+    );
+
+    if (!hasTeamAPlayer || !hasTeamBPlayer)
+      return response.status(400).json({
+        success: false,
+        message: "Court needs at least one player on Team A and Team B",
+      });
+
+    const now = new Date();
+    const hostedPlayerIds = court.assignments.map(
+      (assignment) => assignment.hostedPlayerId,
+    );
+
+    const [, startedCourt] = await prisma.$transaction([
+      prisma.hostedPlayer.updateMany({
+        where: { id: { in: hostedPlayerIds } },
+        data: { timerStartedAt: now },
+      }),
+      prisma.court.update({
+        where: { id: court.id },
+        data: {
+          startedAt: now,
+          endedAt: null,
+        },
+        select: {
+          id: true,
+          startedAt: true,
+          endedAt: true,
+        },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Game started",
+      court: startedCourt,
+    });
+  } catch (error) {
+    console.error("Error starting match court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const endMatchCourt = async (
+  request: Request<StartCourtParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, courtId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !courtId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const court = await prisma.court.findFirst({
+      where: { id: courtId, hostId: host.id },
+      select: {
+        id: true,
+        startedAt: true,
+        assignments: {
+          select: {
+            id: true,
+            hostedPlayerId: true,
+          },
+        },
+      },
+    });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
+
+    if (!court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Game has not started",
+      });
+
+    const now = new Date();
+    const hostedPlayerIds = court.assignments.map(
+      (assignment) => assignment.hostedPlayerId,
+    );
+    const assignmentIds = court.assignments.map((assignment) => assignment.id);
+
+    const [, endedCourt] = await prisma.$transaction([
+      prisma.hostedPlayer.updateMany({
+        where: { id: { in: hostedPlayerIds } },
+        data: { timerStartedAt: now },
+      }),
+      prisma.court.update({
+        where: { id: court.id },
+        data: {
+          startedAt: null,
+          endedAt: now,
+        },
+        select: {
+          id: true,
+          startedAt: true,
+          endedAt: true,
+        },
+      }),
+      prisma.courtAssignment.deleteMany({
+        where: { id: { in: assignmentIds } },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Game ended",
+      court: endedCourt,
+      hostedPlayerIds,
+    });
+  } catch (error) {
+    console.error("Error ending match court host:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

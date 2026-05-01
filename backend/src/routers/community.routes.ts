@@ -18,8 +18,10 @@ import {
   createMatchCourt,
   createQueueCourt,
   deleteMatchCourt,
+  endMatchCourt,
   getMatchCourts,
   getQueueCourts,
+  startMatchCourt,
 } from "../controllers/court.controller.js";
 
 const router: Router = express.Router();
@@ -56,6 +58,16 @@ router.delete(
   "/:communityId/hosts/:hostId/courts/:courtId",
   authenticate,
   deleteMatchCourt,
+);
+router.post(
+  "/:communityId/hosts/:hostId/courts/:courtId/start",
+  authenticate,
+  startMatchCourt,
+);
+router.post(
+  "/:communityId/hosts/:hostId/courts/:courtId/end",
+  authenticate,
+  endMatchCourt,
 );
 
 // QUEUE

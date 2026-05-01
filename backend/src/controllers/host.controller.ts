@@ -330,6 +330,7 @@ export const getHostWithPlayers = async (
         select: {
           id: true,
           status: true,
+          timerStartedAt: true,
           player: {
             select: {
               id: true,

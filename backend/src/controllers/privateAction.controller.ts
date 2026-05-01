@@ -77,6 +77,7 @@ export const acceptPlayer = async (
       },
       data: {
         status: HostedPlayerStatus.accepted,
+        timerStartedAt: new Date(),
       },
     });
 

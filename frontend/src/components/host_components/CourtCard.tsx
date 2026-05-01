@@ -8,6 +8,8 @@ type CourtCardProps = {
   court: CourtType;
   players: AcceptedPlayers[];
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
+  onStartCourtGame: (courtId: string) => void;
+  onEndCourtGame: (courtId: string) => void;
 };
 
 const COURT_SLOTS = [
@@ -95,6 +97,8 @@ export default function CourtCard({
   court,
   players,
   onRemovePlayerFromCourt,
+  onStartCourtGame,
+  onEndCourtGame,
 }: CourtCardProps) {
   const getAssignedPlayer = (position: number) => {
     const assignment = court.assignments.find(
@@ -109,12 +113,42 @@ export default function CourtCard({
     return COURT_SLOTS.find((slot) => slot.position === position)?.label ?? "";
   };
 
+  const hasTeamAPlayer = court.assignments.some(
+    (assignment) => assignment.position === 1 || assignment.position === 3,
+  );
+  const hasTeamBPlayer = court.assignments.some(
+    (assignment) => assignment.position === 2 || assignment.position === 4,
+  );
+  const canStartGame = !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
+
   return (
     <div className="border w-[420px] p-2 rounded-md">
       <header className="flex items-center justify-between">
-        <span>{court.name}</span>
+        <div className="grid">
+          <span>{court.name}</span>
+          {court.startedAt && (
+            <span className="text-[12px] text-green-700">Game in progress</span>
+          )}
+        </div>
         <div className="flex items-center gap-x-2">
-          {/* <span>{court.}</span> */}
+          {canStartGame && (
+            <button
+              type="button"
+              onClick={() => onStartCourtGame(court.id)}
+              className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700"
+            >
+              Start game
+            </button>
+          )}
+          {court.startedAt && (
+            <button
+              type="button"
+              onClick={() => onEndCourtGame(court.id)}
+              className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500"
+            >
+              End game
+            </button>
+          )}
           <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
             <HiOutlineDotsVertical />
           </div>
