@@ -12,6 +12,8 @@ type PlayerCardProps = {
   onToggleDropdown: (hostedPlayerId: string) => void;
   draggableId?: string;
   isInSlot?: boolean;
+  courtId?: string;
+  onRemoveFromCourt?: (hostedPlayerId: string, courtId: string) => void;
 };
 
 export default function PlayerCard({
@@ -20,6 +22,8 @@ export default function PlayerCard({
   onToggleDropdown,
   draggableId = `player-list-${player.id}`,
   isInSlot = false,
+  courtId,
+  onRemoveFromCourt,
 }: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
     useDraggable({
@@ -30,6 +34,11 @@ export default function PlayerCard({
       },
     });
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleRemoveClick = () => {
+    if (!courtId || !onRemoveFromCourt) return;
+    onRemoveFromCourt(player.id, courtId);
+  };
 
   return (
     <div
@@ -54,12 +63,14 @@ export default function PlayerCard({
       </div>
       <div className="flex items-center">
         {isInSlot && (
-          <div
+          <button
+            type="button"
             onPointerDown={(e) => e.stopPropagation()}
+            onClick={handleRemoveClick}
             className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
           >
             <TbArrowBack />
-          </div>
+          </button>
         )}
         <div
           data-dropdown
@@ -73,10 +84,7 @@ export default function PlayerCard({
             />
           </div>
           {activeDropdown === player.id && (
-            <PlayerSettingsDropdown
-              hostedPlayerId={player.id}
-              player={player.player}
-            />
+            <PlayerSettingsDropdown player={player.player} />
           )}
         </div>
       </div>

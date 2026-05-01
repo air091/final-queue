@@ -5,12 +5,10 @@ import { useParams } from "react-router-dom";
 // type PlayerType
 
 type PlayerDropdownProps = {
-  hostedPlayerId: string;
   player: PlayerType;
 };
 
 export default function PlayerSettingsDropdown({
-  hostedPlayerId,
   player,
 }: PlayerDropdownProps) {
   const { communityId, hostId } = useParams();

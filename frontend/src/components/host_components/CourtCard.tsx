@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 type CourtCardProps = {
   court: CourtType;
   players: AcceptedPlayers[];
+  onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
 };
 
 const COURT_SLOTS = [
@@ -21,9 +22,16 @@ type CourtSlotProps = {
   position: number;
   label: string;
   player?: AcceptedPlayers;
+  onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
 };
 
-function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
+function CourtSlot({
+  courtId,
+  position,
+  label,
+  player,
+  onRemovePlayerFromCourt,
+}: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `court-slot-${courtId}-${position}`,
     data: {
@@ -71,7 +79,9 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
             draggableId={`court-player-${courtId}-${position}-${player.id}`}
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
-            isInSlot={true}
+            isInSlot
+            courtId={courtId}
+            onRemoveFromCourt={onRemovePlayerFromCourt}
           />
         </div>
       ) : (
@@ -81,7 +91,11 @@ function CourtSlot({ courtId, position, label, player }: CourtSlotProps) {
   );
 }
 
-export default function CourtCard({ court, players }: CourtCardProps) {
+export default function CourtCard({
+  court,
+  players,
+  onRemovePlayerFromCourt,
+}: CourtCardProps) {
   const getAssignedPlayer = (position: number) => {
     const assignment = court.assignments.find(
       (item) => item.position === position,
@@ -114,6 +128,7 @@ export default function CourtCard({ court, players }: CourtCardProps) {
             position={slot.position}
             label={getSlotLabel(slot.position)}
             player={getAssignedPlayer(slot.position)}
+            onRemovePlayerFromCourt={onRemovePlayerFromCourt}
           />
         ))}
       </main>

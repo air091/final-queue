@@ -80,6 +80,22 @@ const getUpdatedCourts = (
     };
   });
 
+const getCourtsWithoutPlayer = (
+  currentCourts: CourtType[],
+  hostedPlayerId: string,
+  courtId: string,
+) =>
+  currentCourts.map((court) =>
+    court.id === courtId
+      ? {
+          ...court,
+          assignments: court.assignments.filter(
+            (assignment) => assignment.hostedPlayerId !== hostedPlayerId,
+          ),
+        }
+      : court,
+  );
+
 export default function Match() {
   const { communityId, hostId } = useParams();
   const [players, setPlayers] = useState<AcceptedPlayers[]>([]);
@@ -132,6 +148,17 @@ export default function Match() {
     );
   };
 
+  const removePlayerFromCourtAPI = async (
+    hostedPlayerId: string,
+    courtId: string,
+  ) => {
+    await axios.post(
+      `http://localhost:4000/api/private/actions/courts/remove/slot/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+      {},
+      { withCredentials: true },
+    );
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
@@ -173,6 +200,30 @@ export default function Match() {
     );
   };
 
+  const handleRemovePlayerFromCourt = async (
+    hostedPlayerId: string,
+    courtId: string,
+  ) => {
+    const previousCourts = courts;
+    const updatedCourts = getCourtsWithoutPlayer(
+      previousCourts,
+      hostedPlayerId,
+      courtId,
+    );
+
+    setCourts(updatedCourts);
+
+    try {
+      await removePlayerFromCourtAPI(hostedPlayerId, courtId);
+    } catch (error) {
+      setCourts(previousCourts);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -198,6 +249,20 @@ export default function Match() {
           <div className="border w-full max-w-fit">
             <header>
               <h5>Players</h5>
+              <div className="flex items-center justify-between border">
+                <button className="hover:bg-stone-400 cursor-pointer">
+                  All
+                </button>
+                <button className="hover:bg-stone-400 cursor-pointer">
+                  Waiting
+                </button>
+                <button className="hover:bg-stone-400 cursor-pointer">
+                  In queue
+                </button>
+                <button className="hover:bg-stone-400 cursor-pointer">
+                  Playing
+                </button>
+              </div>
             </header>
             <main className="border border-red-500 w-[360px] grid grid-cols-2 gap-2 p-2">
               {players.length > 0 ? (
@@ -220,7 +285,12 @@ export default function Match() {
               {/* court */}
               <div className="flex justify-center gap-3 flex-wrap p-2">
                 {courts.map((court) => (
-                  <CourtCard key={court.id} court={court} players={players} />
+                  <CourtCard
+                    key={court.id}
+                    court={court}
+                    players={players}
+                    onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
+                  />
                 ))}
                 <button
                   type="button"
