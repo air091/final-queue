@@ -3,6 +3,15 @@ import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
 import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
+const getMatchPlayerStatus = (player: {
+  queueEntry: { id: string } | null;
+  courtAssignment: { id: string } | null;
+}) => {
+  if (player.courtAssignment) return "playing";
+  if (player.queueEntry) return "inQueue";
+  return "waiting";
+};
+
 export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
@@ -279,7 +288,7 @@ export const getHostWithPlayers = async (
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!communityId && !hostId)
+    if (!communityId || !hostId)
       return response
         .status(400)
         .json({ success: false, message: "Missing required params" });
@@ -316,15 +325,30 @@ export const getHostWithPlayers = async (
       prisma.hostedPlayer.findMany({
         where: {
           hostId,
-          status: "accepted",
+          status: HostedPlayerStatus.accepted,
         },
         select: {
           id: true,
+          status: true,
           player: {
             select: {
               id: true,
               username: true,
               profileUrl: true,
+            },
+          },
+          queueEntry: {
+            select: {
+              id: true,
+              queueId: true,
+              position: true,
+            },
+          },
+          courtAssignment: {
+            select: {
+              id: true,
+              courtId: true,
+              position: true,
             },
           },
         },
@@ -340,7 +364,10 @@ export const getHostWithPlayers = async (
       success: true,
       message: "Host retrieved successfully",
       ...host,
-      acceptedPlayers,
+      acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
+        ...acceptedPlayer,
+        matchStatus: getMatchPlayerStatus(acceptedPlayer),
+      })),
     });
   } catch (error) {
     console.error("Error getting host with players:", error);

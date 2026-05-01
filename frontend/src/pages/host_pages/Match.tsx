@@ -11,15 +11,33 @@ import {
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
 
+export type MatchPlayerStatus = "waiting" | "inQueue" | "playing";
+
 export type PlayerType = {
   id: string;
   username: string;
   profileUrl: string;
 };
 
+type QueueEntryType = {
+  id: string;
+  queueId: string;
+  position: number;
+};
+
+type CourtAssignmentType = {
+  id: string;
+  courtId: string;
+  position: number;
+};
+
 export type AcceptedPlayers = {
   id: string;
+  status: "accepted";
+  matchStatus: MatchPlayerStatus;
   player: PlayerType;
+  queueEntry: QueueEntryType | null;
+  courtAssignment: CourtAssignmentType | null;
 };
 
 type PlayerAssignedInCourt = {
@@ -38,6 +56,16 @@ type CourtDropData = {
   type: "court-slot";
   courtId: string;
   position: number;
+};
+
+type PlayerStatusFilter = "all" | MatchPlayerStatus;
+
+const getDerivedMatchStatus = (
+  player: Pick<AcceptedPlayers, "queueEntry" | "courtAssignment">,
+): MatchPlayerStatus => {
+  if (player.courtAssignment) return "playing";
+  if (player.queueEntry) return "inQueue";
+  return "waiting";
 };
 
 const getUpdatedCourts = (
@@ -96,10 +124,60 @@ const getCourtsWithoutPlayer = (
       : court,
   );
 
+const getPlayersWithCourtAssignment = (
+  currentPlayers: AcceptedPlayers[],
+  hostedPlayerId: string,
+  courtId: string,
+  position: number,
+) =>
+  currentPlayers.map((player) =>
+    player.id === hostedPlayerId
+      ? {
+          ...player,
+          courtAssignment: {
+            id: player.courtAssignment?.id ?? `${courtId}-${hostedPlayerId}-${position}`,
+            courtId,
+            position,
+          },
+          matchStatus: "playing" as MatchPlayerStatus,
+        }
+      : player,
+  );
+
+const getPlayersWithoutCourtAssignment = (
+  currentPlayers: AcceptedPlayers[],
+  hostedPlayerId: string,
+) =>
+  currentPlayers.map((player) => {
+    if (player.id !== hostedPlayerId) return player;
+
+    const nextPlayer = {
+      ...player,
+      courtAssignment: null,
+    };
+
+    return {
+      ...nextPlayer,
+      matchStatus: getDerivedMatchStatus(nextPlayer),
+    };
+  });
+
+const PLAYER_STATUS_FILTERS: Array<{
+  label: string;
+  value: PlayerStatusFilter;
+}> = [
+  { label: "All", value: "all" },
+  { label: "Waiting", value: "waiting" },
+  { label: "In queue", value: "inQueue" },
+  { label: "Playing", value: "playing" },
+];
+
 export default function Match() {
   const { communityId, hostId } = useParams();
   const [players, setPlayers] = useState<AcceptedPlayers[]>([]);
   const [courts, setCourts] = useState<CourtType[]>([]);
+  const [activePlayerStatus, setActivePlayerStatus] =
+    useState<PlayerStatusFilter>("waiting");
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
   >(null);
@@ -167,6 +245,7 @@ export default function Match() {
     if (dropData?.type !== "court-slot") return;
 
     const previousCourts = courts;
+    const previousPlayers = players;
     const hostedPlayerId =
       (active.data.current?.hostedPlayerId as string | undefined) ??
       String(active.id);
@@ -178,6 +257,14 @@ export default function Match() {
     );
 
     setCourts(updatedCourts);
+    setPlayers(
+      getPlayersWithCourtAssignment(
+        previousPlayers,
+        hostedPlayerId,
+        dropData.courtId,
+        dropData.position,
+      ),
+    );
 
     try {
       await assignPlayerToCourtAPI(
@@ -187,6 +274,7 @@ export default function Match() {
       );
     } catch (error) {
       setCourts(previousCourts);
+      setPlayers(previousPlayers);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -205,6 +293,7 @@ export default function Match() {
     courtId: string,
   ) => {
     const previousCourts = courts;
+    const previousPlayers = players;
     const updatedCourts = getCourtsWithoutPlayer(
       previousCourts,
       hostedPlayerId,
@@ -212,11 +301,13 @@ export default function Match() {
     );
 
     setCourts(updatedCourts);
+    setPlayers(getPlayersWithoutCourtAssignment(previousPlayers, hostedPlayerId));
 
     try {
       await removePlayerFromCourtAPI(hostedPlayerId, courtId);
     } catch (error) {
       setCourts(previousCourts);
+      setPlayers(previousPlayers);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -238,6 +329,12 @@ export default function Match() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const filteredPlayers = players.filter((player) =>
+    activePlayerStatus === "all"
+      ? true
+      : getDerivedMatchStatus(player) === activePlayerStatus,
+  );
+
   return (
     <>
       <header>
@@ -250,23 +347,25 @@ export default function Match() {
             <header>
               <h5>Players</h5>
               <div className="flex items-center justify-between border">
-                <button className="hover:bg-stone-400 cursor-pointer">
-                  All
-                </button>
-                <button className="hover:bg-stone-400 cursor-pointer">
-                  Waiting
-                </button>
-                <button className="hover:bg-stone-400 cursor-pointer">
-                  In queue
-                </button>
-                <button className="hover:bg-stone-400 cursor-pointer">
-                  Playing
-                </button>
+                {PLAYER_STATUS_FILTERS.map((playerStatus) => (
+                  <button
+                    key={playerStatus.value}
+                    type="button"
+                    onClick={() => setActivePlayerStatus(playerStatus.value)}
+                    className={`cursor-pointer px-2 py-1 text-[14px] w-full ${
+                      activePlayerStatus === playerStatus.value
+                        ? "bg-stone-300"
+                        : "hover:bg-stone-400"
+                    }`}
+                  >
+                    {playerStatus.label}
+                  </button>
+                ))}
               </div>
             </header>
             <main className="border border-red-500 w-[360px] grid grid-cols-2 gap-2 p-2">
-              {players.length > 0 ? (
-                players.map((p) => (
+              {filteredPlayers.length > 0 ? (
+                filteredPlayers.map((p) => (
                   <PlayerCard
                     key={p.id}
                     player={p}
@@ -275,7 +374,7 @@ export default function Match() {
                   />
                 ))
               ) : (
-                <p>No players yet</p>
+                <p>No players in this status</p>
               )}
             </main>
           </div>

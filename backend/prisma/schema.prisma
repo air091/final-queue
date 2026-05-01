@@ -21,9 +21,6 @@ enum SkillLevel {
 
 enum AccountStatus {
   active
-  waiting
-  inqueue
-  playing
 }
 
 model Account {
@@ -96,6 +93,10 @@ model HostedPlayer {
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   player               Account @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  // Match presence is derived:
+  // waiting  => no queueEntry and no courtAssignment
+  // inQueue  => queueEntry exists
+  // playing  => courtAssignment exists
   queueEntry           QueueEntry?
   courtAssignment      CourtAssignment?
 
