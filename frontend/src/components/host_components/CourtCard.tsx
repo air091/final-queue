@@ -125,7 +125,7 @@ export default function CourtCard({
     <div className="border w-[420px] p-2 rounded-md">
       <header className="flex items-center justify-between">
         <div className="grid">
-          <span>{court.name}</span>
+          <span className="leading-[12px] font-semibold">{court.name}</span>
           {court.startedAt && (
             <span className="text-[12px] text-green-700">Game in progress</span>
           )}
