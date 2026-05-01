@@ -368,3 +368,77 @@ export const assignPlayerToCourt = async (
     });
   }
 };
+
+type RemovePlayerFromCourtParams = {
+  communityId: string;
+  hostId: string;
+  playerId: string;
+};
+
+export const removePlayerFromCourt = async (
+  request: Request<RemovePlayerFromCourtParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const existing = await prisma.hostedPlayer.findFirst({
+      where: {
+        hostId: host.id,
+        playerId: playerId,
+        status: HostedPlayerStatus.accepted,
+      },
+      select: { id: true, playerId: true },
+    });
+
+    if (!existing)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    await prisma.courtAssignment.deleteMany({
+      where: { hostedPlayerId: existing.id },
+    });
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Player removed from the slot" });
+  } catch (error) {
+    console.error("Error removing player from court:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
