@@ -5,7 +5,7 @@ export default function HomeLayout() {
   return (
     <div className="w-full max-w-480 border mx-auto my-0 flex gap-x-4">
       <Sidebar />
-      <main>
+      <main className="w-full">
         <Outlet />
       </main>
     </div>

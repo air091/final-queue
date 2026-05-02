@@ -27,6 +27,13 @@ export const getAvailableHosts = async (
             id: true,
             profileUrl: true,
             communityName: true,
+            admin: {
+              select: {
+                id: true,
+                profileUrl: true,
+                username: true,
+              },
+            },
           },
         },
         players: {
