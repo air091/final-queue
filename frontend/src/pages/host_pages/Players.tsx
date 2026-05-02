@@ -140,7 +140,9 @@ export default function Players() {
                             ? "bg-green-200 border border-green-500"
                             : p.status === "requested"
                               ? "bg-yellow-200 border border-yellow-500"
-                              : "bg-rose-200 border border-rose-500"
+                              : p.status === "rejected"
+                                ? "bg-rose-200 border border-rose-500"
+                                : "bg-stone-300 border border-stone-500"
                         }`}
                     >
                       {p.status}

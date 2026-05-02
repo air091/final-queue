@@ -51,6 +51,7 @@ export default function HostLayout() {
         ...hostResponse.data.acceptedPlayers,
         ...hostResponse.data.requestedPlayers,
         ...hostResponse.data.rejectedPlayers,
+        ...hostResponse.data.bannedPlayers,
       ]);
       setAcceptedPlayers(
         normalizeAcceptedPlayers(playersResponse.data.acceptedPlayers),

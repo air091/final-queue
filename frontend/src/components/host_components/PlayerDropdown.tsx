@@ -35,9 +35,16 @@ export default function PlayerSettingsDropdown({
     const previousPlayersInHost = playersInHost;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
+    const bannedPlayerRecord = {
+      id: player.id,
+      status: "banned" as const,
+      player: player.player,
+    };
 
     setPlayersInHost((currentPlayers) =>
-      currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === player.id ? bannedPlayerRecord : currentPlayer,
+      ),
     );
     setAcceptedPlayers((currentPlayers) =>
       currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
