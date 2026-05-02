@@ -39,7 +39,7 @@ model Account {
 
 model Community {
   id                    String @id @default(uuid())
-  profileUrl            String?
+  profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
   adminId               String
   communityName         String
   description           String?
