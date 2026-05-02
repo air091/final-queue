@@ -6,6 +6,7 @@ import {
   banPlayer,
   rejectPlayer,
   removePlayerFromCourt,
+  unbanPlayer,
 } from "../controllers/privateAction.controller.js";
 
 const router: Router = express.Router();
@@ -26,6 +27,12 @@ router.post(
   "/ban/community/:communityId/hosts/:hostId/:playerId",
   authenticate,
   banPlayer,
+);
+
+router.post(
+  "/unban/community/:communityId/hosts/:hostId/:playerId",
+  authenticate,
+  unbanPlayer,
 );
 
 router.post(

@@ -262,6 +262,95 @@ export const banPlayer = async (
   }
 };
 
+export const unbanPlayer = async (
+  request: Request<BanPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const existing = await prisma.hostedPlayer.findFirst({
+      where: {
+        hostId: host.id,
+        playerId,
+        status: HostedPlayerStatus.banned,
+      },
+      select: {
+        id: true,
+        playerId: true,
+        player: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+          },
+        },
+      },
+    });
+    if (!existing)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    await prisma.hostedPlayer.update({
+      where: { id: existing.id, playerId: existing.playerId },
+      data: {
+        status: HostedPlayerStatus.accepted,
+        timerStartedAt: new Date(),
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Player unbanned",
+      data: {
+        id: existing.id,
+        status: "accepted",
+        matchStatus: "waiting",
+        timerStartedAt: new Date().toISOString(),
+        player: existing.player,
+        queueEntry: null,
+        courtAssignment: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error unbanning player from hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 type AssignPlayerParams = {
   communityId: string;
   hostId: string;
