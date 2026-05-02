@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 type LoginCredentialsType = {
   email: string;
@@ -75,6 +75,12 @@ export default function Login() {
           Login
         </button>
       </form>
+      <p>
+        Don't have an account yet?{" "}
+        <NavLink to="/register" className="text-blue-600">
+          Register
+        </NavLink>
+      </p>
     </div>
   );
 }
