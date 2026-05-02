@@ -212,6 +212,11 @@ export default function Match() {
   );
   const sensors = useSensors(useSensor(PointerSensor));
 
+  const blurActiveElement = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+  };
+
   const assignPlayerToCourtAPI = async (
     hostedPlayerId: string,
     courtId: string,
@@ -260,6 +265,23 @@ export default function Match() {
     );
 
     return response.data as { hostedPlayerIds: string[] };
+  };
+
+  const renameCourtAPI = async (courtId: string, name: string) => {
+    const response = await axios.patch(
+      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
+      { name },
+      { withCredentials: true },
+    );
+
+    return response.data as {
+      court: {
+        id: string;
+        name: string;
+        startedAt: string | null;
+        endedAt: string | null;
+      };
+    };
   };
 
   const createCourtAPI = async () => {
@@ -337,6 +359,7 @@ export default function Match() {
   };
 
   const handlePlayerDropdown = (playerHostedId: string) => {
+    if (courtActiveDropdown !== null) blurActiveElement();
     setCourtActiveDropdown(null);
     setPlayerActiveDropdown((prev) =>
       prev === playerHostedId ? null : playerHostedId,
@@ -344,11 +367,13 @@ export default function Match() {
   };
 
   const handleCourtDropdown = (courtId: string) => {
+    if (courtActiveDropdown !== null) blurActiveElement();
     setPlayerActiveDropdown(null);
     setCourtActiveDropdown((prev) => (prev === courtId ? null : courtId));
   };
 
   const handleCourtPlayerDropdown = () => {
+    if (courtActiveDropdown !== null) blurActiveElement();
     setCourtActiveDropdown(null);
   };
 
@@ -470,6 +495,34 @@ export default function Match() {
     }
   };
 
+  const handleRenameCourt = async (courtId: string, nextName: string) => {
+    const cleanName = nextName.trim();
+    if (!cleanName) return;
+
+    const previousCourts = courts;
+
+    setCourts((currentCourts) =>
+      currentCourts.map((court) =>
+        court.id === courtId ? { ...court, name: cleanName } : court,
+      ),
+    );
+
+    try {
+      const response = await renameCourtAPI(courtId, cleanName);
+      setCourts((currentCourts) =>
+        currentCourts.map((court) =>
+          court.id === courtId ? { ...court, name: response.court.name } : court,
+        ),
+      );
+    } catch (error) {
+      setCourts(previousCourts);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   const handleAddCourt = async () => {
     const tempCourtId = `temp-court-${Date.now()}`;
     const optimisticCourt: CourtType = {
@@ -517,13 +570,14 @@ export default function Match() {
       );
 
       if (!clickedInsideDropdown) {
+        if (courtActiveDropdown !== null) blurActiveElement();
         setPlayerActiveDropdown(null);
         setCourtActiveDropdown(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [courtActiveDropdown]);
 
   const filteredPlayers = players.filter((player) =>
     activePlayerStatus === "all"
@@ -587,6 +641,7 @@ export default function Match() {
                     onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
                     onStartCourtGame={handleStartCourtGame}
                     onEndCourtGame={handleEndCourtGame}
+                    onRenameCourt={handleRenameCourt}
                     onDeleteCourt={handleDeleteCourt}
                     activeDropdown={courtActiveDropdown}
                     onToggleDropdown={handleCourtDropdown}

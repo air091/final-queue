@@ -352,6 +352,85 @@ type DeleteCourtParams = {
   courtId: string;
 };
 
+export const renameMatchCourt = async (
+  request: Request<DeleteCourtParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, courtId } = request.params;
+    const { name } = request.body;
+    const cleanName = name?.trim();
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !courtId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    if (!cleanName)
+      return response
+        .status(400)
+        .json({ success: false, message: "Court name is required" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const court = await prisma.court.findFirst({
+      where: { id: courtId, hostId: host.id },
+      select: { id: true },
+    });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
+
+    const updatedCourt = await prisma.court.update({
+      where: { id: court.id },
+      data: { name: cleanName },
+      select: {
+        id: true,
+        name: true,
+        startedAt: true,
+        endedAt: true,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Court renamed successfully",
+      court: updatedCourt,
+    });
+  } catch (error) {
+    console.error("Error renaming match court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const deleteMatchCourt = async (
   request: Request<DeleteCourtParams>,
   response: Response,

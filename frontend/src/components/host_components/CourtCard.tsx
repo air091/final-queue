@@ -11,6 +11,7 @@ type CourtCardProps = {
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   onStartCourtGame: (courtId: string) => void;
   onEndCourtGame: (courtId: string) => void;
+  onRenameCourt: (courtId: string, nextName: string) => void;
   onDeleteCourt: (courtId: string) => void;
   activeDropdown: string | null;
   onToggleDropdown: (courtId: string) => void;
@@ -118,6 +119,7 @@ export default function CourtCard({
   onRemovePlayerFromCourt,
   onStartCourtGame,
   onEndCourtGame,
+  onRenameCourt,
   onDeleteCourt,
   activeDropdown,
   onToggleDropdown,
@@ -186,6 +188,8 @@ export default function CourtCard({
             </div>
             {activeDropdown === court.id && (
               <CourtDropdown
+                courtName={court.name}
+                onRename={(nextName) => onRenameCourt(court.id, nextName)}
                 onDelete={() => onDeleteCourt(court.id)}
                 isDeleteDisabled={isInteractionDisabled}
               />
