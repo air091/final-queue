@@ -11,11 +11,16 @@ import Dashboard from "./pages/host_pages/Dashboard";
 import Match from "./pages/host_pages/Match";
 import Payments from "./pages/host_pages/Payments";
 import Players from "./pages/host_pages/Players";
+import Register from "./pages/auth/Register";
 
 const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
   },
   {
     path: "/",

@@ -34,6 +34,14 @@ export default function Sidebar() {
       <ul>
         <li>
           <NavLink
+            to="/"
+            className="block hover:bg-amber-200 px-4 py-1 text-center rounded-md"
+          >
+            Home
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
             to="/community/create"
             className="block hover:bg-amber-200 px-4 py-1 text-center rounded-md"
           >
