@@ -1,3 +1,4 @@
+import axios from "axios";
 import { NavLink } from "react-router-dom";
 
 export default function Sidebar() {
@@ -11,6 +12,21 @@ export default function Sidebar() {
       name: "Community",
     },
   ];
+
+  const logout = async () => {
+    try {
+      await axios.post(
+        `http://localhost:4000/api/auth/logout`,
+        {},
+        { withCredentials: true },
+      );
+      console.log("Logged out");
+    } catch (error) {
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error(error);
+    }
+  };
+
   return (
     <nav className="w-50">
       <ul>
@@ -18,12 +34,20 @@ export default function Sidebar() {
           <li key={link.name}>
             <NavLink
               to={link.path}
-              className="block hover:bg-amber-200 px-4 py-1"
+              className="block hover:bg-amber-200 px-4 py-1 w-full"
             >
               {link.name}
             </NavLink>
           </li>
         ))}
+        <li>
+          <button
+            onClick={async () => await logout()}
+            className="block hover:bg-amber-200 px-4 py-1 w-full cursor-pointer"
+          >
+            Log out
+          </button>
+        </li>
       </ul>
     </nav>
   );
