@@ -1,6 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PlayerCard from "./PlayerCard";
+import CourtDropdown from "./CourtDropdown";
 import { useEffect, useState } from "react";
 import type { AcceptedPlayers, CourtType } from "../../lib/host";
 
@@ -10,6 +11,9 @@ type CourtCardProps = {
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   onStartCourtGame: (courtId: string) => void;
   onEndCourtGame: (courtId: string) => void;
+  activeDropdown: string | null;
+  onToggleDropdown: (courtId: string) => void;
+  onOpenPlayerDropdown: () => void;
 };
 
 const COURT_SLOTS = [
@@ -26,6 +30,8 @@ type CourtSlotProps = {
   player?: AcceptedPlayers;
   isGameStarted: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
+  activeCourtDropdown: string | null;
+  onOpenPlayerDropdown: () => void;
 };
 
 function CourtSlot({
@@ -35,6 +41,8 @@ function CourtSlot({
   player,
   isGameStarted,
   onRemovePlayerFromCourt,
+  activeCourtDropdown,
+  onOpenPlayerDropdown,
 }: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `court-slot-${courtId}-${position}`,
@@ -50,6 +58,7 @@ function CourtSlot({
   >(null);
 
   const handlePlayerDropdown = (playerHostedId: string) => {
+    onOpenPlayerDropdown();
     setPlayerActiveDropdown((prev) =>
       prev === playerHostedId ? null : playerHostedId,
     );
@@ -69,6 +78,10 @@ function CourtSlot({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (activeCourtDropdown !== null) setPlayerActiveDropdown(null);
+  }, [activeCourtDropdown]);
 
   return (
     <div
@@ -104,6 +117,9 @@ export default function CourtCard({
   onRemovePlayerFromCourt,
   onStartCourtGame,
   onEndCourtGame,
+  activeDropdown,
+  onToggleDropdown,
+  onOpenPlayerDropdown,
 }: CourtCardProps) {
   const getAssignedPlayer = (position: number) => {
     const assignment = court.assignments.find(
@@ -155,8 +171,17 @@ export default function CourtCard({
               End game
             </button>
           )}
-          <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
-            <HiOutlineDotsVertical />
+          <div
+            data-dropdown
+            onPointerDown={(e) => e.stopPropagation()}
+            className="relative"
+          >
+            <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
+              <HiOutlineDotsVertical
+                onClick={() => onToggleDropdown(court.id)}
+              />
+            </div>
+            {activeDropdown === court.id && <CourtDropdown />}
           </div>
         </div>
       </header>
@@ -170,6 +195,8 @@ export default function CourtCard({
             player={getAssignedPlayer(slot.position)}
             isGameStarted={isGameStarted}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
+            activeCourtDropdown={activeDropdown}
+            onOpenPlayerDropdown={onOpenPlayerDropdown}
           />
         ))}
       </main>

@@ -189,6 +189,9 @@ export default function Match() {
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
   >(null);
+  const [courtActiveDropdown, setCourtActiveDropdown] = useState<string | null>(
+    null,
+  );
   const sensors = useSensors(useSensor(PointerSensor));
 
   const assignPlayerToCourtAPI = async (
@@ -290,9 +293,19 @@ export default function Match() {
   };
 
   const handlePlayerDropdown = (playerHostedId: string) => {
+    setCourtActiveDropdown(null);
     setPlayerActiveDropdown((prev) =>
       prev === playerHostedId ? null : playerHostedId,
     );
+  };
+
+  const handleCourtDropdown = (courtId: string) => {
+    setPlayerActiveDropdown(null);
+    setCourtActiveDropdown((prev) => (prev === courtId ? null : courtId));
+  };
+
+  const handleCourtPlayerDropdown = () => {
+    setCourtActiveDropdown(null);
   };
 
   const handleRemovePlayerFromCourt = async (
@@ -387,7 +400,10 @@ export default function Match() {
         el.contains(target),
       );
 
-      if (!clickedInsideDropdown) setPlayerActiveDropdown(null);
+      if (!clickedInsideDropdown) {
+        setPlayerActiveDropdown(null);
+        setCourtActiveDropdown(null);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -455,6 +471,9 @@ export default function Match() {
                     onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
                     onStartCourtGame={handleStartCourtGame}
                     onEndCourtGame={handleEndCourtGame}
+                    activeDropdown={courtActiveDropdown}
+                    onToggleDropdown={handleCourtDropdown}
+                    onOpenPlayerDropdown={handleCourtPlayerDropdown}
                   />
                 ))}
                 <button
