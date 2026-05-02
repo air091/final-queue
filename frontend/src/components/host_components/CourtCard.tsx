@@ -1,8 +1,8 @@
 import { useDroppable } from "@dnd-kit/core";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PlayerCard from "./PlayerCard";
-import type { AcceptedPlayers, CourtType } from "../../pages/host_pages/Match";
 import { useEffect, useState } from "react";
+import type { AcceptedPlayers, CourtType } from "../../lib/host";
 
 type CourtCardProps = {
   court: CourtType;

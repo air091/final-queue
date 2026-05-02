@@ -1,6 +1,7 @@
 import axios from "axios";
-import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 import { useParams } from "react-router-dom";
+import { useHostData } from "../../hooks/useHostData";
+import type { AcceptedPlayers } from "../../lib/host";
 
 type PlayerDropdownProps = {
   player: AcceptedPlayers;
@@ -10,28 +11,60 @@ export default function PlayerSettingsDropdown({
   player,
 }: PlayerDropdownProps) {
   const { communityId, hostId } = useParams();
+  const {
+    playersInHost,
+    setPlayersInHost,
+    acceptedPlayers,
+    setAcceptedPlayers,
+    courts,
+    setCourts,
+  } = useHostData();
   const isPlayerInGame = player.matchStatus === "playing";
 
   const banAPI = async () => {
-    try {
-      await axios.post(
-        `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.player.id}`,
-        {},
-        { withCredentials: true },
-      );
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
+    await axios.post(
+      `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.player.id}`,
+      {},
+      { withCredentials: true },
+    );
   };
 
   const handleBanClick = async () => {
     if (isPlayerInGame) return;
-    await banAPI();
+
+    const previousPlayersInHost = playersInHost;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const previousCourts = courts;
+
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
+    );
+    setAcceptedPlayers((currentPlayers) =>
+      currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
+    );
+    setCourts((currentCourts) =>
+      currentCourts.map((court) => ({
+        ...court,
+        assignments: court.assignments.filter(
+          (assignment) => assignment.hostedPlayerId !== player.id,
+        ),
+      })),
+    );
+
+    try {
+      await banAPI();
+    } catch (error) {
+      setPlayersInHost(previousPlayersInHost);
+      setAcceptedPlayers(previousAcceptedPlayers);
+      setCourts(previousCourts);
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
   };
 
   return (
-    <div className="absolute top-7 left-0 boZrder p-2 z-50 bg-white rounded-md w-[168px] cursor-default border grid gap-y-2">
+    <div className="absolute top-7 left-0 border p-2 z-50 bg-white rounded-md w-[168px] cursor-default grid gap-y-2">
       <div>
         <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
           Player settings

@@ -10,50 +10,13 @@ import {
 } from "@dnd-kit/core";
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
-
-export type MatchPlayerStatus = "waiting" | "inQueue" | "playing";
-
-export type PlayerType = {
-  id: string;
-  username: string;
-  profileUrl: string;
-};
-
-type QueueEntryType = {
-  id: string;
-  queueId: string;
-  position: number;
-};
-
-type CourtAssignmentType = {
-  id: string;
-  courtId: string;
-  position: number;
-};
-
-export type AcceptedPlayers = {
-  id: string;
-  status: "accepted";
-  matchStatus: MatchPlayerStatus;
-  timerStartedAt: string | null;
-  player: PlayerType;
-  queueEntry: QueueEntryType | null;
-  courtAssignment: CourtAssignmentType | null;
-};
-
-type PlayerAssignedInCourt = {
-  id: string;
-  hostedPlayerId: string;
-  position: number;
-};
-
-export type CourtType = {
-  id: string;
-  name: string;
-  startedAt: string | null;
-  endedAt: string | null;
-  assignments: PlayerAssignedInCourt[];
-};
+import { useHostData } from "../../hooks/useHostData";
+import {
+  getDerivedMatchStatus,
+  type AcceptedPlayers,
+  type CourtType,
+  type MatchPlayerStatus,
+} from "../../lib/host";
 
 type CourtDropData = {
   type: "court-slot";
@@ -62,20 +25,6 @@ type CourtDropData = {
 };
 
 type PlayerStatusFilter = "all" | MatchPlayerStatus;
-
-const getDerivedMatchStatus = (
-  player: Pick<AcceptedPlayers, "queueEntry" | "courtAssignment">,
-): MatchPlayerStatus => {
-  if (player.courtAssignment) return "inQueue";
-  if (player.queueEntry) return "inQueue";
-  return "waiting";
-};
-
-const normalizeAcceptedPlayers = (players: AcceptedPlayers[]) =>
-  players.map((player) => ({
-    ...player,
-    matchStatus: player.matchStatus ?? getDerivedMatchStatus(player),
-  }));
 
 const getUpdatedCourts = (
   currentCourts: CourtType[],
@@ -229,45 +178,18 @@ const PLAYER_STATUS_FILTERS: Array<{
 
 export default function Match() {
   const { communityId, hostId } = useParams();
-  const [players, setPlayers] = useState<AcceptedPlayers[]>([]);
-  const [courts, setCourts] = useState<CourtType[]>([]);
+  const {
+    acceptedPlayers: players,
+    setAcceptedPlayers: setPlayers,
+    courts,
+    setCourts,
+  } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("waiting");
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
   >(null);
   const sensors = useSensors(useSensor(PointerSensor));
-
-  const getPlayersAPI = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/players`,
-        { withCredentials: true },
-      );
-      setPlayers(normalizeAcceptedPlayers(response.data.acceptedPlayers));
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
-  };
-
-  const getCourtsAPI = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts`,
-        { withCredentials: true },
-      );
-      setCourts(response.data.courts);
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    getPlayersAPI();
-    getCourtsAPI();
-  }, []);
 
   const assignPlayerToCourtAPI = async (
     hostedPlayerId: string,

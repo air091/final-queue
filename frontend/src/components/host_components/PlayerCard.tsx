@@ -1,10 +1,10 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { HiOutlineDotsVertical } from "react-icons/hi";
-import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 import PlayerSettingsDropdown from "./PlayerDropdown";
 import { useEffect, useRef, useState } from "react";
 import { TbArrowBack } from "react-icons/tb";
+import type { AcceptedPlayers } from "../../lib/host";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;

@@ -1,57 +1,53 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheck } from "react-icons/fa6";
 import { FcCancel } from "react-icons/fc";
-
-type PlayerType = {
-  id: string;
-  username: string;
-  profileUrl: string;
-};
-
-type PlayersType = {
-  id: string;
-  status: string;
-  player: PlayerType;
-};
+import { useHostData } from "../../hooks/useHostData";
 
 export default function Players() {
   const { communityId, hostId } = useParams();
-  const [players, setPlayers] = useState<PlayersType[]>([]);
-
-  const getPlayersInHost = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}`,
-        {
-          withCredentials: true,
-        },
-      );
-      setPlayers([
-        ...response.data.acceptedPlayers,
-        ...response.data.requestedPlayers,
-        ...response.data.rejectedPlayers,
-      ]);
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    getPlayersInHost();
-  }, []);
+  const {
+    playersInHost: players,
+    setPlayersInHost,
+    acceptedPlayers,
+    setAcceptedPlayers,
+  } = useHostData();
 
   const handleAcceptPlayer = async (playerId: string) => {
-    // rollback
     const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const nextAcceptedPlayer = previousPlayers.find(
+      (player) => player.player.id === playerId,
+    );
 
-    setPlayers((prev) =>
+    setPlayersInHost((prev) =>
       prev.map((p) =>
         p.player.id === playerId ? { ...p, status: "accepted" } : p,
       ),
     );
+    setAcceptedPlayers((currentPlayers) => {
+      if (!nextAcceptedPlayer) return currentPlayers;
+      if (
+        currentPlayers.some(
+          (currentPlayer) => currentPlayer.id === nextAcceptedPlayer.id,
+        )
+      ) {
+        return currentPlayers;
+      }
+
+      return [
+        ...currentPlayers,
+        {
+          id: nextAcceptedPlayer.id,
+          status: "accepted",
+          matchStatus: "waiting",
+          timerStartedAt: new Date().toISOString(),
+          player: nextAcceptedPlayer.player,
+          queueEntry: null,
+          courtAssignment: null,
+        },
+      ];
+    });
 
     try {
       await axios.post(
@@ -60,7 +56,8 @@ export default function Players() {
         { withCredentials: true },
       );
     } catch (error) {
-      setPlayers(previousPlayers);
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
 
       if (axios.isAxiosError(error)) console.error(error);
       else console.error(error);
@@ -68,10 +65,9 @@ export default function Players() {
   };
 
   const handleRejectPlayer = async (playerId: string) => {
-    // rollback
     const previousPlayers = players;
 
-    setPlayers((prev) =>
+    setPlayersInHost((prev) =>
       prev.map((p) =>
         p.player.id === playerId ? { ...p, status: "rejected" } : p,
       ),
@@ -84,7 +80,7 @@ export default function Players() {
         { withCredentials: true },
       );
     } catch (error) {
-      setPlayers(previousPlayers);
+      setPlayersInHost(previousPlayers);
 
       if (axios.isAxiosError(error)) console.error(error);
       else console.error(error);
@@ -161,7 +157,7 @@ export default function Players() {
                         />
                       )}
 
-                      {p.status !== "rejected" && (
+                      {p.status === "requested" && (
                         <FcCancel
                           size={28}
                           title="Reject"
