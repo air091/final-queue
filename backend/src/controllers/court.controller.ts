@@ -389,17 +389,43 @@ export const deleteMatchCourt = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
-    const deletedCourt = await prisma.court.delete({
+    const court = await prisma.court.findFirst({
       where: { id: courtId, hostId: host.id },
+      select: {
+        id: true,
+        startedAt: true,
+        assignments: {
+          select: {
+            hostedPlayerId: true,
+          },
+        },
+      },
     });
 
-    if (!deletedCourt)
+    if (!court)
       return response
         .status(404)
         .json({ success: false, message: "No court found" });
+
+    if (court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot delete a court while a game is in progress",
+      });
+
+    await prisma.court.delete({
+      where: { id: court.id },
+    });
+
     return response
       .status(200)
-      .json({ success: false, message: "Court deleted successfully" });
+      .json({
+        success: true,
+        message: "Court deleted successfully",
+        hostedPlayerIds: court.assignments.map(
+          (assignment) => assignment.hostedPlayerId,
+        ),
+      });
   } catch (error) {
     console.error("Error delete match court host:", error);
     return response.status(500).json({

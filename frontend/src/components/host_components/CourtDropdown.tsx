@@ -1,4 +1,12 @@
-export default function CourtDropdown() {
+type CourtDropdownProps = {
+  onDelete: () => void;
+  isDeleteDisabled: boolean;
+};
+
+export default function CourtDropdown({
+  onDelete,
+  isDeleteDisabled,
+}: CourtDropdownProps) {
   return (
     <div className="absolute top-7 right-0 z-50 grid w-[168px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
       <div>
@@ -9,9 +17,15 @@ export default function CourtDropdown() {
       <div>
         <button
           type="button"
-          className="block w-full rounded py-1 px-2 text-white bg-red-500 cursor-pointer hover:bg-red-700"
+          onClick={onDelete}
+          disabled={isDeleteDisabled}
+          className={`block w-full rounded py-1 px-2 text-white ${
+            isDeleteDisabled
+              ? "bg-stone-400 cursor-not-allowed"
+              : "bg-red-500 cursor-pointer hover:bg-red-700"
+          }`}
         >
-          Delete
+          {isDeleteDisabled ? "Delete unavailable" : "Delete"}
         </button>
       </div>
     </div>

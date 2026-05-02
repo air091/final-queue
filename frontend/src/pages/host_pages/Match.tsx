@@ -166,6 +166,24 @@ const getPlayersWithoutCourtAssignment = (
     };
   });
 
+const getPlayersWithoutCourtAssignments = (
+  currentPlayers: AcceptedPlayers[],
+  hostedPlayerIds: string[],
+) =>
+  currentPlayers.map((player) => {
+    if (!hostedPlayerIds.includes(player.id)) return player;
+
+    const nextPlayer = {
+      ...player,
+      courtAssignment: null,
+    };
+
+    return {
+      ...nextPlayer,
+      matchStatus: getDerivedMatchStatus(nextPlayer),
+    };
+  });
+
 const PLAYER_STATUS_FILTERS: Array<{
   label: string;
   value: PlayerStatusFilter;
@@ -229,6 +247,15 @@ export default function Match() {
     const response = await axios.post(
       `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/end`,
       {},
+      { withCredentials: true },
+    );
+
+    return response.data as { hostedPlayerIds: string[] };
+  };
+
+  const deleteCourtAPI = async (courtId: string) => {
+    const response = await axios.delete(
+      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
       { withCredentials: true },
     );
 
@@ -392,6 +419,40 @@ export default function Match() {
     }
   };
 
+  const handleDeleteCourt = async (courtId: string) => {
+    const previousCourts = courts;
+    const previousPlayers = players;
+    const deletedCourt = previousCourts.find((court) => court.id === courtId);
+    const hostedPlayerIds =
+      deletedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
+      [];
+
+    setCourtActiveDropdown(null);
+    setCourts((currentCourts) =>
+      currentCourts.filter((court) => court.id !== courtId),
+    );
+    setPlayers(
+      getPlayersWithoutCourtAssignments(previousPlayers, hostedPlayerIds),
+    );
+
+    try {
+      const response = await deleteCourtAPI(courtId);
+      setPlayers((currentPlayers) =>
+        getPlayersWithoutCourtAssignments(
+          currentPlayers,
+          response.hostedPlayerIds,
+        ),
+      );
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -471,6 +532,7 @@ export default function Match() {
                     onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
                     onStartCourtGame={handleStartCourtGame}
                     onEndCourtGame={handleEndCourtGame}
+                    onDeleteCourt={handleDeleteCourt}
                     activeDropdown={courtActiveDropdown}
                     onToggleDropdown={handleCourtDropdown}
                     onOpenPlayerDropdown={handleCourtPlayerDropdown}
