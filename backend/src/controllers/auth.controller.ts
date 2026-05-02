@@ -5,7 +5,7 @@ import { signToken } from "../lib/jwt.js";
 
 export const register = async (request: Request, response: Response) => {
   try {
-    const { username, email, password } = request.body;
+    const { username, skillLevel, email, password } = request.body;
     const cleanedUsername: string = username.trim();
     const cleanedEmail: string = email.trim().toLowerCase();
 
@@ -27,6 +27,7 @@ export const register = async (request: Request, response: Response) => {
     await prisma.account.create({
       data: {
         username: cleanedUsername,
+        skillLevel,
         email: cleanedEmail,
         password: hashPassword,
       },
