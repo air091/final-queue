@@ -262,6 +262,23 @@ export default function Match() {
     return response.data as { hostedPlayerIds: string[] };
   };
 
+  const createCourtAPI = async () => {
+    const response = await axios.post(
+      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/add`,
+      {},
+      { withCredentials: true },
+    );
+
+    return response.data as {
+      court: {
+        id: string;
+        name: string;
+        startedAt: string | null;
+        endedAt: string | null;
+      };
+    };
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
@@ -453,6 +470,44 @@ export default function Match() {
     }
   };
 
+  const handleAddCourt = async () => {
+    const tempCourtId = `temp-court-${Date.now()}`;
+    const optimisticCourt: CourtType = {
+      id: tempCourtId,
+      name: `Court ${courts.length + 1}`,
+      startedAt: null,
+      endedAt: null,
+      assignments: [],
+    };
+
+    setCourts((currentCourts) => [...currentCourts, optimisticCourt]);
+
+    try {
+      const response = await createCourtAPI();
+      setCourts((currentCourts) =>
+        currentCourts.map((court) =>
+          court.id === tempCourtId
+            ? {
+                id: response.court.id,
+                name: response.court.name,
+                startedAt: response.court.startedAt,
+                endedAt: response.court.endedAt,
+                assignments: [],
+              }
+            : court,
+        ),
+      );
+    } catch (error) {
+      setCourts((currentCourts) =>
+        currentCourts.filter((court) => court.id !== tempCourtId),
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -540,7 +595,8 @@ export default function Match() {
                 ))}
                 <button
                   type="button"
-                  className="w-[420px] h-[120px] border cursor-pointer hover:bg-stone-200 rounded-md"
+                  onClick={() => void handleAddCourt()}
+                  className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
                 >
                   Add court
                 </button>

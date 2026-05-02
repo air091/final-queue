@@ -29,7 +29,7 @@ type CourtSlotProps = {
   position: number;
   label: string;
   player?: AcceptedPlayers;
-  isGameStarted: boolean;
+  isInteractionDisabled: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   activeCourtDropdown: string | null;
   onOpenPlayerDropdown: () => void;
@@ -40,14 +40,14 @@ function CourtSlot({
   position,
   label,
   player,
-  isGameStarted,
+  isInteractionDisabled,
   onRemovePlayerFromCourt,
   activeCourtDropdown,
   onOpenPlayerDropdown,
 }: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `court-slot-${courtId}-${position}`,
-    disabled: isGameStarted,
+    disabled: isInteractionDisabled,
     data: {
       type: "court-slot",
       courtId,
@@ -99,8 +99,8 @@ function CourtSlot({
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
             isInSlot
-            canDrag={!isGameStarted}
-            canRemoveFromCourt={!isGameStarted}
+            canDrag={!isInteractionDisabled}
+            canRemoveFromCourt={!isInteractionDisabled}
             courtId={courtId}
             onRemoveFromCourt={onRemovePlayerFromCourt}
           />
@@ -144,6 +144,7 @@ export default function CourtCard({
   );
   const canStartGame = !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
   const isGameStarted = Boolean(court.startedAt);
+  const isInteractionDisabled = isGameStarted;
 
   return (
     <div className="border w-[420px] p-2 rounded-md">
@@ -186,7 +187,7 @@ export default function CourtCard({
             {activeDropdown === court.id && (
               <CourtDropdown
                 onDelete={() => onDeleteCourt(court.id)}
-                isDeleteDisabled={isGameStarted}
+                isDeleteDisabled={isInteractionDisabled}
               />
             )}
           </div>
@@ -200,7 +201,7 @@ export default function CourtCard({
             position={slot.position}
             label={getSlotLabel(slot.position)}
             player={getAssignedPlayer(slot.position)}
-            isGameStarted={isGameStarted}
+            isInteractionDisabled={isInteractionDisabled}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
             activeCourtDropdown={activeDropdown}
             onOpenPlayerDropdown={onOpenPlayerDropdown}
