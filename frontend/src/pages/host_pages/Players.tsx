@@ -4,6 +4,9 @@ import { FaCheck } from "react-icons/fa6";
 import { FcCancel } from "react-icons/fc";
 import { useHostData } from "../../hooks/useHostData";
 
+const formatSkillLevel = (skillLevel: string) =>
+  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
+
 export default function Players() {
   const { communityId, hostId } = useParams();
   const {
@@ -203,6 +206,9 @@ export default function Players() {
               <th className="text-start font-semibold text-[14px] py-1.5 px-2">
                 Player
               </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[144px]">
+                Skill Level
+              </th>
               <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
                 Status
               </th>
@@ -232,6 +238,11 @@ export default function Players() {
                         </div>
                         <span>{p.player.username}</span>
                       </div>
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
+                        {formatSkillLevel(p.player.skillLevel)}
+                      </span>
                     </td>
                     <td className="py-1.5 px-2">
                       <span
@@ -302,7 +313,7 @@ export default function Players() {
               })
             ) : (
               <tr>
-                <td colSpan={3} className="text-center py-1.5 px-2">
+                <td colSpan={4} className="text-center py-1.5 px-2">
                   No players yet
                 </td>
               </tr>

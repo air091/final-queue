@@ -1,9 +1,11 @@
 export type MatchPlayerStatus = "waiting" | "inQueue" | "playing";
+export type SkillLevelType = "beginner" | "intermediate" | "advanced" | "elite";
 
 export type PlayerType = {
   id: string;
   username: string;
   profileUrl: string;
+  skillLevel: SkillLevelType;
 };
 
 export type QueueEntryType = {

@@ -7,6 +7,9 @@ type PlayerDropdownProps = {
   player: AcceptedPlayers;
 };
 
+const formatSkillLevel = (skillLevel: string) =>
+  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
+
 export default function PlayerSettingsDropdown({
   player,
 }: PlayerDropdownProps) {
@@ -77,6 +80,9 @@ export default function PlayerSettingsDropdown({
           Player settings
         </h2>
         <h4 className="font-semibold">{player.player.username}</h4>
+        <p className="text-[12px] text-stone-500">
+          Level: {formatSkillLevel(player.player.skillLevel)}
+        </p>
       </div>
       <div>
         <button
