@@ -24,6 +24,7 @@ type CourtSlotProps = {
   position: number;
   label: string;
   player?: AcceptedPlayers;
+  isGameStarted: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
 };
 
@@ -32,10 +33,12 @@ function CourtSlot({
   position,
   label,
   player,
+  isGameStarted,
   onRemovePlayerFromCourt,
 }: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `court-slot-${courtId}-${position}`,
+    disabled: isGameStarted,
     data: {
       type: "court-slot",
       courtId,
@@ -82,6 +85,8 @@ function CourtSlot({
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
             isInSlot
+            canDrag={!isGameStarted}
+            canRemoveFromCourt={!isGameStarted}
             courtId={courtId}
             onRemoveFromCourt={onRemovePlayerFromCourt}
           />
@@ -120,6 +125,7 @@ export default function CourtCard({
     (assignment) => assignment.position === 2 || assignment.position === 4,
   );
   const canStartGame = !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
+  const isGameStarted = Boolean(court.startedAt);
 
   return (
     <div className="border w-[420px] p-2 rounded-md">
@@ -162,6 +168,7 @@ export default function CourtCard({
             position={slot.position}
             label={getSlotLabel(slot.position)}
             player={getAssignedPlayer(slot.position)}
+            isGameStarted={isGameStarted}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
           />
         ))}

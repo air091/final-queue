@@ -214,12 +214,30 @@ export const banPlayer = async (
         playerId: playerId,
         status: HostedPlayerStatus.accepted,
       },
-      select: { id: true, playerId: true },
+      select: {
+        id: true,
+        playerId: true,
+        courtAssignment: {
+          select: {
+            court: {
+              select: {
+                startedAt: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!existing)
       return response
         .status(404)
         .json({ success: false, message: "Player not found" });
+
+    if (existing.courtAssignment?.court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot ban a player while they are in an active game",
+      });
 
     await prisma.$transaction([
       prisma.hostedPlayer.update({
@@ -313,7 +331,7 @@ export const assignPlayerToCourt = async (
 
     const court = await prisma.court.findFirst({
       where: { id: courtId, hostId: host.id },
-      select: { id: true },
+      select: { id: true, startedAt: true },
     });
 
     if (!court)
@@ -321,9 +339,29 @@ export const assignPlayerToCourt = async (
         .status(404)
         .json({ success: false, message: "Court not found" });
 
+    if (court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot assign players to a game in progress",
+      });
+
     const existingAssignment = await prisma.courtAssignment.findFirst({
       where: { hostedPlayerId: player.id },
+      select: {
+        id: true,
+        court: {
+          select: {
+            startedAt: true,
+          },
+        },
+      },
     });
+
+    if (existingAssignment?.court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot move players from a game in progress",
+      });
 
     const occupied = await prisma.courtAssignment.findFirst({
       where: {
@@ -417,13 +455,19 @@ export const removePlayerFromCourt = async (
 
     const court = await prisma.court.findFirst({
       where: { id: courtId, hostId: host.id },
-      select: { id: true },
+      select: { id: true, startedAt: true },
     });
 
     if (!court)
       return response
         .status(404)
         .json({ success: false, message: "Court not found" });
+
+    if (court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot remove players while the game is in progress",
+      });
 
     const existing = await prisma.hostedPlayer.findFirst({
       where: {

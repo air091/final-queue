@@ -12,6 +12,8 @@ type PlayerCardProps = {
   onToggleDropdown: (hostedPlayerId: string) => void;
   draggableId?: string;
   isInSlot?: boolean;
+  canDrag?: boolean;
+  canRemoveFromCourt?: boolean;
   courtId?: string;
   onRemoveFromCourt?: (hostedPlayerId: string, courtId: string) => void;
 };
@@ -22,15 +24,19 @@ export default function PlayerCard({
   onToggleDropdown,
   draggableId = `player-list-${player.id}`,
   isInSlot = false,
+  canDrag = true,
+  canRemoveFromCourt = true,
   courtId,
   onRemoveFromCourt,
 }: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
     useDraggable({
       id: draggableId,
+      disabled: !canDrag,
       data: {
         type: "player",
         hostedPlayerId: player.id,
+        courtId,
       },
     });
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,7 +80,11 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.6 : 1,
       }}
-      className="border w-full flex items-center justify-between gap-x-10 py-1 px-1 cursor-grab active:cursor-grabbing hover:bg-stone-200 rounded-full"
+      className={`border w-full flex items-center justify-between gap-x-10 py-1 px-1 rounded-full ${
+        canDrag
+          ? "cursor-grab active:cursor-grabbing hover:bg-stone-200"
+          : "cursor-default"
+      }`}
     >
       <div className="flex items-center gap-x-2">
         <div className="w-[28px] h-[28px] rounded-full border">
@@ -94,7 +104,7 @@ export default function PlayerCard({
         </div>
       </div>
       <div className="flex items-center">
-        {isInSlot && (
+        {isInSlot && canRemoveFromCourt && (
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
@@ -116,7 +126,7 @@ export default function PlayerCard({
             />
           </div>
           {activeDropdown === player.id && (
-            <PlayerSettingsDropdown player={player.player} />
+            <PlayerSettingsDropdown player={player} />
           )}
         </div>
       </div>

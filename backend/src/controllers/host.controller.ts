@@ -5,9 +5,15 @@ import { HostedPlayerStatus } from "../generated/prisma/enums.js";
 
 const getMatchPlayerStatus = (player: {
   queueEntry: { id: string } | null;
-  courtAssignment: { id: string } | null;
+  courtAssignment:
+    | {
+        id: string;
+        court: { startedAt: Date | null } | null;
+      }
+    | null;
 }) => {
-  if (player.courtAssignment) return "playing";
+  if (player.courtAssignment?.court?.startedAt) return "playing";
+  if (player.courtAssignment) return "inQueue";
   if (player.queueEntry) return "inQueue";
   return "waiting";
 };
@@ -350,6 +356,11 @@ export const getHostWithPlayers = async (
               id: true,
               courtId: true,
               position: true,
+              court: {
+                select: {
+                  startedAt: true,
+                },
+              },
             },
           },
         },
@@ -367,6 +378,13 @@ export const getHostWithPlayers = async (
       ...host,
       acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
         ...acceptedPlayer,
+        courtAssignment: acceptedPlayer.courtAssignment
+          ? {
+              id: acceptedPlayer.courtAssignment.id,
+              courtId: acceptedPlayer.courtAssignment.courtId,
+              position: acceptedPlayer.courtAssignment.position,
+            }
+          : null,
         matchStatus: getMatchPlayerStatus(acceptedPlayer),
       })),
     });

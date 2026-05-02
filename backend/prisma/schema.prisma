@@ -96,8 +96,8 @@ model HostedPlayer {
 
   // Match presence is derived:
   // waiting  => no queueEntry and no courtAssignment
-  // inQueue  => queueEntry exists
-  // playing  => courtAssignment exists
+  // inQueue  => queueEntry exists, or courtAssignment exists before the court starts
+  // playing  => courtAssignment exists on a started court
   // timerStartedAt continues from waiting into queue,
   // resets when a game starts, and resets again when a game ends.
   queueEntry           QueueEntry?

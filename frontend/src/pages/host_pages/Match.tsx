@@ -66,7 +66,7 @@ type PlayerStatusFilter = "all" | MatchPlayerStatus;
 const getDerivedMatchStatus = (
   player: Pick<AcceptedPlayers, "queueEntry" | "courtAssignment">,
 ): MatchPlayerStatus => {
-  if (player.courtAssignment) return "playing";
+  if (player.courtAssignment) return "inQueue";
   if (player.queueEntry) return "inQueue";
   return "waiting";
 };
@@ -161,6 +161,7 @@ const getPlayersWithCourtAssignment = (
   hostedPlayerId: string,
   courtId: string,
   position: number,
+  isCourtStarted: boolean,
 ) =>
   currentPlayers.map((player) =>
     player.id === hostedPlayerId
@@ -171,7 +172,9 @@ const getPlayersWithCourtAssignment = (
             courtId,
             position,
           },
-          matchStatus: "playing" as MatchPlayerStatus,
+          matchStatus: isCourtStarted
+            ? ("playing" as MatchPlayerStatus)
+            : ("inQueue" as MatchPlayerStatus),
         }
       : player,
   );
@@ -314,6 +317,14 @@ export default function Match() {
     const dropData = over.data.current as CourtDropData | undefined;
     if (dropData?.type !== "court-slot") return;
 
+    const sourceCourtId = active.data.current?.courtId as string | undefined;
+    const sourceCourt = sourceCourtId
+      ? courts.find((court) => court.id === sourceCourtId)
+      : null;
+    const targetCourt = courts.find((court) => court.id === dropData.courtId);
+
+    if (sourceCourt?.startedAt || targetCourt?.startedAt) return;
+
     const previousCourts = courts;
     const previousPlayers = players;
     const hostedPlayerId =
@@ -325,6 +336,9 @@ export default function Match() {
       dropData.courtId,
       dropData.position,
     );
+    const updatedTargetCourt = updatedCourts.find(
+      (court) => court.id === dropData.courtId,
+    );
 
     setCourts(updatedCourts);
     setPlayers(
@@ -333,6 +347,7 @@ export default function Match() {
         hostedPlayerId,
         dropData.courtId,
         dropData.position,
+        Boolean(updatedTargetCourt?.startedAt),
       ),
     );
 

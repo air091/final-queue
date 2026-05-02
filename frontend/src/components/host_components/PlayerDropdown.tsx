@@ -1,21 +1,21 @@
 import axios from "axios";
-import type { PlayerType } from "../../pages/host_pages/Match";
+import type { AcceptedPlayers } from "../../pages/host_pages/Match";
 import { useParams } from "react-router-dom";
 
-// type PlayerType
-
 type PlayerDropdownProps = {
-  player: PlayerType;
+  player: AcceptedPlayers;
 };
 
 export default function PlayerSettingsDropdown({
   player,
 }: PlayerDropdownProps) {
   const { communityId, hostId } = useParams();
+  const isPlayerInGame = player.matchStatus === "playing";
+
   const banAPI = async () => {
     try {
       await axios.post(
-        `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.id}`,
+        `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.player.id}`,
         {},
         { withCredentials: true },
       );
@@ -26,6 +26,7 @@ export default function PlayerSettingsDropdown({
   };
 
   const handleBanClick = async () => {
+    if (isPlayerInGame) return;
     await banAPI();
   };
 
@@ -35,14 +36,20 @@ export default function PlayerSettingsDropdown({
         <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
           Player settings
         </h2>
-        <h4 className="font-semibold">{player.username}</h4>
+        <h4 className="font-semibold">{player.player.username}</h4>
       </div>
       <div>
         <button
+          type="button"
           onClick={handleBanClick}
-          className="w-full block bg-red-500 text-white border-none cursor-pointer hover:bg-red-700 rounded py-1 px-2"
+          disabled={isPlayerInGame}
+          className={`w-full block text-white border-none rounded py-1 px-2 ${
+            isPlayerInGame
+              ? "bg-stone-400 cursor-not-allowed"
+              : "bg-red-500 cursor-pointer hover:bg-red-700"
+          }`}
         >
-          Ban
+          {isPlayerInGame ? "Ban unavailable" : "Ban"}
         </button>
       </div>
     </div>
