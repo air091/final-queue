@@ -8,6 +8,7 @@ import {
 } from "../controllers/community.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import {
+  createStaticPlayer,
   deleteHost,
   getHostById,
   getHosts,
@@ -44,6 +45,11 @@ router.get(
   "/:communityId/hosts/:hostId/players",
   authenticate,
   getHostWithPlayers,
+);
+router.post(
+  "/:communityId/hosts/:hostId/players/static",
+  authenticate,
+  createStaticPlayer,
 );
 router.delete("/:communityId/host/:hostId", authenticate, deleteHost);
 

@@ -86,13 +86,16 @@ enum HostedPlayerStatus {
 model HostedPlayer {
   id                   String @id @default(uuid())
   hostId               String
-  playerId             String
+  playerId             String?
+  staticName           String?
+  staticProfileUrl     String?
+  staticSkillLevel     SkillLevel?
   status               HostedPlayerStatus @default(requested)
   timerStartedAt       DateTime?
   updatedAt            DateTime @updatedAt
 
   host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  player               Account @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  player               Account? @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // Match presence is derived:
   // waiting  => no queueEntry and no courtAssignment

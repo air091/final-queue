@@ -95,8 +95,13 @@ export default function PlayerCard({
           />
         </div>
         <div>
-          <span className="block font-semibold leading-[12px]">
-            {player.player.username}
+          <span className="flex items-center gap-2 font-semibold leading-[12px]">
+            <span>{player.player.username}</span>
+            {player.player.isStatic && (
+              <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em] text-stone-700">
+                Static
+              </span>
+            )}
           </span>
           <span className="block font-semibold text-[10px] text-stone-500">
             {formattedTimer}

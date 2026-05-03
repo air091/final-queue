@@ -1,7 +1,16 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
-import { HostedPlayerStatus } from "../generated/prisma/enums.js";
+import {
+  HostedPlayerStatus,
+  SkillLevel,
+} from "../generated/prisma/enums.js";
+import {
+  DEFAULT_HOSTED_PLAYER_PROFILE_URL,
+  hostedPlayerProfileSelect,
+  type HostedPlayerProfileSource,
+  toHostedPlayerProfile,
+} from "../lib/hostedPlayer.js";
 
 const getMatchPlayerStatus = (player: {
   queueEntry: { id: string } | null;
@@ -17,6 +26,17 @@ const getMatchPlayerStatus = (player: {
   if (player.queueEntry) return "inQueue";
   return "waiting";
 };
+
+const mapHostPlayerRecord = (
+  player: {
+    id: string;
+    status: HostedPlayerStatus;
+  } & HostedPlayerProfileSource,
+) => ({
+  id: player.id,
+  status: player.status,
+  player: toHostedPlayerProfile(player),
+});
 
 export const host = async (request: Request<Params>, response: Response) => {
   try {
@@ -191,14 +211,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
-              skillLevel: true,
-            },
-          },
+          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -211,14 +224,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
-              skillLevel: true,
-            },
-          },
+          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -231,14 +237,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
-              skillLevel: true,
-            },
-          },
+          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -251,14 +250,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
-              skillLevel: true,
-            },
-          },
+          ...hostedPlayerProfileSelect,
         },
       }),
     ]);
@@ -272,10 +264,10 @@ export const getHostById = async (
       success: true,
       message: "Host retrieved successfully",
       ...host,
-      requestedPlayers,
-      acceptedPlayers,
-      rejectedPlayers,
-      bannedPlayers,
+      requestedPlayers: requestedPlayers.map(mapHostPlayerRecord),
+      acceptedPlayers: acceptedPlayers.map(mapHostPlayerRecord),
+      rejectedPlayers: rejectedPlayers.map(mapHostPlayerRecord),
+      bannedPlayers: bannedPlayers.map(mapHostPlayerRecord),
     });
   } catch (error) {
     console.error("Error getting host:", error);
@@ -341,14 +333,7 @@ export const getHostWithPlayers = async (
           id: true,
           status: true,
           timerStartedAt: true,
-          player: {
-            select: {
-              id: true,
-              username: true,
-              profileUrl: true,
-              skillLevel: true,
-            },
-          },
+          ...hostedPlayerProfileSelect,
           queueEntry: {
             select: {
               id: true,
@@ -382,7 +367,11 @@ export const getHostWithPlayers = async (
       message: "Host retrieved successfully",
       ...host,
       acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
-        ...acceptedPlayer,
+        id: acceptedPlayer.id,
+        status: acceptedPlayer.status,
+        timerStartedAt: acceptedPlayer.timerStartedAt,
+        player: toHostedPlayerProfile(acceptedPlayer),
+        queueEntry: acceptedPlayer.queueEntry,
         courtAssignment: acceptedPlayer.courtAssignment
           ? {
               id: acceptedPlayer.courtAssignment.id,
@@ -455,4 +444,105 @@ export const deleteHost = async (
   }
 };
 
-// FOR PLAYERS
+type CreateStaticPlayerParams = {
+  communityId: string;
+  hostId: string;
+};
+
+type CreateStaticPlayerBody = {
+  username?: string;
+  skillLevel?: SkillLevel;
+  profileUrl?: string;
+};
+
+export const createStaticPlayer = async (
+  request: Request<CreateStaticPlayerParams, unknown, CreateStaticPlayerBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const { username, skillLevel, profileUrl } = request.body;
+    const cleanUsername = username?.trim();
+    const cleanProfileUrl = profileUrl?.trim();
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    if (!cleanUsername)
+      return response
+        .status(400)
+        .json({ success: false, message: "Player name is required" });
+
+    if (skillLevel && !Object.values(SkillLevel).includes(skillLevel))
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, adminId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const now = new Date();
+    const staticPlayer = await prisma.hostedPlayer.create({
+      data: {
+        hostId: host.id,
+        status: HostedPlayerStatus.accepted,
+        timerStartedAt: now,
+        staticName: cleanUsername,
+        staticSkillLevel: skillLevel ?? SkillLevel.beginner,
+        staticProfileUrl:
+          cleanProfileUrl || DEFAULT_HOSTED_PLAYER_PROFILE_URL,
+      },
+      select: {
+        id: true,
+        status: true,
+        timerStartedAt: true,
+        ...hostedPlayerProfileSelect,
+      },
+    });
+
+    return response.status(201).json({
+      success: true,
+      message: "Static player created successfully",
+      hostedPlayer: {
+        id: staticPlayer.id,
+        status: staticPlayer.status,
+        timerStartedAt: staticPlayer.timerStartedAt,
+        matchStatus: "waiting",
+        player: toHostedPlayerProfile(staticPlayer),
+        queueEntry: null,
+        courtAssignment: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating static player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

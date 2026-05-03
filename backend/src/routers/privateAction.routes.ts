@@ -12,25 +12,25 @@ import {
 const router: Router = express.Router();
 
 router.post(
-  "/accept/community/:communityId/hosts/:hostId/:playerId",
+  "/accept/community/:communityId/hosts/:hostId/:hostedPlayerId",
   authenticate,
   acceptPlayer,
 );
 
 router.post(
-  "/reject/community/:communityId/hosts/:hostId/:playerId",
+  "/reject/community/:communityId/hosts/:hostId/:hostedPlayerId",
   authenticate,
   rejectPlayer,
 );
 
 router.post(
-  "/ban/community/:communityId/hosts/:hostId/:playerId",
+  "/ban/community/:communityId/hosts/:hostId/:hostedPlayerId",
   authenticate,
   banPlayer,
 );
 
 router.post(
-  "/unban/community/:communityId/hosts/:hostId/:playerId",
+  "/unban/community/:communityId/hosts/:hostId/:hostedPlayerId",
   authenticate,
   unbanPlayer,
 );
