@@ -24,7 +24,7 @@ export default function Sidebar() {
             to={`/community/${communityId}/hosts/${hostId}/dashboard`}
             className={({ isActive }) =>
               `flex items-center gap-x-[10px] px-[10px] py-[6px] rounded-sm
-                    ${isActive ? "bg-accent text-background font-semibold" : "hover:bg-secondary/40"}`
+                    ${isActive ? "bg-primary text-background font-semibold" : "hover:bg-secondary/40"}`
             }
           >
             <MdSpaceDashboard size={18} />
@@ -36,7 +36,7 @@ export default function Sidebar() {
             to={`/community/${communityId}/hosts/${hostId}/players`}
             className={({ isActive }) =>
               `flex items-center gap-x-[10px] px-[10px] py-[6px] rounded-sm
-                    ${isActive ? "bg-accent text-background font-semibold" : "hover:bg-secondary/40"}`
+                    ${isActive ? "bg-primary text-background font-semibold" : "hover:bg-secondary/40"}`
             }
           >
             <HiUsers size={18} />
@@ -48,7 +48,7 @@ export default function Sidebar() {
             to={`/community/${communityId}/hosts/${hostId}/match`}
             className={({ isActive }) =>
               `flex items-center gap-x-[10px] px-[10px] py-[6px] rounded-sm
-                    ${isActive ? "bg-accent text-background font-semibold" : "hover:bg-secondary/40"}`
+                    ${isActive ? "bg-primary text-background font-semibold" : "hover:bg-secondary/40"}`
             }
           >
             <GiMatchHead size={18} />
@@ -60,7 +60,7 @@ export default function Sidebar() {
             to={`/community/${communityId}/hosts/${hostId}/payments`}
             className={({ isActive }) =>
               `flex items-center gap-x-[10px] px-[10px] py-[6px] rounded-sm
-                    ${isActive ? "bg-accent text-background font-semibold" : "hover:bg-secondary/40"}`
+                    ${isActive ? "bg-primary text-background font-semibold" : "hover:bg-secondary/40"}`
             }
           >
             <MdOutlinePayment size={18} />

@@ -117,7 +117,9 @@ const getPlayersWithCourtAssignment = (
       ? {
           ...player,
           courtAssignment: {
-            id: player.courtAssignment?.id ?? `${courtId}-${hostedPlayerId}-${position}`,
+            id:
+              player.courtAssignment?.id ??
+              `${courtId}-${hostedPlayerId}-${position}`,
             courtId,
             position,
           },
@@ -407,7 +409,11 @@ export default function Match() {
     hostedPlayerId: string,
     courtId: string,
   ) => {
-    const updatedCourts = getCourtsWithoutPlayer(courts, hostedPlayerId, courtId);
+    const updatedCourts = getCourtsWithoutPlayer(
+      courts,
+      hostedPlayerId,
+      courtId,
+    );
 
     setCourts(updatedCourts);
     setPlayers(getPlayersWithoutCourtAssignment(players, hostedPlayerId));
@@ -429,8 +435,9 @@ export default function Match() {
     const previousCourts = courts;
     const startedCourt = previousCourts.find((court) => court.id === courtId);
     const hostedPlayerIds =
-      startedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
-      [];
+      startedCourt?.assignments.map(
+        (assignment) => assignment.hostedPlayerId,
+      ) ?? [];
     const previousPlayers = players;
 
     setCourts(getStartedCourt(previousCourts, courtId));
@@ -487,8 +494,9 @@ export default function Match() {
     const previousPlayers = players;
     const deletedCourt = previousCourts.find((court) => court.id === courtId);
     const hostedPlayerIds =
-      deletedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
-      [];
+      deletedCourt?.assignments.map(
+        (assignment) => assignment.hostedPlayerId,
+      ) ?? [];
 
     setCourtActiveDropdown(null);
     setCourts((currentCourts) =>
@@ -532,7 +540,9 @@ export default function Match() {
       const response = await renameCourtAPI(courtId, cleanName);
       setCourts((currentCourts) =>
         currentCourts.map((court) =>
-          court.id === courtId ? { ...court, name: response.court.name } : court,
+          court.id === courtId
+            ? { ...court, name: response.court.name }
+            : court,
         ),
       );
     } catch (error) {
@@ -608,25 +618,22 @@ export default function Match() {
 
   return (
     <>
-      <header>
-        <h3>Match</h3>
-      </header>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <main className="flex">
           {/* players */}
           <div className="border w-full max-w-fit">
             <header>
               <h5>Players</h5>
-              <div className="flex items-center justify-between border">
+              <div className="flex items-center justify-between">
                 {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
                     key={playerStatus.value}
                     type="button"
                     onClick={() => setActivePlayerStatus(playerStatus.value)}
-                    className={`cursor-pointer px-2 py-1 text-[14px] w-full ${
+                    className={`cursor-pointer px-2 py-1 text-[14px] w-full rounded-xs ${
                       activePlayerStatus === playerStatus.value
-                        ? "bg-stone-300"
-                        : "hover:bg-stone-400"
+                        ? "bg-accent text-background"
+                        : "hover:bg-secondary"
                     }`}
                   >
                     {playerStatus.label}
@@ -634,7 +641,7 @@ export default function Match() {
                 ))}
               </div>
             </header>
-            <main className="border border-red-500 w-[360px] grid grid-cols-2 gap-2 p-2">
+            <main className="w-[360px] grid grid-cols-2 gap-2 p-2">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard

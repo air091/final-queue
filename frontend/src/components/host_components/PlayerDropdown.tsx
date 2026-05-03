@@ -68,7 +68,8 @@ export default function PlayerSettingsDropdown({
       setAcceptedPlayers(previousAcceptedPlayers);
       setCourts(previousCourts);
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     }
   };
@@ -82,7 +83,7 @@ export default function PlayerSettingsDropdown({
         <div className="flex items-center gap-2">
           <h4 className="font-semibold">{player.player.username}</h4>
           {player.player.isStatic && (
-            <span className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] text-stone-700">
+            <span className="rounded-md bg-stone-200 px-1.5 text-[10px] text-stone-700 uppercase">
               Static
             </span>
           )}

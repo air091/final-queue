@@ -71,6 +71,18 @@ export default function PlayerCard({
     return `${hours}:${minutes}:${seconds}`;
   })();
 
+  const statusClasses = {
+    waiting: "border-green-500 bg-green-300",
+    inQueue: "border-yellow-500 bg-yellow-300",
+    playing: "border-red-500 bg-red-300",
+  }[player.matchStatus];
+
+  const hoverClasses = {
+    waiting: "hover:bg-green-400",
+    inQueue: "hover:bg-yellow-400",
+    playing: "hover:bg-red-400",
+  }[player.matchStatus];
+
   return (
     <div
       ref={setNodeRef}
@@ -80,14 +92,14 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.6 : 1,
       }}
-      className={`border w-full flex items-center justify-between py-1 px-1 rounded-full ${
+      className={`w-full flex items-center justify-between py-1 px-1 rounded-full border ${statusClasses} ${
         canDrag
-          ? "cursor-grab active:cursor-grabbing hover:bg-stone-200"
+          ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
           : "cursor-default"
       }`}
     >
       <div className="flex items-center gap-x-2">
-        <div className="w-[28px] h-[28px] rounded-full border">
+        <div className="w-[28px] h-[28px] rounded-full">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
@@ -98,7 +110,7 @@ export default function PlayerCard({
           <span className="flex items-center gap-2 font-semibold leading-[12px]">
             <span className="text-[12px]">{player.player.username}</span>
             {player.player.isStatic && (
-              <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-[8px] font-semibold uppercase  text-stone-700">
+              <span className="rounded-md bg-stone-200 px-1.5 text-[8px] font-semibold uppercase  text-stone-700">
                 Static
               </span>
             )}
