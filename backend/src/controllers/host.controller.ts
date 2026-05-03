@@ -31,10 +31,12 @@ const mapHostPlayerRecord = (
   player: {
     id: string;
     status: HostedPlayerStatus;
+    paymentStatus: string;
   } & HostedPlayerProfileSource,
 ) => ({
   id: player.id,
   status: player.status,
+  paymentStatus: player.paymentStatus,
   player: toHostedPlayerProfile(player),
 });
 
@@ -56,7 +58,7 @@ export const host = async (request: Request<Params>, response: Response) => {
         .json({ success: false, message: "Sport name is required" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
     });
 
     if (!community)
@@ -211,6 +213,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           ...hostedPlayerProfileSelect,
         },
       }),
@@ -224,6 +227,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           ...hostedPlayerProfileSelect,
         },
       }),
@@ -237,6 +241,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           ...hostedPlayerProfileSelect,
         },
       }),
@@ -250,6 +255,7 @@ export const getHostById = async (
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           ...hostedPlayerProfileSelect,
         },
       }),
@@ -332,6 +338,7 @@ export const getHostWithPlayers = async (
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           timerStartedAt: true,
           ...hostedPlayerProfileSelect,
           queueEntry: {
@@ -369,6 +376,7 @@ export const getHostWithPlayers = async (
       acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
         id: acceptedPlayer.id,
         status: acceptedPlayer.status,
+        paymentStatus: acceptedPlayer.paymentStatus,
         timerStartedAt: acceptedPlayer.timerStartedAt,
         player: toHostedPlayerProfile(acceptedPlayer),
         queueEntry: acceptedPlayer.queueEntry,
@@ -404,7 +412,7 @@ export const deleteHost = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
     });
 
     if (!community)
@@ -520,6 +528,7 @@ export const createStaticPlayer = async (
       select: {
         id: true,
         status: true,
+        paymentStatus: true,
         timerStartedAt: true,
         ...hostedPlayerProfileSelect,
       },
@@ -531,6 +540,7 @@ export const createStaticPlayer = async (
       hostedPlayer: {
         id: staticPlayer.id,
         status: staticPlayer.status,
+        paymentStatus: staticPlayer.paymentStatus,
         timerStartedAt: staticPlayer.timerStartedAt,
         matchStatus: "waiting",
         player: toHostedPlayerProfile(staticPlayer),

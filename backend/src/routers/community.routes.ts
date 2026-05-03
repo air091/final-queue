@@ -25,6 +25,12 @@ import {
   renameMatchCourt,
   startMatchCourt,
 } from "../controllers/court.controller.js";
+import {
+  getHostPayments,
+  getHostPricing,
+  upsertHostedPlayerPayment,
+  upsertHostPricing,
+} from "../controllers/payment.controller.js";
 
 const router: Router = express.Router();
 
@@ -89,6 +95,29 @@ router.post(
   "/:communityId/hosts/:hostId/queues/add",
   authenticate,
   createQueueCourt,
+);
+
+// PAYMENTS
+
+router.get(
+  "/:communityId/hosts/:hostId/payments",
+  authenticate,
+  getHostPayments,
+);
+router.get(
+  "/:communityId/hosts/:hostId/payments/pricing",
+  authenticate,
+  getHostPricing,
+);
+router.patch(
+  "/:communityId/hosts/:hostId/payments/pricing",
+  authenticate,
+  upsertHostPricing,
+);
+router.patch(
+  "/:communityId/hosts/:hostId/payments/:hostedPlayerId",
+  authenticate,
+  upsertHostedPlayerPayment,
 );
 
 export default router;

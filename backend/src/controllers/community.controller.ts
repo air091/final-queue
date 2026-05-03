@@ -162,7 +162,7 @@ export const setCommunity = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
       select: { id: true },
     });
 
@@ -211,7 +211,7 @@ export const deleteCommunity = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.id },
+      where: { id: communityId, adminId: user.sub },
     });
 
     if (!community)
