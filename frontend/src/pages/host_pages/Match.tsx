@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
@@ -213,10 +215,17 @@ export default function Match() {
   const [courtActiveDropdown, setCourtActiveDropdown] = useState<string | null>(
     null,
   );
+  const [activeDraggedPlayerId, setActiveDraggedPlayerId] = useState<
+    string | null
+  >(null);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
   const sensors = useSensors(useSensor(PointerSensor));
+
+  const activeDraggedPlayer = activeDraggedPlayerId
+    ? players.find((player) => player.id === activeDraggedPlayerId) ?? null
+    : null;
 
   const blurActiveElement = () => {
     const activeElement = document.activeElement;
@@ -331,6 +340,8 @@ export default function Match() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDraggedPlayerId(null);
+
     const { active, over } = event;
     if (!over) return;
 
@@ -384,6 +395,14 @@ export default function Match() {
         await refreshHostData();
       }
     });
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const hostedPlayerId =
+      (event.active.data.current?.hostedPlayerId as string | undefined) ??
+      String(event.active.id);
+
+    setActiveDraggedPlayerId(hostedPlayerId);
   };
 
   const handlePlayerDropdown = (playerHostedId: string) => {
@@ -618,7 +637,12 @@ export default function Match() {
 
   return (
     <>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDraggedPlayerId(null)}
+      >
         <main className="flex">
           {/* players */}
           <div className="border w-full max-w-fit p-2">
@@ -687,6 +711,19 @@ export default function Match() {
             </main>
           </div>
         </main>
+        <DragOverlay zIndex={2000}>
+          {activeDraggedPlayer ? (
+            <div className="w-[176px]">
+              <PlayerCard
+                player={activeDraggedPlayer}
+                activeDropdown={null}
+                onToggleDropdown={() => undefined}
+                canDrag={false}
+                canRemoveFromCourt={false}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </>
   );

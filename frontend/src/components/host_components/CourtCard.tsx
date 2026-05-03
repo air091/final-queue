@@ -162,7 +162,7 @@ export default function CourtCard({
         viewBox="0 0 300 150"
         fill="none"
         stroke="rgba(200, 200, 200, 0.8)"
-        stroke-width="2"
+        strokeWidth="2"
         preserveAspectRatio="none"
         className="bg-green-800/80 absolute top-0 left-0 z-0 rounded-md"
       >
@@ -173,7 +173,7 @@ export default function CourtCard({
           height="100"
           fill="none"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="2"
+          strokeWidth="2"
         />
         <line
           x1="150"
@@ -181,8 +181,8 @@ export default function CourtCard({
           x2="150"
           y2="125"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="2"
-          stroke-dasharray="5,5"
+          strokeWidth="2"
+          strokeDasharray="5,5"
         />
         <line
           x1="25"
@@ -190,7 +190,7 @@ export default function CourtCard({
           x2="275"
           y2="50"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="1.5"
+          strokeWidth="1.5"
         />
         <line
           x1="25"
@@ -198,7 +198,7 @@ export default function CourtCard({
           x2="275"
           y2="100"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="1.5"
+          strokeWidth="1.5"
         />
         <line
           x1="50"
@@ -206,7 +206,7 @@ export default function CourtCard({
           x2="50"
           y2="125"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="1.5"
+          strokeWidth="1.5"
         />
         <line
           x1="250"
@@ -214,7 +214,7 @@ export default function CourtCard({
           x2="250"
           y2="125"
           stroke="rgba(200, 200, 200, 0.8)"
-          stroke-width="1.5"
+          strokeWidth="1.5"
         />
       </svg>
       <header className="relative z-[120] flex items-center justify-between">

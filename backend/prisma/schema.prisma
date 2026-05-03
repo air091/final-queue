@@ -87,6 +87,7 @@ model HostedPlayer {
   id                   String @id @default(uuid())
   hostId               String
   playerId             String?
+  isPaid               Boolean @default(false)
   staticName           String?
   staticProfileUrl     String?
   staticSkillLevel     SkillLevel?
@@ -167,4 +168,13 @@ model CourtAssignment {
   @@unique([courtId, position])
   @@unique([hostedPlayerId])
   @@index([courtId])
+}
+
+model Payment {
+  id                  String @id @default(uuid())
+  entranceFee         Decimal @default(0)
+  perMatchFee         Decimal @default(0)
+  expectedFee         Decimal @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

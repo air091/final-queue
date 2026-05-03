@@ -90,7 +90,7 @@ export default function PlayerCard({
       {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
-        opacity: isDragging ? 0.6 : 1,
+        opacity: isDragging ? 0 : 1,
       }}
       className={`relative w-full flex items-center justify-between py-1 px-1 rounded-full border ${statusClasses} ${
         canDrag
