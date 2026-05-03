@@ -155,7 +155,7 @@ export default function CourtCard({
   const isInteractionDisabled = isGameStarted;
 
   return (
-    <div className="relative border w-[420px] p-2 rounded-md">
+    <div className="relative w-[420px] p-2 rounded-md">
       <svg
         width="100%"
         height="100%"
@@ -164,7 +164,7 @@ export default function CourtCard({
         stroke="rgba(200, 200, 200, 0.8)"
         stroke-width="2"
         preserveAspectRatio="none"
-        className="bg-green-800/80 absolute top-0 left-0 z-0"
+        className="bg-green-800/80 absolute top-0 left-0 z-0 rounded-md"
       >
         <rect
           x="25"
@@ -219,7 +219,7 @@ export default function CourtCard({
       </svg>
       <header className="relative z-[120] flex items-center justify-between">
         <div className="grid">
-          <span className="leading-[12px] font-semibold text-white drop-shadow-lg">
+          <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
             {court.name}
           </span>
           {court.startedAt && (
@@ -250,7 +250,7 @@ export default function CourtCard({
             onPointerDown={(e) => e.stopPropagation()}
             className={`relative ${activeDropdown === court.id ? "z-[130]" : ""}`}
           >
-            <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
+            <div className="cursor-pointer text-background hover:bg-green-800 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
               <HiOutlineDotsVertical
                 onClick={() => onToggleDropdown(court.id)}
               />

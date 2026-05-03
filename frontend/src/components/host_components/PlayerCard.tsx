@@ -110,7 +110,7 @@ export default function PlayerCard({
           <span className="flex items-center gap-2 font-semibold leading-[12px]">
             <span className="text-[12px]">{player.player.username}</span>
             {player.player.isStatic && (
-              <span className="rounded-md bg-stone-200 px-1.5 text-[8px] font-semibold uppercase  text-stone-700">
+              <span className="rounded-md bg-stone-200 px-1  text-[8px] font-semibold uppercase  text-stone-700">
                 Static
               </span>
             )}
