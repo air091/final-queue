@@ -425,6 +425,7 @@ export default function Match() {
 
   const handleCourtPlayerDropdown = () => {
     if (courtActiveDropdown !== null) blurActiveElement();
+    setPlayerActiveDropdown(null);
     setCourtActiveDropdown(null);
   };
 
@@ -733,6 +734,7 @@ export default function Match() {
                     onRenameCourt={handleRenameCourt}
                     onDeleteCourt={handleDeleteCourt}
                     activeDropdown={courtActiveDropdown}
+                    activePlayerDropdown={playerActiveDropdown}
                     onToggleDropdown={handleCourtDropdown}
                     onOpenPlayerDropdown={handleCourtPlayerDropdown}
                   />

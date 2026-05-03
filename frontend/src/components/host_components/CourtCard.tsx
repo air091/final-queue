@@ -14,6 +14,7 @@ type CourtCardProps = {
   onRenameCourt: (courtId: string, nextName: string) => void;
   onDeleteCourt: (courtId: string) => void;
   activeDropdown: string | null;
+  activePlayerDropdown: string | null;
   onToggleDropdown: (courtId: string) => void;
   onOpenPlayerDropdown: () => void;
 };
@@ -33,6 +34,7 @@ type CourtSlotProps = {
   isInteractionDisabled: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   activeCourtDropdown: string | null;
+  activePlayerDropdown: string | null;
   onOpenPlayerDropdown: () => void;
 };
 
@@ -44,6 +46,7 @@ function CourtSlot({
   isInteractionDisabled,
   onRemovePlayerFromCourt,
   activeCourtDropdown,
+  activePlayerDropdown,
   onOpenPlayerDropdown,
 }: CourtSlotProps) {
   const { isOver, setNodeRef } = useDroppable({
@@ -82,8 +85,10 @@ function CourtSlot({
   }, []);
 
   useEffect(() => {
-    if (activeCourtDropdown !== null) setPlayerActiveDropdown(null);
-  }, [activeCourtDropdown]);
+    if (activeCourtDropdown !== null || activePlayerDropdown !== null) {
+      setPlayerActiveDropdown(null);
+    }
+  }, [activeCourtDropdown, activePlayerDropdown]);
 
   return (
     <div
@@ -128,6 +133,7 @@ export default function CourtCard({
   onRenameCourt,
   onDeleteCourt,
   activeDropdown,
+  activePlayerDropdown,
   onToggleDropdown,
   onOpenPlayerDropdown,
 }: CourtCardProps) {
@@ -277,6 +283,7 @@ export default function CourtCard({
             isInteractionDisabled={isInteractionDisabled}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
             activeCourtDropdown={activeDropdown}
+            activePlayerDropdown={activePlayerDropdown}
             onOpenPlayerDropdown={onOpenPlayerDropdown}
           />
         ))}

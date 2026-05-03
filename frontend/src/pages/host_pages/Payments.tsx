@@ -26,15 +26,7 @@ type PlayerPaymentDraft = {
 };
 
 const CURRENCY_OPTIONS: PaymentCurrency[] = ["PHP", "USD", "EUR"];
-const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = [
-  "unpaid",
-  "pending",
-  "partial",
-  "paid",
-  "failed",
-  "refunded",
-  "waived",
-];
+const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["unpaid", "paid"];
 const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = ["cash", "ewallet"];
 
 const formatMoney = (amount: number, currency: PaymentCurrency) =>
@@ -157,14 +149,18 @@ export default function Payments() {
         }
 
         const amountExpected =
-          nextPricing.entranceFee + nextPricing.perMatchFee * player.gamesPlayed;
+          nextPricing.entranceFee +
+          nextPricing.perMatchFee * player.gamesPlayed;
 
         return {
           ...player,
           payment: {
             ...player.payment,
             amountExpected,
-            balance: getPaymentBalance(amountExpected, player.payment.amountPaid),
+            balance: getPaymentBalance(
+              amountExpected,
+              player.payment.amountPaid,
+            ),
             currency: nextPricing.currency,
           },
         };
@@ -380,7 +376,8 @@ export default function Payments() {
           <div className="rounded-md border p-3">
             <p className="text-xs text-stone-500">Paid players</p>
             <p className="font-semibold">
-              {paymentsData.summary.paidCount}/{paymentsData.summary.totalPlayers}
+              {paymentsData.summary.paidCount}/
+              {paymentsData.summary.totalPlayers}
             </p>
           </div>
         </div>
@@ -428,7 +425,8 @@ export default function Payments() {
                 paymentsData.players.map((player) => {
                   const draft = playerDrafts[player.id];
                   const expectedAmount = toAmount(
-                    draft?.amountExpected ?? String(player.payment.amountExpected),
+                    draft?.amountExpected ??
+                      String(player.payment.amountExpected),
                   );
                   const paidAmount = toAmount(
                     draft?.amountPaid ?? String(player.payment.amountPaid),
@@ -476,7 +474,9 @@ export default function Payments() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-2 py-2 text-sm">{player.gamesPlayed}</td>
+                      <td className="px-2 py-2 text-sm">
+                        {player.gamesPlayed}
+                      </td>
                       <td className="px-2 py-2">
                         <input
                           type="number"
@@ -511,7 +511,8 @@ export default function Payments() {
                           min="0"
                           step="0.01"
                           value={
-                            draft?.amountPaid ?? String(player.payment.amountPaid)
+                            draft?.amountPaid ??
+                            String(player.payment.amountPaid)
                           }
                           onChange={(event) =>
                             setPlayerDrafts((current) => ({
@@ -547,7 +548,9 @@ export default function Payments() {
                                   status: player.payment.status,
                                   method: player.payment.method ?? "",
                                 }),
-                                method: event.target.value as PaymentMethod | "",
+                                method: event.target.value as
+                                  | PaymentMethod
+                                  | "",
                               },
                             }))
                           }
@@ -567,7 +570,9 @@ export default function Payments() {
                       <td className="px-2 py-2">
                         <button
                           type="button"
-                          onClick={() => void handleSavePlayerPayment(player.id)}
+                          onClick={() =>
+                            void handleSavePlayerPayment(player.id)
+                          }
                           disabled={savingPlayerId === player.id}
                           className={`rounded-md px-3 py-1 text-sm text-white ${
                             savingPlayerId === player.id

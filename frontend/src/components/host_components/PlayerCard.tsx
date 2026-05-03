@@ -143,7 +143,7 @@ export default function PlayerCard({
             />
           </div>
           {activeDropdown === player.id && (
-            <PlayerSettingsDropdown player={player} />
+            <PlayerSettingsDropdown player={player} anchorRef={dropdownRef} />
           )}
         </div>
       </div>

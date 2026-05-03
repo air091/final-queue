@@ -1,10 +1,14 @@
 import axios from "axios";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
 import type { AcceptedPlayers } from "../../lib/host";
+import type { RefObject } from "react";
 
 type PlayerDropdownProps = {
   player: AcceptedPlayers;
+  anchorRef: RefObject<HTMLDivElement | null>;
 };
 
 const formatSkillLevel = (skillLevel: string) =>
@@ -12,6 +16,7 @@ const formatSkillLevel = (skillLevel: string) =>
 
 export default function PlayerSettingsDropdown({
   player,
+  anchorRef,
 }: PlayerDropdownProps) {
   const { communityId, hostId } = useParams();
   const {
@@ -23,6 +28,33 @@ export default function PlayerSettingsDropdown({
     setCourts,
   } = useHostData();
   const isPlayerInGame = player.matchStatus === "playing";
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+
+      const rect = anchor.getBoundingClientRect();
+      const dropdownWidth = 168;
+      const gap = 4;
+      const maxLeft = Math.max(8, window.innerWidth - dropdownWidth - 8);
+
+      setPosition({
+        top: rect.bottom + gap,
+        left: Math.min(rect.left, maxLeft),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorRef]);
 
   const banAPI = async () => {
     await axios.post(
@@ -74,8 +106,15 @@ export default function PlayerSettingsDropdown({
     }
   };
 
-  return (
-    <div className="absolute top-7 left-0 z-[999] grid w-[168px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
+  return createPortal(
+    <div
+      data-dropdown
+      className="fixed z-[4000] grid w-[168px] gap-y-2 rounded-md border bg-white p-2 cursor-default shadow-md"
+      style={{
+        top: position.top,
+        left: position.left,
+      }}
+    >
       <div>
         <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
           Player settings
@@ -109,6 +148,7 @@ export default function PlayerSettingsDropdown({
           {isPlayerInGame ? "Ban unavailable" : "Ban"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
