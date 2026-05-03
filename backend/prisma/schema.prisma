@@ -110,6 +110,7 @@ model HostedPlayer {
   hostId               String
   playerId             String?
   paymentStatus        PaymentStatus @default(unpaid)
+  gamesPlayed          Int @default(0)
   staticName           String?
   staticProfileUrl     String?
   staticSkillLevel     SkillLevel?
