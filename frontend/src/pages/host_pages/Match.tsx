@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   DndContext,
@@ -201,6 +201,7 @@ export default function Match() {
     setAcceptedPlayers: setPlayers,
     courts,
     setCourts,
+    refreshHostData,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("waiting");
@@ -210,11 +211,37 @@ export default function Match() {
   const [courtActiveDropdown, setCourtActiveDropdown] = useState<string | null>(
     null,
   );
+  const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
+    new Map(),
+  );
   const sensors = useSensors(useSensor(PointerSensor));
 
   const blurActiveElement = () => {
     const activeElement = document.activeElement;
     if (activeElement instanceof HTMLElement) activeElement.blur();
+  };
+
+  const queueCourtPlayerOperation = (
+    hostedPlayerId: string,
+    operation: () => Promise<void>,
+  ) => {
+    const previousOperation =
+      pendingCourtPlayerOperationsRef.current.get(hostedPlayerId) ??
+      Promise.resolve();
+
+    const nextOperation = previousOperation
+      .catch(() => undefined)
+      .then(operation)
+      .finally(() => {
+        const currentOperation =
+          pendingCourtPlayerOperationsRef.current.get(hostedPlayerId);
+        if (currentOperation === nextOperation) {
+          pendingCourtPlayerOperationsRef.current.delete(hostedPlayerId);
+        }
+      });
+
+    pendingCourtPlayerOperationsRef.current.set(hostedPlayerId, nextOperation);
+    return nextOperation;
   };
 
   const assignPlayerToCourtAPI = async (
@@ -301,7 +328,7 @@ export default function Match() {
     };
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -316,13 +343,11 @@ export default function Match() {
 
     if (sourceCourt?.startedAt || targetCourt?.startedAt) return;
 
-    const previousCourts = courts;
-    const previousPlayers = players;
     const hostedPlayerId =
       (active.data.current?.hostedPlayerId as string | undefined) ??
       String(active.id);
     const updatedCourts = getUpdatedCourts(
-      previousCourts,
+      courts,
       hostedPlayerId,
       dropData.courtId,
       dropData.position,
@@ -334,7 +359,7 @@ export default function Match() {
     setCourts(updatedCourts);
     setPlayers(
       getPlayersWithCourtAssignment(
-        previousPlayers,
+        players,
         hostedPlayerId,
         dropData.courtId,
         dropData.position,
@@ -342,20 +367,21 @@ export default function Match() {
       ),
     );
 
-    try {
-      await assignPlayerToCourtAPI(
-        hostedPlayerId,
-        dropData.courtId,
-        dropData.position,
-      );
-    } catch (error) {
-      setCourts(previousCourts);
-      setPlayers(previousPlayers);
+    void queueCourtPlayerOperation(hostedPlayerId, async () => {
+      try {
+        await assignPlayerToCourtAPI(
+          hostedPlayerId,
+          dropData.courtId,
+          dropData.position,
+        );
+      } catch (error) {
+        if (axios.isAxiosError(error))
+          console.error(error.response?.data ?? error);
+        else console.error(error);
 
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data ?? error);
-      else console.error(error);
-    }
+        await refreshHostData();
+      }
+    });
   };
 
   const handlePlayerDropdown = (playerHostedId: string) => {
@@ -377,31 +403,26 @@ export default function Match() {
     setCourtActiveDropdown(null);
   };
 
-  const handleRemovePlayerFromCourt = async (
+  const handleRemovePlayerFromCourt = (
     hostedPlayerId: string,
     courtId: string,
   ) => {
-    const previousCourts = courts;
-    const previousPlayers = players;
-    const updatedCourts = getCourtsWithoutPlayer(
-      previousCourts,
-      hostedPlayerId,
-      courtId,
-    );
+    const updatedCourts = getCourtsWithoutPlayer(courts, hostedPlayerId, courtId);
 
     setCourts(updatedCourts);
-    setPlayers(getPlayersWithoutCourtAssignment(previousPlayers, hostedPlayerId));
+    setPlayers(getPlayersWithoutCourtAssignment(players, hostedPlayerId));
 
-    try {
-      await removePlayerFromCourtAPI(hostedPlayerId, courtId);
-    } catch (error) {
-      setCourts(previousCourts);
-      setPlayers(previousPlayers);
+    void queueCourtPlayerOperation(hostedPlayerId, async () => {
+      try {
+        await removePlayerFromCourtAPI(hostedPlayerId, courtId);
+      } catch (error) {
+        if (axios.isAxiosError(error))
+          console.error(error.response?.data ?? error);
+        else console.error(error);
 
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data ?? error);
-      else console.error(error);
-    }
+        await refreshHostData();
+      }
+    });
   };
 
   const handleStartCourtGame = async (courtId: string) => {

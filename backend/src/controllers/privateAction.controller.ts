@@ -513,7 +513,7 @@ export const assignPlayerToCourt = async (
     const existingAssignment = await prisma.courtAssignment.findFirst({
       where: { hostedPlayerId: player.id },
       select: {
-        id: true,
+        hostedPlayerId: true,
         court: {
           select: {
             startedAt: true,
@@ -542,23 +542,18 @@ export const assignPlayerToCourt = async (
       });
     }
 
-    if (existingAssignment) {
-      await prisma.courtAssignment.update({
-        where: { id: existingAssignment.id },
-        data: {
-          courtId: court.id,
-          position,
-        },
-      });
-    } else {
-      await prisma.courtAssignment.create({
-        data: {
-          hostedPlayerId: player.id,
-          courtId: court.id,
-          position,
-        },
-      });
-    }
+    await prisma.courtAssignment.upsert({
+      where: { hostedPlayerId: player.id },
+      update: {
+        courtId: court.id,
+        position,
+      },
+      create: {
+        hostedPlayerId: player.id,
+        courtId: court.id,
+        position,
+      },
+    });
 
     return response.status(200).json({
       success: true,
@@ -657,9 +652,9 @@ export const removePlayerFromCourt = async (
     });
 
     if (!assignment)
-      return response.status(404).json({
-        success: false,
-        message: "Player is not assigned to this court",
+      return response.status(200).json({
+        success: true,
+        message: "Player already removed from the slot",
       });
 
     await prisma.courtAssignment.delete({
