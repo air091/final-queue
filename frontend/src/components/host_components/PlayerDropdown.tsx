@@ -75,7 +75,7 @@ export default function PlayerSettingsDropdown({
   };
 
   return (
-    <div className="absolute top-7 left-0 border p-2 z-50 bg-white rounded-md w-[168px] cursor-default grid gap-y-2">
+    <div className="absolute top-7 left-0 z-[140] grid w-[168px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
       <div>
         <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
           Player settings

@@ -88,12 +88,18 @@ function CourtSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`border w-full min-h-[48px] flex items-center justify-center rounded-md transition-colors px-2 py-1 ${
-        isOver ? "bg-stone-200 border-stone-500" : ""
-      }`}
+      className={`relative border-2 border-white text-white w-full min-h-[48px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
     >
-      {player ? (
-        <div className="w-full">
+      {/* Blurred background layer */}
+      <div
+        className={`absolute inset-0 transition-colors backdrop-blur-[1.5px] ${
+          isOver ? "bg-stone-200/40 backdrop-blur-md" : ""
+        }`}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 w-full flex items-center justify-center">
+        {player ? (
           <PlayerCard
             player={player}
             draggableId={`court-player-${courtId}-${position}-${player.id}`}
@@ -105,10 +111,10 @@ function CourtSlot({
             courtId={courtId}
             onRemoveFromCourt={onRemovePlayerFromCourt}
           />
-        </div>
-      ) : (
-        <span>{label}</span>
-      )}
+        ) : (
+          <span>{label}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -149,10 +155,73 @@ export default function CourtCard({
   const isInteractionDisabled = isGameStarted;
 
   return (
-    <div className="border w-[420px] p-2 rounded-md">
-      <header className="flex items-center justify-between">
+    <div className="relative border w-[420px] p-2 rounded-md">
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 300 150"
+        fill="none"
+        stroke="rgba(200, 200, 200, 0.8)"
+        stroke-width="2"
+        preserveAspectRatio="none"
+        className="bg-green-800/80 absolute top-0 left-0 z-0"
+      >
+        <rect
+          x="25"
+          y="25"
+          width="250"
+          height="100"
+          fill="none"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="2"
+        />
+        <line
+          x1="150"
+          y1="25"
+          x2="150"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="2"
+          stroke-dasharray="5,5"
+        />
+        <line
+          x1="25"
+          y1="50"
+          x2="275"
+          y2="50"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="1.5"
+        />
+        <line
+          x1="25"
+          y1="100"
+          x2="275"
+          y2="100"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="1.5"
+        />
+        <line
+          x1="50"
+          y1="25"
+          x2="50"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="1.5"
+        />
+        <line
+          x1="250"
+          y1="25"
+          x2="250"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          stroke-width="1.5"
+        />
+      </svg>
+      <header className="relative z-[120] flex items-center justify-between">
         <div className="grid">
-          <span className="leading-[12px] font-semibold">{court.name}</span>
+          <span className="leading-[12px] font-semibold text-white drop-shadow-lg">
+            {court.name}
+          </span>
           {court.startedAt && (
             <span className="text-[12px] text-green-700">Game in progress</span>
           )}
@@ -179,7 +248,7 @@ export default function CourtCard({
           <div
             data-dropdown
             onPointerDown={(e) => e.stopPropagation()}
-            className="relative"
+            className={`relative ${activeDropdown === court.id ? "z-[130]" : ""}`}
           >
             <div className="cursor-pointer hover:bg-stone-400 p-1 rounded-full w-fit">
               <HiOutlineDotsVertical
@@ -197,7 +266,7 @@ export default function CourtCard({
           </div>
         </div>
       </header>
-      <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3">
+      <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3 z-10">
         {COURT_SLOTS.map((slot) => (
           <CourtSlot
             key={slot.position}

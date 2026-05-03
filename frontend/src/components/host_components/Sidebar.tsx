@@ -8,7 +8,7 @@ import { MdOutlinePayment } from "react-icons/md";
 export default function Sidebar() {
   const { communityId, hostId } = useParams();
   return (
-    <nav className="w-full max-w-[220px]">
+    <nav className="w-[220px]">
       <ul className="grid">
         <li>
           <NavLink

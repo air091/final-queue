@@ -92,11 +92,11 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.6 : 1,
       }}
-      className={`w-full flex items-center justify-between py-1 px-1 rounded-full border ${statusClasses} ${
+      className={`relative w-full flex items-center justify-between py-1 px-1 rounded-full border ${statusClasses} ${
         canDrag
           ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
           : "cursor-default"
-      }`}
+      } ${activeDropdown === player.id ? "z-[120]" : ""}`}
     >
       <div className="flex items-center gap-x-2">
         <div className="w-[28px] h-[28px] rounded-full">
@@ -135,7 +135,7 @@ export default function PlayerCard({
           data-dropdown
           ref={dropdownRef}
           onPointerDown={(e) => e.stopPropagation()}
-          className="relative w-full"
+          className={`relative w-full ${activeDropdown === player.id ? "z-[130]" : ""}`}
         >
           <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
             <HiOutlineDotsVertical

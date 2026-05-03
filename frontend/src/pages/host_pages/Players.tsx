@@ -191,7 +191,10 @@ function PlayerSection({
               })
             ) : (
               <tr>
-                <td colSpan={4} className="text-center py-4 px-2 text-sm text-stone-500">
+                <td
+                  colSpan={4}
+                  className="text-center py-4 px-2 text-sm text-stone-500"
+                >
                   {emptyMessage}
                 </td>
               </tr>
@@ -247,12 +250,16 @@ export default function Players() {
         player: hostedPlayer.player,
       };
 
-      setPlayersInHost((currentPlayers) => [hostPlayerRecord, ...currentPlayers]);
+      setPlayersInHost((currentPlayers) => [
+        hostPlayerRecord,
+        ...currentPlayers,
+      ]);
       setAcceptedPlayers((currentPlayers) => [hostedPlayer, ...currentPlayers]);
       setStaticPlayerName("");
       setStaticSkillLevel("beginner");
     } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     } finally {
       setIsCreatingStaticPlayer(false);
@@ -346,7 +353,9 @@ export default function Players() {
       ),
     );
     setAcceptedPlayers((currentPlayers) =>
-      currentPlayers.filter((currentPlayer) => currentPlayer.id !== hostedPlayerId),
+      currentPlayers.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
+      ),
     );
     setCourts((currentCourts) =>
       currentCourts.map((court) => ({
@@ -368,7 +377,8 @@ export default function Players() {
       setAcceptedPlayers(previousAcceptedPlayers);
       setCourts(previousCourts);
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     }
   };
@@ -421,7 +431,8 @@ export default function Players() {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     }
   };
@@ -470,7 +481,8 @@ export default function Players() {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     }
   };

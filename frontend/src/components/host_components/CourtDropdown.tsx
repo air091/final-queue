@@ -30,7 +30,7 @@ export default function CourtDropdown({
   };
 
   return (
-    <div className="absolute top-7 right-0 z-50 grid w-[200px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
+    <div className="absolute top-7 right-0 z-[140] grid w-[200px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
       <div>
         <h2 className="font-semibold text-[12px] text-black leading-[10px]">
           Court settings

@@ -621,10 +621,10 @@ export default function Match() {
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <main className="flex">
           {/* players */}
-          <div className="border w-full max-w-fit">
+          <div className="border w-full max-w-fit p-2">
             <header>
-              <h5>Players</h5>
-              <div className="flex items-center justify-between">
+              <h5 className="font-semibold">Players</h5>
+              <div className="flex items-center justify-between my-2">
                 {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
                     key={playerStatus.value}
@@ -641,7 +641,7 @@ export default function Match() {
                 ))}
               </div>
             </header>
-            <main className="w-[360px] grid grid-cols-2 gap-2 p-2">
+            <main className="w-[360px] grid grid-cols-2 gap-1">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
