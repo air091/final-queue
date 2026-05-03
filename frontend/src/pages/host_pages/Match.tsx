@@ -14,7 +14,9 @@ import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
 import { useHostData } from "../../hooks/useHostData";
 import {
+  buildPaymentsSummary,
   getDerivedMatchStatus,
+  getPaymentBalance,
   type AcceptedPlayers,
   type CourtType,
   type MatchPlayerStatus,
@@ -205,6 +207,8 @@ export default function Match() {
     setAcceptedPlayers: setPlayers,
     courts,
     setCourts,
+    paymentsData,
+    setPaymentsData,
     refreshHostData,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
@@ -479,6 +483,7 @@ export default function Match() {
   const handleEndCourtGame = async (courtId: string) => {
     const previousCourts = courts;
     const previousPlayers = players;
+    const previousPaymentsData = paymentsData;
     const endedCourt = previousCourts.find((court) => court.id === courtId);
     const hostedPlayerIds =
       endedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
@@ -488,6 +493,37 @@ export default function Match() {
     setPlayers(
       getPlayersWithResetTimer(previousPlayers, hostedPlayerIds, "waiting"),
     );
+    setPaymentsData((currentPaymentsData) => {
+      const nextPlayers = currentPaymentsData.players.map((player) => {
+        if (!hostedPlayerIds.includes(player.id)) return player;
+
+        const nextGamesPlayed = player.gamesPlayed + 1;
+        const nextAmountExpected =
+          player.payment.id === null
+            ? currentPaymentsData.pricing.entranceFee +
+              currentPaymentsData.pricing.perMatchFee * nextGamesPlayed
+            : player.payment.amountExpected;
+
+        return {
+          ...player,
+          gamesPlayed: nextGamesPlayed,
+          payment: {
+            ...player.payment,
+            amountExpected: nextAmountExpected,
+            balance: getPaymentBalance(
+              nextAmountExpected,
+              player.payment.amountPaid,
+            ),
+          },
+        };
+      });
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
 
     try {
       const response = await endCourtGameAPI(courtId);
@@ -501,6 +537,7 @@ export default function Match() {
     } catch (error) {
       setCourts(previousCourts);
       setPlayers(previousPlayers);
+      setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);

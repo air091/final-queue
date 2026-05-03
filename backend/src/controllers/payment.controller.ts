@@ -45,11 +45,15 @@ const isNullableTrimmedString = (value: unknown) =>
 
 const toMoneyNumber = (value: unknown) => Number(value ?? 0);
 
-const getDefaultExpectedAmount = (pricing: {
+const getExpectedAmount = (
+  pricing: {
   entranceFee: unknown;
   perMatchFee: unknown;
-} | null) =>
-  toMoneyNumber(pricing?.entranceFee) + toMoneyNumber(pricing?.perMatchFee);
+} | null,
+  gamesPlayed: number,
+) =>
+  toMoneyNumber(pricing?.entranceFee) +
+  toMoneyNumber(pricing?.perMatchFee) * gamesPlayed;
 
 const resolvePaymentStatus = ({
   explicitStatus,
@@ -312,7 +316,6 @@ export const getHostPayments = async (
         .json({ success: false, message: "Community or host not found" });
 
     const pricing = mapPricing(host.pricing);
-    const defaultExpectedAmount = getDefaultExpectedAmount(host.pricing);
 
     const hostedPlayers = await prisma.hostedPlayer.findMany({
       where: {
@@ -328,6 +331,7 @@ export const getHostPayments = async (
         id: true,
         status: true,
         paymentStatus: true,
+        gamesPlayed: true,
         timerStartedAt: true,
         ...hostedPlayerProfileSelect,
         payments: {
@@ -351,6 +355,10 @@ export const getHostPayments = async (
     });
 
     const players = hostedPlayers.map((hostedPlayer) => {
+      const defaultExpectedAmount = getExpectedAmount(
+        host.pricing,
+        hostedPlayer.gamesPlayed,
+      );
       const payment = mapPaymentRecord({
         payment: hostedPlayer.payments[0],
         fallbackCurrency: pricing.currency,
@@ -361,6 +369,7 @@ export const getHostPayments = async (
         id: hostedPlayer.id,
         status: hostedPlayer.status,
         paymentStatus: hostedPlayer.paymentStatus,
+        gamesPlayed: hostedPlayer.gamesPlayed,
         timerStartedAt: hostedPlayer.timerStartedAt,
         player: toHostedPlayerProfile(hostedPlayer),
         payment,
@@ -510,6 +519,7 @@ export const upsertHostedPlayerPayment = async (
         id: true,
         status: true,
         paymentStatus: true,
+        gamesPlayed: true,
         timerStartedAt: true,
         ...hostedPlayerProfileSelect,
         payments: {
@@ -538,7 +548,10 @@ export const upsertHostedPlayerPayment = async (
         .json({ success: false, message: "Hosted player not found" });
 
     const existingPayment = hostedPlayer.payments[0] ?? null;
-    const defaultExpectedAmount = getDefaultExpectedAmount(host.pricing);
+    const defaultExpectedAmount = getExpectedAmount(
+      host.pricing,
+      hostedPlayer.gamesPlayed,
+    );
     const nextAmountExpected =
       amountExpected ??
       (existingPayment
@@ -638,6 +651,7 @@ export const upsertHostedPlayerPayment = async (
         id: hostedPlayer.id,
         status: hostedPlayer.status,
         paymentStatus: nextStatus,
+        gamesPlayed: hostedPlayer.gamesPlayed,
         timerStartedAt: hostedPlayer.timerStartedAt,
         player: toHostedPlayerProfile(hostedPlayer),
       },

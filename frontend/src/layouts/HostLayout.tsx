@@ -4,9 +4,11 @@ import { Outlet, useParams } from "react-router-dom";
 import Sidebar from "../components/host_components/Sidebar";
 import type { HostOutletContext } from "../hooks/useHostData";
 import {
+  EMPTY_HOST_PAYMENTS_DATA,
   normalizeAcceptedPlayers,
   type AcceptedPlayers,
   type CourtType,
+  type HostPaymentsData,
   type HostPlayerRecord,
   type QueueType,
 } from "../lib/host";
@@ -17,6 +19,9 @@ export default function HostLayout() {
   const [acceptedPlayers, setAcceptedPlayers] = useState<AcceptedPlayers[]>([]);
   const [courts, setCourts] = useState<CourtType[]>([]);
   const [queues, setQueues] = useState<QueueType[]>([]);
+  const [paymentsData, setPaymentsData] = useState<HostPaymentsData>(
+    EMPTY_HOST_PAYMENTS_DATA,
+  );
   const [isHostLoading, setIsHostLoading] = useState(true);
   const [hostLoadError, setHostLoadError] = useState<string | null>(null);
 
@@ -27,7 +32,13 @@ export default function HostLayout() {
     setHostLoadError(null);
 
     try {
-      const [hostResponse, playersResponse, courtsResponse, queuesResponse] =
+      const [
+        hostResponse,
+        playersResponse,
+        courtsResponse,
+        queuesResponse,
+        paymentsResponse,
+      ] =
         await Promise.all([
           axios.get(
             `http://localhost:4000/api/community/${communityId}/hosts/${hostId}`,
@@ -45,6 +56,10 @@ export default function HostLayout() {
             `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/queues`,
             { withCredentials: true },
           ),
+          axios.get(
+            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/payments`,
+            { withCredentials: true },
+          ),
         ]);
 
       setPlayersInHost([
@@ -58,6 +73,11 @@ export default function HostLayout() {
       );
       setCourts(courtsResponse.data.courts);
       setQueues(queuesResponse.data.queues);
+      setPaymentsData({
+        pricing: paymentsResponse.data.pricing,
+        summary: paymentsResponse.data.summary,
+        players: paymentsResponse.data.players,
+      });
     } catch (error) {
       setHostLoadError("Unable to load host data.");
 
@@ -82,6 +102,8 @@ export default function HostLayout() {
     setCourts,
     queues,
     setQueues,
+    paymentsData,
+    setPaymentsData,
     refreshHostData: loadHostData,
   };
 

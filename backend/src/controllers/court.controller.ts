@@ -256,7 +256,12 @@ export const endMatchCourt = async (
     const [, endedCourt] = await prisma.$transaction([
       prisma.hostedPlayer.updateMany({
         where: { id: { in: hostedPlayerIds } },
-        data: { timerStartedAt: now },
+        data: {
+          timerStartedAt: now,
+          gamesPlayed: {
+            increment: 1,
+          },
+        },
       }),
       prisma.court.update({
         where: { id: court.id },
