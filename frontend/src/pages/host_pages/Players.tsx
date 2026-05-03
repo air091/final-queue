@@ -14,6 +14,195 @@ import type {
 const formatSkillLevel = (skillLevel: string) =>
   skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
+type PlayerSectionProps = {
+  title: string;
+  description: string;
+  players: HostPlayerRecord[];
+  acceptedPlayers: AcceptedPlayers[];
+  onAcceptPlayer: (hostedPlayerId: string) => void;
+  onRejectPlayer: (hostedPlayerId: string) => void;
+  onBanPlayer: (hostedPlayerId: string) => void;
+  onUnbanPlayer: (hostedPlayerId: string) => void;
+  onUpdateStaticPlayerSkillLevel?: (
+    hostedPlayerId: string,
+    skillLevel: SkillLevelType,
+  ) => void;
+  emptyMessage: string;
+};
+
+function PlayerSection({
+  title,
+  description,
+  players,
+  acceptedPlayers,
+  onAcceptPlayer,
+  onRejectPlayer,
+  onBanPlayer,
+  onUnbanPlayer,
+  onUpdateStaticPlayerSkillLevel,
+  emptyMessage,
+}: PlayerSectionProps) {
+  return (
+    <section className="rounded-xl border border-stone-200 bg-white p-4">
+      <header className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-base font-semibold">{title}</h4>
+          <p className="text-sm text-stone-500">{description}</p>
+        </div>
+        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+          {players.length}
+        </span>
+      </header>
+      <div className="overflow-x-auto">
+        <table className="table-auto border-collapse w-full">
+          <thead>
+            <tr>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2">
+                Player
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[144px]">
+                Skill Level
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+                Status
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.length > 0 ? (
+              players.map((p) => {
+                const acceptedPlayer = acceptedPlayers.find(
+                  (accepted) => accepted.id === p.id,
+                );
+                const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
+
+                return (
+                  <tr key={p.id} className="hover:bg-stone-100">
+                    <td className="py-1.5 px-2">
+                      <div className="flex items-center gap-x-2 text-[14px]">
+                        <div className="border w-[28px] h-[28px] rounded-full">
+                          <img
+                            src={p.player.profileUrl}
+                            alt={p.player.username}
+                            className="block w-full h-full rounded-full"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>{p.player.username}</span>
+                          {p.player.isStatic && (
+                            <span className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] text-stone-700">
+                              Static
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-2">
+                      {p.player.isStatic && onUpdateStaticPlayerSkillLevel ? (
+                        <select
+                          value={p.player.skillLevel}
+                          onChange={(event) =>
+                            onUpdateStaticPlayerSkillLevel(
+                              p.id,
+                              event.target.value as SkillLevelType,
+                            )
+                          }
+                          className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[12px]"
+                        >
+                          <option value="beginner">Beginner</option>
+                          <option value="intermediate">Intermediate</option>
+                          <option value="advanced">Advanced</option>
+                          <option value="elite">Elite</option>
+                        </select>
+                      ) : (
+                        <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
+                          {formatSkillLevel(p.player.skillLevel)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-md text-[12px] cursor-default ${
+                          p.status === "accepted"
+                            ? "bg-green-200 border border-green-500"
+                            : p.status === "requested"
+                              ? "bg-yellow-200 border border-yellow-500"
+                              : p.status === "rejected"
+                                ? "bg-rose-200 border border-rose-500"
+                                : "bg-stone-300 border border-stone-500"
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <div className="flex items-center gap-x-2">
+                        {p.status !== "accepted" && p.status !== "banned" && (
+                          <FaCheck
+                            size={28}
+                            title="Accept"
+                            onClick={() => onAcceptPlayer(p.id)}
+                            className="bg-green-200 p-1 rounded-md cursor-pointer hover:bg-green-400"
+                          />
+                        )}
+
+                        {p.status === "requested" && (
+                          <FcCancel
+                            size={28}
+                            title="Reject"
+                            onClick={() => onRejectPlayer(p.id)}
+                            className="bg-rose-200 p-1 rounded-md cursor-pointer hover:bg-rose-400"
+                          />
+                        )}
+
+                        {p.status === "accepted" && (
+                          <button
+                            type="button"
+                            title={isBanDisabled ? "Ban unavailable" : "Ban"}
+                            disabled={isBanDisabled}
+                            onClick={() => onBanPlayer(p.id)}
+                            className={`rounded-md px-2 py-1 text-[12px] text-white ${
+                              isBanDisabled
+                                ? "bg-stone-400 cursor-not-allowed"
+                                : "bg-red-500 cursor-pointer hover:bg-red-700"
+                            }`}
+                          >
+                            Ban
+                          </button>
+                        )}
+
+                        {p.status === "banned" && (
+                          <button
+                            type="button"
+                            title="Unban"
+                            onClick={() => onUnbanPlayer(p.id)}
+                            className="rounded-md bg-stone-700 px-2 py-1 text-[12px] text-white cursor-pointer hover:bg-stone-900"
+                          >
+                            Unban
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={4} className="text-center py-4 px-2 text-sm text-stone-500">
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export default function Players() {
   const { communityId, hostId } = useParams();
   const {
@@ -28,6 +217,8 @@ export default function Players() {
   const [staticSkillLevel, setStaticSkillLevel] =
     useState<SkillLevelType>("beginner");
   const [isCreatingStaticPlayer, setIsCreatingStaticPlayer] = useState(false);
+  const accountPlayers = players.filter((player) => !player.player.isStatic);
+  const staticPlayers = players.filter((player) => player.player.isStatic);
 
   const handleCreateStaticPlayer = async (
     event: FormEvent<HTMLFormElement>,
@@ -235,6 +426,55 @@ export default function Players() {
     }
   };
 
+  const handleUpdateStaticPlayerSkillLevel = async (
+    hostedPlayerId: string,
+    skillLevel: SkillLevelType,
+  ) => {
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === hostedPlayerId
+          ? {
+              ...currentPlayer,
+              player: {
+                ...currentPlayer.player,
+                skillLevel,
+              },
+            }
+          : currentPlayer,
+      ),
+    );
+    setAcceptedPlayers((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === hostedPlayerId
+          ? {
+              ...currentPlayer,
+              player: {
+                ...currentPlayer.player,
+                skillLevel,
+              },
+            }
+          : currentPlayer,
+      ),
+    );
+
+    try {
+      await axios.patch(
+        `http://localhost:4000/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/skill-level`,
+        { skillLevel },
+        { withCredentials: true },
+      );
+    } catch (error) {
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
   return (
     <>
       <header className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -287,134 +527,30 @@ export default function Players() {
           </button>
         </form>
       </header>
-      <div className="p-1">
-        <table className="table-auto border-collapse w-full">
-          <thead>
-            <tr>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2">
-                Player
-              </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[144px]">
-                Skill Level
-              </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
-                Status
-              </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.length > 0 ? (
-              players.map((p) => {
-                const acceptedPlayer = acceptedPlayers.find(
-                  (accepted) => accepted.id === p.id,
-                );
-                const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
-
-                return (
-                  <tr key={p.id} className="hover:bg-stone-100">
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center gap-x-2 text-[14px]">
-                        <div className="border w-[28px] h-[28px] rounded-full">
-                          <img
-                            src={p.player.profileUrl}
-                            alt={p.player.username}
-                            className="block w-full h-full rounded-full"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>{p.player.username}</span>
-                          {p.player.isStatic && (
-                            <span className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] text-stone-700">
-                              Static
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-1.5 px-2">
-                      <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
-                        {formatSkillLevel(p.player.skillLevel)}
-                      </span>
-                    </td>
-                    <td className="py-1.5 px-2">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-md  text-[12px] cursor-default
-                        ${
-                          p.status === "accepted"
-                            ? "bg-green-200 border border-green-500"
-                            : p.status === "requested"
-                              ? "bg-yellow-200 border border-yellow-500"
-                              : p.status === "rejected"
-                                ? "bg-rose-200 border border-rose-500"
-                                : "bg-stone-300 border border-stone-500"
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center gap-x-2">
-                        {p.status !== "accepted" && p.status !== "banned" && (
-                          <FaCheck
-                            size={28}
-                            title="Accept"
-                            onClick={() => handleAcceptPlayer(p.id)}
-                            className="bg-green-200 p-1 rounded-md cursor-pointer hover:bg-green-400"
-                          />
-                        )}
-
-                        {p.status === "requested" && (
-                          <FcCancel
-                            size={28}
-                            title="Reject"
-                            onClick={() => handleRejectPlayer(p.id)}
-                            className="bg-rose-200 p-1 rounded-md cursor-pointer hover:bg-rose-400"
-                          />
-                        )}
-
-                        {p.status === "accepted" && (
-                          <button
-                            type="button"
-                            title={isBanDisabled ? "Ban unavailable" : "Ban"}
-                            disabled={isBanDisabled}
-                            onClick={() => handleBanPlayer(p.id)}
-                            className={`rounded-md px-2 py-1 text-[12px] text-white ${
-                              isBanDisabled
-                                ? "bg-stone-400 cursor-not-allowed"
-                                : "bg-red-500 cursor-pointer hover:bg-red-700"
-                            }`}
-                          >
-                            Ban
-                          </button>
-                        )}
-
-                        {p.status === "banned" && (
-                          <button
-                            type="button"
-                            title="Unban"
-                            onClick={() => handleUnbanPlayer(p.id)}
-                            className="rounded-md bg-stone-700 px-2 py-1 text-[12px] text-white cursor-pointer hover:bg-stone-900"
-                          >
-                            Unban
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="text-center py-1.5 px-2">
-                  No players yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="grid gap-4 p-1">
+        <PlayerSection
+          title="Account Players"
+          description="Players connected to real accounts and host join requests."
+          players={accountPlayers}
+          acceptedPlayers={acceptedPlayers}
+          onAcceptPlayer={handleAcceptPlayer}
+          onRejectPlayer={handleRejectPlayer}
+          onBanPlayer={handleBanPlayer}
+          onUnbanPlayer={handleUnbanPlayer}
+          emptyMessage="No account players yet."
+        />
+        <PlayerSection
+          title="Static Players"
+          description="Host-only walk-in players without an account."
+          players={staticPlayers}
+          acceptedPlayers={acceptedPlayers}
+          onAcceptPlayer={handleAcceptPlayer}
+          onRejectPlayer={handleRejectPlayer}
+          onBanPlayer={handleBanPlayer}
+          onUnbanPlayer={handleUnbanPlayer}
+          onUpdateStaticPlayerSkillLevel={handleUpdateStaticPlayerSkillLevel}
+          emptyMessage="No static players yet."
+        />
       </div>
     </>
   );

@@ -7,6 +7,7 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
+  updateStaticPlayerSkillLevel,
 } from "../controllers/privateAction.controller.js";
 
 const router: Router = express.Router();
@@ -33,6 +34,12 @@ router.post(
   "/unban/community/:communityId/hosts/:hostId/:hostedPlayerId",
   authenticate,
   unbanPlayer,
+);
+
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
+  authenticate,
+  updateStaticPlayerSkillLevel,
 );
 
 router.post(

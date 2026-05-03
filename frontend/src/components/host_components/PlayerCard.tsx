@@ -80,7 +80,7 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.6 : 1,
       }}
-      className={`border w-full flex items-center justify-between gap-x-10 py-1 px-1 rounded-full ${
+      className={`border w-full flex items-center justify-between py-1 px-1 rounded-full ${
         canDrag
           ? "cursor-grab active:cursor-grabbing hover:bg-stone-200"
           : "cursor-default"
@@ -96,9 +96,9 @@ export default function PlayerCard({
         </div>
         <div>
           <span className="flex items-center gap-2 font-semibold leading-[12px]">
-            <span>{player.player.username}</span>
+            <span className="text-[12px]">{player.player.username}</span>
             {player.player.isStatic && (
-              <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em] text-stone-700">
+              <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-[8px] font-semibold uppercase  text-stone-700">
                 Static
               </span>
             )}
@@ -123,7 +123,7 @@ export default function PlayerCard({
           data-dropdown
           ref={dropdownRef}
           onPointerDown={(e) => e.stopPropagation()}
-          className="relative"
+          className="relative w-full"
         >
           <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
             <HiOutlineDotsVertical
