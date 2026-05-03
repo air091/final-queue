@@ -61,7 +61,8 @@ export default function HostLayout() {
     } catch (error) {
       setHostLoadError("Unable to load host data.");
 
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
       else console.error(error);
     } finally {
       setIsHostLoading(false);
@@ -85,7 +86,7 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="w-full max-w-480 border mx-auto my-0 flex gap-x-4">
+    <div className="w-full max-w-480 h-full border mx-auto my-0 flex gap-x-4 px-[32px]">
       <Sidebar />
       <main className="w-full">
         {isHostLoading ? (
