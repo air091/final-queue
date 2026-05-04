@@ -2,6 +2,9 @@ import dotenv from "dotenv";
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import path from "node:path";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import authRoutes from "./routers/auth.routes.js";
 import communityRoutes from "./routers/community.routes.js";
@@ -14,6 +17,7 @@ const configuredOrigins = [
   process.env.CORS_ORIGIN,
   process.env.CORS_ORIGINS,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  process.env.RENDER_EXTERNAL_URL,
 ]
   .flatMap((value) => value?.split(",") ?? [])
   .map((value) => value.trim())
@@ -22,6 +26,10 @@ const configuredOrigins = [
 const allowedOrigins = new Set(["http://localhost:5173", ...configuredOrigins]);
 
 const app: Express = express();
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirectory = path.dirname(currentFilePath);
+const frontendDistPath = path.resolve(currentDirectory, "../../frontend/dist");
+const frontendIndexPath = path.join(frontendDistPath, "index.html");
 
 app.use(
   cors({
@@ -47,5 +55,13 @@ app.use("/api/auth", authRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/public/actions", publicActionRoutes);
 app.use("/api/private/actions", privateActionRoutes);
+
+if (existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+
+  app.get(/^\/(?!api(?:\/|$)).*/, (_request, response) => {
+    response.sendFile(frontendIndexPath);
+  });
+}
 
 export default app;

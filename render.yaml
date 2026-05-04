@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: queue-system
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm --prefix frontend run build
+    preDeployCommand: npm --prefix backend run migrate:deploy
+    startCommand: npm --prefix backend run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: NODE_ENV
+        value: production
