@@ -3,8 +3,8 @@ services:
     name: queue-system
     runtime: node
     plan: free
-    buildCommand: npm install --prefix backend --include=dev && npm install --prefix frontend --include=dev && npm --prefix frontend run build
-    startCommand: npm --prefix backend run migrate:deploy && npm --prefix backend run start
+    buildCommand: npm install --prefix backend --include=dev && npm --prefix backend run prisma:generate && npm install --prefix frontend --include=dev && npm --prefix frontend run build
+    startCommand: npm --prefix backend run prisma:generate && npm --prefix backend run migrate:deploy && npm --prefix backend run start
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
