@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { FaCheck } from "react-icons/fa6";
 import { FcCancel } from "react-icons/fc";
@@ -36,6 +36,7 @@ type PlayerSectionProps = {
   ) => void;
   onUpdateStaticPlayerProfileUrl?: (hostedPlayerId: string) => void;
   emptyMessage: string;
+  extraContent?: ReactNode;
 };
 
 function PlayerSection({
@@ -53,6 +54,7 @@ function PlayerSection({
   onStaticProfileUrlDraftChange,
   onUpdateStaticPlayerProfileUrl,
   emptyMessage,
+  extraContent,
 }: PlayerSectionProps) {
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4">
@@ -65,6 +67,7 @@ function PlayerSection({
           {players.length}
         </span>
       </header>
+      {extraContent ? <div className="mb-4">{extraContent}</div> : null}
       <div className="overflow-x-auto">
         <table className="table-auto border-collapse w-full">
           <thead>
@@ -632,57 +635,12 @@ export default function Players() {
       <header className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <div>
           <h3>Players Management</h3>
-          <p className="text-sm text-stone-500">
-            Add account players from join requests, or create a static player
-            directly for walk-ins.
-          </p>
         </div>
-        <form
-          onSubmit={(event) => void handleCreateStaticPlayer(event)}
-          className="flex flex-wrap items-end gap-2"
-        >
-          <label className="grid gap-1 text-sm">
-            <span>Static player</span>
-            <input
-              type="text"
-              value={staticPlayerName}
-              onChange={(event) => setStaticPlayerName(event.target.value)}
-              placeholder="Player name"
-              className="block min-w-[220px] rounded-md border px-3 py-1.5"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span>Skill</span>
-            <select
-              value={staticSkillLevel}
-              onChange={(event) =>
-                setStaticSkillLevel(event.target.value as SkillLevelType)
-              }
-              className="rounded-md border px-3 py-1.5"
-            >
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-              <option value="elite">Elite</option>
-            </select>
-          </label>
-          <button
-            type="submit"
-            disabled={isCreatingStaticPlayer}
-            className={`rounded-md px-3 py-1.5 text-sm text-white ${
-              isCreatingStaticPlayer
-                ? "cursor-not-allowed bg-stone-400"
-                : "cursor-pointer bg-stone-800 hover:bg-stone-700"
-            }`}
-          >
-            {isCreatingStaticPlayer ? "Adding..." : "Add player"}
-          </button>
-        </form>
       </header>
       <div className="grid gap-4 p-1">
         <PlayerSection
           title="Account Players"
-          description="Players connected to real accounts and host join requests."
+          description="Real accounts."
           players={accountPlayers}
           acceptedPlayers={acceptedPlayers}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
@@ -695,7 +653,7 @@ export default function Players() {
         />
         <PlayerSection
           title="Static Players"
-          description="Host-only walk-in players without an account."
+          description="Walk-in players without an account."
           players={staticPlayers}
           acceptedPlayers={acceptedPlayers}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
@@ -713,6 +671,49 @@ export default function Players() {
           }
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           emptyMessage="No static players yet."
+          extraContent={
+            <form
+              onSubmit={(event) => void handleCreateStaticPlayer(event)}
+              className="flex flex-wrap items-end gap-2"
+            >
+              <label className="grid gap-1 text-sm">
+                <span>Static player</span>
+                <input
+                  type="text"
+                  value={staticPlayerName}
+                  onChange={(event) => setStaticPlayerName(event.target.value)}
+                  placeholder="Player name"
+                  className="block min-w-[220px] rounded-md border px-3 py-1.5"
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Skill</span>
+                <select
+                  value={staticSkillLevel}
+                  onChange={(event) =>
+                    setStaticSkillLevel(event.target.value as SkillLevelType)
+                  }
+                  className="rounded-md border px-3 py-1.5"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="elite">Elite</option>
+                </select>
+              </label>
+              <button
+                type="submit"
+                disabled={isCreatingStaticPlayer}
+                className={`rounded-md px-3 py-1.5 text-sm text-white ${
+                  isCreatingStaticPlayer
+                    ? "cursor-not-allowed bg-stone-400"
+                    : "cursor-pointer bg-stone-800 hover:bg-stone-700"
+                }`}
+              >
+                {isCreatingStaticPlayer ? "Adding..." : "Add player"}
+              </button>
+            </form>
+          }
         />
       </div>
     </>

@@ -124,6 +124,7 @@ export default function PlayerCard({
         {isInSlot && canRemoveFromCourt && (
           <button
             type="button"
+            title="Remove slot"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
             className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
@@ -137,7 +138,10 @@ export default function PlayerCard({
           onPointerDown={(e) => e.stopPropagation()}
           className={`relative w-full ${activeDropdown === player.id ? "z-[130]" : ""}`}
         >
-          <div className="hover:bg-stone-400 p-1 rounded-full cursor-pointer">
+          <div
+            title="Player settings"
+            className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
+          >
             <HiOutlineDotsVertical
               onClick={() => onToggleDropdown(player.id)}
             />

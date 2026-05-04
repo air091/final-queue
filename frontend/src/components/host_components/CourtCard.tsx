@@ -256,10 +256,12 @@ export default function CourtCard({
             onPointerDown={(e) => e.stopPropagation()}
             className={`relative ${activeDropdown === court.id ? "z-[130]" : ""}`}
           >
-            <div className="cursor-pointer text-background hover:bg-green-800 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
-              <HiOutlineDotsVertical
-                onClick={() => onToggleDropdown(court.id)}
-              />
+            <div
+              title="Court settings"
+              className="cursor-pointer text-background hover:bg-green-800 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]"
+              onClick={() => onToggleDropdown(court.id)}
+            >
+              <HiOutlineDotsVertical />
             </div>
             {activeDropdown === court.id && (
               <CourtDropdown
