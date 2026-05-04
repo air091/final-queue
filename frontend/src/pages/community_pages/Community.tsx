@@ -26,10 +26,15 @@ type HostsType = {
   status: string;
 };
 
+const DEFAULT_SPORT_OPTIONS = ["Badminton"];
+
 export default function Community() {
   const { id } = useParams();
   const [community, setCommunity] = useState<CommunityType | null>(null);
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
+  const [sportName, setSportName] = useState(DEFAULT_SPORT_OPTIONS[0]);
+  const [isCreatingHost, setIsCreatingHost] = useState(false);
+  const [hostError, setHostError] = useState<string | null>(null);
   const navigate = useNavigate();
   // community info
   const getCommunityAPI = async () => {
@@ -43,8 +48,8 @@ export default function Community() {
   };
 
   useEffect(() => {
-    getCommunityAPI();
-  }, []);
+    void getCommunityAPI();
+  }, [id]);
 
   // hosts info
   const getCommunityHostsAPI = async () => {
@@ -58,8 +63,32 @@ export default function Community() {
   };
 
   useEffect(() => {
-    getCommunityHostsAPI();
-  }, []);
+    void getCommunityHostsAPI();
+  }, [id]);
+
+  const handleCreateHost = async () => {
+    if (!id || !sportName.trim()) return;
+
+    setIsCreatingHost(true);
+    setHostError(null);
+
+    try {
+      const response = await api.post(`/api/community/${id}/host`, {
+        sportName,
+      });
+
+      const newHost = response.data.data as HostsType;
+      setCommunityHosts((currentHosts) => [...currentHosts, newHost]);
+    } catch (error) {
+      setHostError("Unable to create host.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Create host api failed", error);
+    } finally {
+      setIsCreatingHost(false);
+    }
+  };
 
   return (
     <div className="w-full">
@@ -92,6 +121,47 @@ export default function Community() {
         </div>
       </header>
       <section className="w-full">
+        <div className="mb-4 rounded-lg border border-stone-200 bg-white p-3">
+          <div className="mb-2">
+            <h3 className="font-semibold">Create host</h3>
+            <p className="text-sm text-stone-500">
+              Pick a sport and a new host will be added to this community.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="grid gap-1 text-sm">
+              <span>Sport</span>
+              <select
+                name="sport"
+                id="sport"
+                value={sportName}
+                onChange={(event) => setSportName(event.target.value)}
+                className="rounded-md border px-3 py-2 text-sm"
+              >
+                {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
+                  <option key={sportOption} value={sportOption}>
+                    {sportOption}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => void handleCreateHost()}
+              disabled={isCreatingHost}
+              className={`mt-5 rounded-md px-3 py-2 text-sm text-text border ${
+                isCreatingHost
+                  ? "cursor-not-allowed bg-stone-400"
+                  : "cursor-pointer hover:bg-stone-400"
+              }`}
+            >
+              {isCreatingHost ? "Creating..." : "Add host"}
+            </button>
+          </div>
+          {hostError ? (
+            <p className="mt-2 text-sm text-red-600">{hostError}</p>
+          ) : null}
+        </div>
         {communityHosts.length > 0 ? (
           <table className="border w-full table-auto border-collapse">
             <thead>
