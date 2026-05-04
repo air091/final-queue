@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
 import type { AcceptedPlayers } from "../../lib/host";
 import type { RefObject } from "react";
+import { api } from "../../lib/api";
 
 type PlayerDropdownProps = {
   player: AcceptedPlayers;
@@ -57,10 +58,9 @@ export default function PlayerSettingsDropdown({
   }, [anchorRef]);
 
   const banAPI = async () => {
-    await axios.post(
-      `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.id}`,
+    await api.post(
+      `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.id}`,
       {},
-      { withCredentials: true },
     );
   };
 

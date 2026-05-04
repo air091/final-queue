@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { api } from "../../lib/api";
 
 type RegisterCredentialsType = {
   username: string;
@@ -23,15 +24,12 @@ export default function Register() {
 
   const register = async () => {
     try {
-      const response = await axios.post(
-        `http://localhost:4000/api/auth/register`,
-        {
-          username: registerCredentials.username,
-          skillLevel: registerCredentials.skillLevel,
-          email: registerCredentials.email,
-          password: registerCredentials.password,
-        },
-      );
+      const response = await api.post("/api/auth/register", {
+        username: registerCredentials.username,
+        skillLevel: registerCredentials.skillLevel,
+        email: registerCredentials.email,
+        password: registerCredentials.password,
+      });
 
       console.log(response);
       setRegisterCredentials({

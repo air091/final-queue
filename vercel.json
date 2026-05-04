@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --dir backend --frozen-lockfile && pnpm install --dir frontend --frozen-lockfile",
+  "buildCommand": "pnpm --dir frontend build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

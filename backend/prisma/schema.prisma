@@ -92,7 +92,12 @@ enum Currency {
 
 enum PaymentStatus {
   unpaid
+  pending
+  partial
   paid
+  failed
+  refunded
+  waived
 }
 
 enum PaymentMethod {

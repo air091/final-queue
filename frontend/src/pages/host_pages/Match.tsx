@@ -13,6 +13,7 @@ import {
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
 import { useHostData } from "../../hooks/useHostData";
+import { api } from "../../lib/api";
 import {
   buildPaymentsSummary,
   getDerivedMatchStatus,
@@ -264,10 +265,9 @@ export default function Match() {
     courtId: string,
     position: number,
   ) => {
-    await axios.post(
-      `http://localhost:4000/api/private/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+    await api.post(
+      `/api/private/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
       { position },
-      { withCredentials: true },
     );
   };
 
@@ -275,45 +275,40 @@ export default function Match() {
     hostedPlayerId: string,
     courtId: string,
   ) => {
-    await axios.post(
-      `http://localhost:4000/api/private/actions/courts/remove/slot/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+    await api.post(
+      `/api/private/actions/courts/remove/slot/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
       {},
-      { withCredentials: true },
     );
   };
 
   const startCourtGameAPI = async (courtId: string) => {
-    await axios.post(
-      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/start`,
+    await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/start`,
       {},
-      { withCredentials: true },
     );
   };
 
   const endCourtGameAPI = async (courtId: string) => {
-    const response = await axios.post(
-      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/end`,
+    const response = await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/end`,
       {},
-      { withCredentials: true },
     );
 
     return response.data as { hostedPlayerIds: string[] };
   };
 
   const deleteCourtAPI = async (courtId: string) => {
-    const response = await axios.delete(
-      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
-      { withCredentials: true },
+    const response = await api.delete(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
     );
 
     return response.data as { hostedPlayerIds: string[] };
   };
 
   const renameCourtAPI = async (courtId: string, name: string) => {
-    const response = await axios.patch(
-      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
+    const response = await api.patch(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}`,
       { name },
-      { withCredentials: true },
     );
 
     return response.data as {
@@ -327,10 +322,9 @@ export default function Match() {
   };
 
   const createCourtAPI = async () => {
-    const response = await axios.post(
-      `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts/add`,
+    const response = await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/courts/add`,
       {},
-      { withCredentials: true },
     );
 
     return response.data as {

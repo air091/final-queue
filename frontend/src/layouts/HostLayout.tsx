@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
 import Sidebar from "../components/host_components/Sidebar";
 import type { HostOutletContext } from "../hooks/useHostData";
+import { api } from "../lib/api";
 import {
   EMPTY_HOST_PAYMENTS_DATA,
   normalizeAcceptedPlayers,
@@ -40,26 +41,11 @@ export default function HostLayout() {
         paymentsResponse,
       ] =
         await Promise.all([
-          axios.get(
-            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}`,
-            { withCredentials: true },
-          ),
-          axios.get(
-            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/players`,
-            { withCredentials: true },
-          ),
-          axios.get(
-            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/courts`,
-            { withCredentials: true },
-          ),
-          axios.get(
-            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/queues`,
-            { withCredentials: true },
-          ),
-          axios.get(
-            `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/payments`,
-            { withCredentials: true },
-          ),
+          api.get(`/api/community/${communityId}/hosts/${hostId}`),
+          api.get(`/api/community/${communityId}/hosts/${hostId}/players`),
+          api.get(`/api/community/${communityId}/hosts/${hostId}/courts`),
+          api.get(`/api/community/${communityId}/hosts/${hostId}/queues`),
+          api.get(`/api/community/${communityId}/hosts/${hostId}/payments`),
         ]);
 
       setPlayersInHost([

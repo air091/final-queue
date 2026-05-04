@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 type JoinStatus = "requested" | "accepted" | "rejected" | "banned" | null;
 
@@ -31,10 +32,7 @@ export default function Home() {
 
   const getAvailableHosts = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:4000/api/public/actions/hosts/available`,
-        { withCredentials: true },
-      );
+      const response = await api.get("/api/public/actions/hosts/available");
       console.log(response.data.hosts);
       setAvailableHost(response.data.hosts);
     } catch (error) {
@@ -60,10 +58,9 @@ export default function Home() {
     );
 
     try {
-      await axios.post(
-        `http://localhost:4000/api/public/actions/request/community/${host.community.id}/hosts/${host.id}`,
+      await api.post(
+        `/api/public/actions/request/community/${host.community.id}/hosts/${host.id}`,
         {},
-        { withCredentials: true },
       );
     } catch (error) {
       setAvailableHost((currentHosts) =>

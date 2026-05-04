@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoMdTrash } from "react-icons/io";
 import { HiPencilAlt } from "react-icons/hi";
+import { api } from "../../lib/api";
 
 type AdminType = {
   id: string;
@@ -33,10 +34,7 @@ export default function Community() {
   // community info
   const getCommunityAPI = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:4000/api/community/${id}`,
-        { withCredentials: true },
-      );
+      const response = await api.get(`/api/community/${id}`);
       setCommunity(response.data.community);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -51,10 +49,7 @@ export default function Community() {
   // hosts info
   const getCommunityHostsAPI = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:4000/api/community/${id}/hosts/`,
-        { withCredentials: true },
-      );
+      const response = await api.get(`/api/community/${id}/hosts/`);
       setCommunityHosts(response.data.hosts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);

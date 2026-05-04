@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { api } from "../../lib/api";
 
 type CommunitiesType = {
   id: string;
@@ -14,9 +15,7 @@ export default function Sidebar() {
 
   const getCommunities = async () => {
     try {
-      const response = await axios.get("http://localhost:4000/api/community", {
-        withCredentials: true,
-      });
+      const response = await api.get("/api/community");
       setCommunities(response.data.communities);
     } catch (error) {
       if (axios.isAxiosError(error))

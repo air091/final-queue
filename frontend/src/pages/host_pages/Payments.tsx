@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
+import { api } from "../../lib/api";
 import {
   buildPaymentsSummary,
   getPaymentBalance,
@@ -175,14 +176,13 @@ export default function Payments() {
     });
 
     try {
-      await axios.patch(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/payments/pricing`,
+      await api.patch(
+        `/api/community/${communityId}/hosts/${hostId}/payments/pricing`,
         {
           entranceFee: toAmount(pricingDraft.entranceFee),
           perMatchFee: toAmount(pricingDraft.perMatchFee),
           currency: pricingDraft.currency,
         },
-        { withCredentials: true },
       );
     } catch (saveError) {
       setPaymentsData(previousPaymentsData);
@@ -231,15 +231,14 @@ export default function Payments() {
     );
 
     try {
-      await axios.patch(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/payments/${hostedPlayerId}`,
+      await api.patch(
+        `/api/community/${communityId}/hosts/${hostId}/payments/${hostedPlayerId}`,
         {
           amountExpected: toAmount(draft.amountExpected),
           amountPaid: toAmount(draft.amountPaid),
           status: draft.status,
           method: draft.method || null,
         },
-        { withCredentials: true },
       );
     } catch (saveError) {
       setPaymentsData(previousPaymentsData);

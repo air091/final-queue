@@ -1,5 +1,6 @@
 import axios from "axios";
 import { NavLink } from "react-router-dom";
+import { api } from "../../lib/api";
 
 export default function Sidebar() {
   const navLinks = [
@@ -15,11 +16,7 @@ export default function Sidebar() {
 
   const logout = async () => {
     try {
-      await axios.post(
-        `http://localhost:4000/api/auth/logout`,
-        {},
-        { withCredentials: true },
-      );
+      await api.post("/api/auth/logout", {});
       console.log("Logged out");
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);

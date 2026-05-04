@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { FaCheck } from "react-icons/fa6";
 import { FcCancel } from "react-icons/fc";
 import { useHostData } from "../../hooks/useHostData";
+import { api } from "../../lib/api";
 import type {
   AcceptedPlayers,
   HostPlayerRecord,
@@ -234,13 +235,12 @@ export default function Players() {
     setIsCreatingStaticPlayer(true);
 
     try {
-      const response = await axios.post(
-        `http://localhost:4000/api/community/${communityId}/hosts/${hostId}/players/static`,
+      const response = await api.post(
+        `/api/community/${communityId}/hosts/${hostId}/players/static`,
         {
           username: cleanName,
           skillLevel: staticSkillLevel,
         },
-        { withCredentials: true },
       );
 
       const hostedPlayer = response.data.hostedPlayer as AcceptedPlayers;
@@ -303,10 +303,9 @@ export default function Players() {
     });
 
     try {
-      await axios.post(
-        `http://localhost:4000/api/private/actions/accept/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+      await api.post(
+        `/api/private/actions/accept/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
         {},
-        { withCredentials: true },
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);
@@ -327,10 +326,9 @@ export default function Players() {
     );
 
     try {
-      await axios.post(
-        `http://localhost:4000/api/private/actions/reject/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+      await api.post(
+        `/api/private/actions/reject/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
         {},
-        { withCredentials: true },
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);
@@ -367,10 +365,9 @@ export default function Players() {
     );
 
     try {
-      await axios.post(
-        `http://localhost:4000/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+      await api.post(
+        `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
         {},
-        { withCredentials: true },
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);
@@ -422,10 +419,9 @@ export default function Players() {
     });
 
     try {
-      await axios.post(
-        `http://localhost:4000/api/private/actions/unban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+      await api.post(
+        `/api/private/actions/unban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
         {},
-        { withCredentials: true },
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);
@@ -472,10 +468,9 @@ export default function Players() {
     );
 
     try {
-      await axios.patch(
-        `http://localhost:4000/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/skill-level`,
+      await api.patch(
+        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/skill-level`,
         { skillLevel },
-        { withCredentials: true },
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);

@@ -1,0 +1,11 @@
+{
+  "name": "queue-system",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev:frontend": "pnpm --dir frontend dev",
+    "dev:backend": "pnpm --dir backend server",
+    "build": "pnpm --dir frontend build",
+    "migrate:deploy": "pnpm --dir backend exec prisma migrate deploy"
+  }
+}
