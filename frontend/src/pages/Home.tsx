@@ -33,7 +33,6 @@ export default function Home() {
   const getAvailableHosts = async () => {
     try {
       const response = await api.get("/api/public/actions/hosts/available");
-      console.log(response.data.hosts);
       setAvailableHost(response.data.hosts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);

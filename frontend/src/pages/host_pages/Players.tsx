@@ -20,6 +20,8 @@ type PlayerSectionProps = {
   description: string;
   players: HostPlayerRecord[];
   acceptedPlayers: AcceptedPlayers[];
+  staticProfileUrlDrafts: Record<string, string>;
+  savingStaticProfileUrlId: string | null;
   onAcceptPlayer: (hostedPlayerId: string) => void;
   onRejectPlayer: (hostedPlayerId: string) => void;
   onBanPlayer: (hostedPlayerId: string) => void;
@@ -28,6 +30,11 @@ type PlayerSectionProps = {
     hostedPlayerId: string,
     skillLevel: SkillLevelType,
   ) => void;
+  onStaticProfileUrlDraftChange?: (
+    hostedPlayerId: string,
+    profileUrl: string,
+  ) => void;
+  onUpdateStaticPlayerProfileUrl?: (hostedPlayerId: string) => void;
   emptyMessage: string;
 };
 
@@ -36,11 +43,15 @@ function PlayerSection({
   description,
   players,
   acceptedPlayers,
+  staticProfileUrlDrafts,
+  savingStaticProfileUrlId,
   onAcceptPlayer,
   onRejectPlayer,
   onBanPlayer,
   onUnbanPlayer,
   onUpdateStaticPlayerSkillLevel,
+  onStaticProfileUrlDraftChange,
+  onUpdateStaticPlayerProfileUrl,
   emptyMessage,
 }: PlayerSectionProps) {
   return (
@@ -63,6 +74,9 @@ function PlayerSection({
               </th>
               <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[144px]">
                 Skill Level
+              </th>
+              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[280px]">
+                Photo URL
               </th>
               <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
                 Status
@@ -122,6 +136,44 @@ function PlayerSection({
                         <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
                           {formatSkillLevel(p.player.skillLevel)}
                         </span>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-2">
+                      {p.player.isStatic &&
+                      onStaticProfileUrlDraftChange &&
+                      onUpdateStaticPlayerProfileUrl ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="url"
+                            value={
+                              staticProfileUrlDrafts[p.id] ?? p.player.profileUrl
+                            }
+                            onChange={(event) =>
+                              onStaticProfileUrlDraftChange(
+                                p.id,
+                                event.target.value,
+                              )
+                            }
+                            placeholder="https://example.com/player.jpg"
+                            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1 text-[12px]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStaticPlayerProfileUrl(p.id)}
+                            disabled={savingStaticProfileUrlId === p.id}
+                            className={`shrink-0 rounded-md px-2 py-1 text-[12px] text-white ${
+                              savingStaticProfileUrlId === p.id
+                                ? "cursor-not-allowed bg-stone-400"
+                                : "cursor-pointer bg-stone-800 hover:bg-stone-700"
+                            }`}
+                          >
+                            {savingStaticProfileUrlId === p.id
+                              ? "Saving..."
+                              : "Save"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[12px] text-stone-400">-</span>
                       )}
                     </td>
                     <td className="py-1.5 px-2">
@@ -193,7 +245,7 @@ function PlayerSection({
             ) : (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="text-center py-4 px-2 text-sm text-stone-500"
                 >
                   {emptyMessage}
@@ -220,7 +272,13 @@ export default function Players() {
   const [staticPlayerName, setStaticPlayerName] = useState("");
   const [staticSkillLevel, setStaticSkillLevel] =
     useState<SkillLevelType>("beginner");
+  const [staticProfileUrlDrafts, setStaticProfileUrlDrafts] = useState<
+    Record<string, string>
+  >({});
   const [isCreatingStaticPlayer, setIsCreatingStaticPlayer] = useState(false);
+  const [savingStaticProfileUrlId, setSavingStaticProfileUrlId] = useState<
+    string | null
+  >(null);
   const accountPlayers = players.filter((player) => !player.player.isStatic);
   const staticPlayers = players.filter((player) => player.player.isStatic);
 
@@ -255,6 +313,10 @@ export default function Players() {
         ...currentPlayers,
       ]);
       setAcceptedPlayers((currentPlayers) => [hostedPlayer, ...currentPlayers]);
+      setStaticProfileUrlDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [hostedPlayer.id]: hostedPlayer.player.profileUrl,
+      }));
       setStaticPlayerName("");
       setStaticSkillLevel("beginner");
     } catch (error) {
@@ -482,6 +544,86 @@ export default function Players() {
     }
   };
 
+  const handleUpdateStaticPlayerProfileUrl = async (hostedPlayerId: string) => {
+    const nextProfileUrl = staticProfileUrlDrafts[hostedPlayerId] ?? "";
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+
+    setSavingStaticProfileUrlId(hostedPlayerId);
+
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === hostedPlayerId
+          ? {
+              ...currentPlayer,
+              player: {
+                ...currentPlayer.player,
+                profileUrl: nextProfileUrl.trim() || currentPlayer.player.profileUrl,
+              },
+            }
+          : currentPlayer,
+      ),
+    );
+    setAcceptedPlayers((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === hostedPlayerId
+          ? {
+              ...currentPlayer,
+              player: {
+                ...currentPlayer.player,
+                profileUrl: nextProfileUrl.trim() || currentPlayer.player.profileUrl,
+              },
+            }
+          : currentPlayer,
+      ),
+    );
+
+    try {
+      const response = await api.patch(
+        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/profile-url`,
+        {
+          profileUrl: nextProfileUrl.trim() || null,
+        },
+      );
+
+      const updatedPlayer = response.data.data as AcceptedPlayers;
+
+      setPlayersInHost((currentPlayers) =>
+        currentPlayers.map((currentPlayer) =>
+          currentPlayer.id === hostedPlayerId
+            ? {
+                ...currentPlayer,
+                player: updatedPlayer.player,
+              }
+            : currentPlayer,
+        ),
+      );
+      setAcceptedPlayers((currentPlayers) =>
+        currentPlayers.map((currentPlayer) =>
+          currentPlayer.id === hostedPlayerId
+            ? {
+                ...currentPlayer,
+                player: updatedPlayer.player,
+              }
+            : currentPlayer,
+        ),
+      );
+      setStaticProfileUrlDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [hostedPlayerId]: updatedPlayer.player.profileUrl,
+      }));
+    } catch (error) {
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setSavingStaticProfileUrlId(null);
+    }
+  };
+
   return (
     <>
       <header className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -540,6 +682,8 @@ export default function Players() {
           description="Players connected to real accounts and host join requests."
           players={accountPlayers}
           acceptedPlayers={acceptedPlayers}
+          staticProfileUrlDrafts={staticProfileUrlDrafts}
+          savingStaticProfileUrlId={savingStaticProfileUrlId}
           onAcceptPlayer={handleAcceptPlayer}
           onRejectPlayer={handleRejectPlayer}
           onBanPlayer={handleBanPlayer}
@@ -551,11 +695,20 @@ export default function Players() {
           description="Host-only walk-in players without an account."
           players={staticPlayers}
           acceptedPlayers={acceptedPlayers}
+          staticProfileUrlDrafts={staticProfileUrlDrafts}
+          savingStaticProfileUrlId={savingStaticProfileUrlId}
           onAcceptPlayer={handleAcceptPlayer}
           onRejectPlayer={handleRejectPlayer}
           onBanPlayer={handleBanPlayer}
           onUnbanPlayer={handleUnbanPlayer}
           onUpdateStaticPlayerSkillLevel={handleUpdateStaticPlayerSkillLevel}
+          onStaticProfileUrlDraftChange={(hostedPlayerId, profileUrl) =>
+            setStaticProfileUrlDrafts((currentDrafts) => ({
+              ...currentDrafts,
+              [hostedPlayerId]: profileUrl,
+            }))
+          }
+          onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           emptyMessage="No static players yet."
         />
       </div>

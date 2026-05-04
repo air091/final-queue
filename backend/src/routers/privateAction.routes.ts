@@ -7,6 +7,7 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
+  updateStaticPlayerProfileUrl,
   updateStaticPlayerSkillLevel,
 } from "../controllers/privateAction.controller.js";
 
@@ -40,6 +41,12 @@ router.patch(
   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
   authenticate,
   updateStaticPlayerSkillLevel,
+);
+
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
+  authenticate,
+  updateStaticPlayerProfileUrl,
 );
 
 router.post(

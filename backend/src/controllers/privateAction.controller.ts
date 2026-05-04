@@ -163,6 +163,10 @@ type UpdateStaticPlayerSkillLevelBody = {
   skillLevel?: SkillLevel;
 };
 
+type UpdateStaticPlayerProfileUrlBody = {
+  profileUrl?: string | null;
+};
+
 export const banPlayer = async (
   request: Request<BanPlayerParams>,
   response: Response,
@@ -420,6 +424,138 @@ export const updateStaticPlayerSkillLevel = async (
     });
   } catch (error) {
     console.error("Error updating static player skill level:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const updateStaticPlayerProfileUrl = async (
+  request: Request<
+    BanPlayerParams,
+    unknown,
+    UpdateStaticPlayerProfileUrlBody
+  >,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, hostedPlayerId } = request.params;
+    const { profileUrl } = request.body;
+
+    if (!communityId || !hostId || !hostedPlayerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const cleanedProfileUrl = profileUrl?.trim() ?? "";
+
+    if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
+      try {
+        const parsedUrl = new URL(cleanedProfileUrl);
+
+        if (
+          parsedUrl.protocol !== "http:" &&
+          parsedUrl.protocol !== "https:"
+        ) {
+          return response
+            .status(400)
+            .json({ success: false, message: "Profile URL must use http or https" });
+        }
+      } catch {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid profile URL" });
+      }
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const host = await getAuthorizedHost(communityId, hostId, user.sub);
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const existing = await prisma.hostedPlayer.findFirst({
+      where: {
+        id: hostedPlayerId,
+        hostId: host.id,
+        playerId: null,
+      },
+      select: {
+        id: true,
+        status: true,
+        timerStartedAt: true,
+        queueEntry: {
+          select: {
+            id: true,
+            queueId: true,
+            position: true,
+          },
+        },
+        courtAssignment: {
+          select: {
+            id: true,
+            courtId: true,
+            position: true,
+          },
+        },
+      },
+    });
+
+    if (!existing)
+      return response.status(404).json({
+        success: false,
+        message: "Static player not found",
+      });
+
+    const updated = await prisma.hostedPlayer.update({
+      where: { id: existing.id },
+      data: {
+        staticProfileUrl: cleanedProfileUrl || null,
+      },
+      select: {
+        id: true,
+        status: true,
+        timerStartedAt: true,
+        queueEntry: {
+          select: {
+            id: true,
+            queueId: true,
+            position: true,
+          },
+        },
+        courtAssignment: {
+          select: {
+            id: true,
+            courtId: true,
+            position: true,
+          },
+        },
+        ...hostedPlayerProfileSelect,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Static player profile updated",
+      data: {
+        id: updated.id,
+        status: updated.status,
+        timerStartedAt: updated.timerStartedAt,
+        player: toHostedPlayerProfile(updated),
+        queueEntry: updated.queueEntry,
+        courtAssignment: updated.courtAssignment,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating static player profile URL:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
