@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "installCommand": "corepack enable && corepack prepare pnpm@10.33.0 --activate && pnpm install --dir backend --frozen-lockfile && pnpm install --dir frontend --frozen-lockfile",
-  "buildCommand": "pnpm --dir frontend build",
+  "installCommand": "npm install --prefix backend && npm install --prefix frontend",
+  "buildCommand": "npm --prefix frontend run build",
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
