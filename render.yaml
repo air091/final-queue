@@ -3,7 +3,7 @@ services:
     name: queue-system
     runtime: node
     plan: free
-    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm --prefix frontend run build
+    buildCommand: npm install --prefix backend --include=dev && npm install --prefix frontend --include=dev && npm --prefix frontend run build
     startCommand: npm --prefix backend run migrate:deploy && npm --prefix backend run start
     healthCheckPath: /api/health
     envVars:
@@ -13,5 +13,3 @@ services:
         sync: false
       - key: JWT_EXPIRES_IN
         value: 15m
-      - key: NODE_ENV
-        value: production
