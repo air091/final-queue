@@ -99,11 +99,11 @@ export default function PlayerCard({
       } ${activeDropdown === player.id ? "z-[120]" : ""}`}
     >
       <div className="flex items-center gap-x-2">
-        <div className="w-[28px] h-[28px] rounded-full">
+        <div className="w-[36px] h-[36px] rounded-full">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
-            className="block w-full h-full object-contain rounded-full"
+            className="block w-full h-full object-cover object-center rounded-full"
           />
         </div>
         <div>

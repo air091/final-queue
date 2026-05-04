@@ -98,11 +98,11 @@ function PlayerSection({
                   <tr key={p.id} className="hover:bg-stone-100">
                     <td className="py-1.5 px-2">
                       <div className="flex items-center gap-x-2 text-[14px]">
-                        <div className="border w-[28px] h-[28px] rounded-full">
+                        <div className="border w-[36px] h-[36px] rounded-full">
                           <img
                             src={p.player.profileUrl}
                             alt={p.player.username}
-                            className="block w-full h-full rounded-full"
+                            className="block w-full h-full object-cover object-center rounded-full"
                           />
                         </div>
                         <div className="flex items-center gap-2">
@@ -146,7 +146,8 @@ function PlayerSection({
                           <input
                             type="url"
                             value={
-                              staticProfileUrlDrafts[p.id] ?? p.player.profileUrl
+                              staticProfileUrlDrafts[p.id] ??
+                              p.player.profileUrl
                             }
                             onChange={(event) =>
                               onStaticProfileUrlDraftChange(
@@ -558,7 +559,8 @@ export default function Players() {
               ...currentPlayer,
               player: {
                 ...currentPlayer.player,
-                profileUrl: nextProfileUrl.trim() || currentPlayer.player.profileUrl,
+                profileUrl:
+                  nextProfileUrl.trim() || currentPlayer.player.profileUrl,
               },
             }
           : currentPlayer,
@@ -571,7 +573,8 @@ export default function Players() {
               ...currentPlayer,
               player: {
                 ...currentPlayer.player,
-                profileUrl: nextProfileUrl.trim() || currentPlayer.player.profileUrl,
+                profileUrl:
+                  nextProfileUrl.trim() || currentPlayer.player.profileUrl,
               },
             }
           : currentPlayer,
