@@ -64,25 +64,12 @@ const resolvePaymentStatus = ({
   amountExpected: number;
   amountPaid: number;
 }) => {
-  if (
-    explicitStatus === PaymentStatus.failed ||
-    explicitStatus === PaymentStatus.refunded ||
-    explicitStatus === PaymentStatus.waived ||
-    explicitStatus === PaymentStatus.pending
-  ) {
-    return explicitStatus;
-  }
-
   if (amountExpected <= 0 && amountPaid <= 0) {
     return explicitStatus ?? PaymentStatus.unpaid;
   }
 
-  if (amountPaid <= 0) {
+  if (amountPaid <= 0 || amountPaid < amountExpected) {
     return PaymentStatus.unpaid;
-  }
-
-  if (amountPaid < amountExpected) {
-    return PaymentStatus.partial;
   }
 
   return PaymentStatus.paid;
@@ -386,18 +373,9 @@ export const getHostPayments = async (
         accumulator.totalOutstanding += balance;
 
         if (paymentStatus === PaymentStatus.paid) accumulator.paidCount += 1;
-        if (paymentStatus === PaymentStatus.partial)
-          accumulator.partialCount += 1;
-        if (
-          paymentStatus === PaymentStatus.unpaid ||
-          paymentStatus === PaymentStatus.pending
-        ) {
+        if (paymentStatus === PaymentStatus.unpaid) {
           accumulator.unpaidCount += 1;
         }
-        if (paymentStatus === PaymentStatus.waived)
-          accumulator.waivedCount += 1;
-        if (paymentStatus === PaymentStatus.refunded)
-          accumulator.refundedCount += 1;
 
         return accumulator;
       },
@@ -407,10 +385,7 @@ export const getHostPayments = async (
         totalPaid: 0,
         totalOutstanding: 0,
         paidCount: 0,
-        partialCount: 0,
         unpaidCount: 0,
-        waivedCount: 0,
-        refundedCount: 0,
       },
     );
 
@@ -575,9 +550,7 @@ export const upsertHostedPlayerPayment = async (
         ? null
         : paidAt
           ? new Date(paidAt)
-          : nextAmountPaid > 0 &&
-              (nextStatus === PaymentStatus.paid ||
-                nextStatus === PaymentStatus.partial)
+          : nextAmountPaid > 0 && nextStatus === PaymentStatus.paid
             ? (existingPayment?.paidAt ?? new Date())
             : (existingPayment?.paidAt ?? null);
 

@@ -1,14 +1,7 @@
 export type MatchPlayerStatus = "waiting" | "inQueue" | "playing";
 export type SkillLevelType = "beginner" | "intermediate" | "advanced" | "elite";
 export type PaymentCurrency = "PHP" | "USD" | "EUR";
-export type PaymentStatus =
-  | "unpaid"
-  | "pending"
-  | "partial"
-  | "paid"
-  | "failed"
-  | "refunded"
-  | "waived";
+export type PaymentStatus = "unpaid" | "paid";
 export type PaymentMethod = "cash" | "ewallet";
 
 export type PlayerType = {
@@ -93,10 +86,7 @@ export type PaymentsSummary = {
   totalPaid: number;
   totalOutstanding: number;
   paidCount: number;
-  partialCount: number;
   unpaidCount: number;
-  waivedCount: number;
-  refundedCount: number;
 };
 
 export type HostPaymentsData = {
@@ -116,10 +106,7 @@ export const EMPTY_PAYMENTS_SUMMARY: PaymentsSummary = {
   totalPaid: 0,
   totalOutstanding: 0,
   paidCount: 0,
-  partialCount: 0,
   unpaidCount: 0,
-  waivedCount: 0,
-  refundedCount: 0,
 };
 
 export const EMPTY_HOST_PAYMENTS_DATA: HostPaymentsData = {
@@ -163,15 +150,9 @@ export const buildPaymentsSummary = (
       accumulator.totalOutstanding += player.payment.balance;
 
       if (player.paymentStatus === "paid") accumulator.paidCount += 1;
-      if (player.paymentStatus === "partial") accumulator.partialCount += 1;
-      if (
-        player.paymentStatus === "unpaid" ||
-        player.paymentStatus === "pending"
-      ) {
+      if (player.paymentStatus === "unpaid") {
         accumulator.unpaidCount += 1;
       }
-      if (player.paymentStatus === "waived") accumulator.waivedCount += 1;
-      if (player.paymentStatus === "refunded") accumulator.refundedCount += 1;
 
       return accumulator;
     },

@@ -93,18 +93,8 @@ export default function Payments() {
     amountExpected: number;
     amountPaid: number;
   }) => {
-    if (
-      explicitStatus === "failed" ||
-      explicitStatus === "refunded" ||
-      explicitStatus === "waived" ||
-      explicitStatus === "pending"
-    ) {
-      return explicitStatus;
-    }
-
     if (amountExpected <= 0 && amountPaid <= 0) return explicitStatus;
-    if (amountPaid <= 0) return "unpaid";
-    if (amountPaid < amountExpected) return "partial";
+    if (amountPaid <= 0 || amountPaid < amountExpected) return "unpaid";
     return "paid";
   };
 
