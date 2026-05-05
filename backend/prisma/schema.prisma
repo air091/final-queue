@@ -35,6 +35,7 @@ model Account {
   updatedAt             DateTime @updatedAt
   communities           Community[]
   hostedPlayers         HostedPlayer[]
+  matchParticipants     MatchParticipant[]
 }
 
 model Community {
@@ -72,6 +73,7 @@ model Host {
   players               HostedPlayer[]
   courts                Court[]
   queues                Queue[]
+  matches               Match[]
   pricing               HostPricing?
 
   @@index([communityId])
@@ -124,6 +126,7 @@ model HostedPlayer {
   // resets when a game starts, and resets again when a game ends.
   queueEntry           QueueEntry?
   courtAssignment      CourtAssignment?
+  matchParticipations  MatchParticipant[]
   payments             PlayerPayment[]
 
   @@unique([hostId, playerId])
@@ -170,6 +173,7 @@ model Court {
 
   host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
   assignments         CourtAssignment[]
+  matches             Match[]
 
   @@index([hostId])
 }
@@ -188,6 +192,53 @@ model CourtAssignment {
   @@unique([courtId, position])
   @@unique([hostedPlayerId])
   @@index([courtId])
+}
+
+enum MatchStatus {
+  finished
+  ongoing
+}
+
+model Match {
+  id                  String @id @default(uuid())
+  hostId              String
+  courtId             String?
+  status              MatchStatus @default(ongoing)
+  startedAt           DateTime?
+  endedAt             DateTime?
+  teamWinner          String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  court               Court? @relation(fields: [courtId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  participants        MatchParticipant[]
+
+  @@index([hostId, status, startedAt])
+  @@index([courtId])
+}
+
+model MatchParticipant {
+  id                  String @id @default(uuid())
+  matchId             String
+  hostedPlayerId      String
+  accountId           String?
+  staticName          String?
+  staticProfileUrl    String?
+  staticSkillLevel    SkillLevel?
+  team                String?
+  result              String?
+  joinedAt            DateTime @default(now())
+  createdAt           DateTime @default(now())
+
+  match               Match @relation(fields: [matchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  account             Account? @relation(fields: [accountId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([matchId, hostedPlayerId])
+  @@index([matchId])
+  @@index([hostedPlayerId])
+  @@index([accountId])
 }
 
 model HostPricing {
@@ -219,6 +270,4 @@ model PlayerPayment {
   hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([hostedPlayerId])
-  @@index([status])
-  @@index([paidAt])
 }
