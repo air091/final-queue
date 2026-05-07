@@ -33,13 +33,13 @@ type PlayerStatusFilter = "all" | MatchPlayerStatus;
 
 const getUpdatedCourts = (
   currentCourts: CourtType[],
-  hostedPlayerId: string,
+  playerId: string,
   courtId: string,
   position: number,
 ) =>
   currentCourts.map((court) => {
     const assignmentsWithoutDraggedPlayer = court.assignments.filter(
-      (assignment) => assignment.hostedPlayerId !== hostedPlayerId,
+      (assignment) => assignment.playerId !== playerId,
     );
 
     if (court.id !== courtId) {
@@ -53,7 +53,7 @@ const getUpdatedCourts = (
       (assignment) => assignment.position !== position,
     );
     const existingAssignment = court.assignments.find(
-      (assignment) => assignment.hostedPlayerId === hostedPlayerId,
+      (assignment) => assignment.playerId === playerId,
     );
 
     return {
@@ -61,10 +61,8 @@ const getUpdatedCourts = (
       assignments: [
         ...nextAssignments,
         {
-          id:
-            existingAssignment?.id ??
-            `${court.id}-${hostedPlayerId}-${position}`,
-          hostedPlayerId,
+          id: existingAssignment?.id ?? `${court.id}-${playerId}-${position}`,
+          playerId,
           position,
         },
       ].sort((a, b) => a.position - b.position),
@@ -73,7 +71,7 @@ const getUpdatedCourts = (
 
 const getCourtsWithoutPlayer = (
   currentCourts: CourtType[],
-  hostedPlayerId: string,
+  playerId: string,
   courtId: string,
 ) =>
   currentCourts.map((court) =>
@@ -81,7 +79,7 @@ const getCourtsWithoutPlayer = (
       ? {
           ...court,
           assignments: court.assignments.filter(
-            (assignment) => assignment.hostedPlayerId !== hostedPlayerId,
+            (assignment) => assignment.playerId !== playerId,
           ),
         }
       : court,
@@ -112,19 +110,19 @@ const getEndedCourt = (currentCourts: CourtType[], courtId: string) =>
 
 const getPlayersWithCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
-  hostedPlayerId: string,
+  playerId: string,
   courtId: string,
   position: number,
   isCourtStarted: boolean,
 ) =>
   currentPlayers.map((player) =>
-    player.id === hostedPlayerId
+    player.id === playerId
       ? {
           ...player,
           courtAssignment: {
             id:
               player.courtAssignment?.id ??
-              `${courtId}-${hostedPlayerId}-${position}`,
+              `${courtId}-${playerId}-${position}`,
             courtId,
             position,
           },
@@ -137,13 +135,13 @@ const getPlayersWithCourtAssignment = (
 
 const getPlayersWithResetTimer = (
   currentPlayers: AcceptedPlayers[],
-  hostedPlayerIds: string[],
+  playerIds: string[],
   nextStatus: MatchPlayerStatus,
 ) => {
   const now = new Date().toISOString();
 
   return currentPlayers.map((player) =>
-    hostedPlayerIds.includes(player.id)
+    playerIds.includes(player.id)
       ? {
           ...player,
           courtAssignment:
@@ -157,10 +155,10 @@ const getPlayersWithResetTimer = (
 
 const getPlayersWithoutCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
-  hostedPlayerId: string,
+  playerId: string,
 ) =>
   currentPlayers.map((player) => {
-    if (player.id !== hostedPlayerId) return player;
+    if (player.id !== playerId) return player;
 
     const nextPlayer = {
       ...player,
@@ -175,10 +173,10 @@ const getPlayersWithoutCourtAssignment = (
 
 const getPlayersWithoutCourtAssignments = (
   currentPlayers: AcceptedPlayers[],
-  hostedPlayerIds: string[],
+  playerIds: string[],
 ) =>
   currentPlayers.map((player) => {
-    if (!hostedPlayerIds.includes(player.id)) return player;
+    if (!playerIds.includes(player.id)) return player;
 
     const nextPlayer = {
       ...player,
@@ -229,7 +227,7 @@ export default function Match() {
   const sensors = useSensors(useSensor(PointerSensor));
 
   const activeDraggedPlayer = activeDraggedPlayerId
-    ? players.find((player) => player.id === activeDraggedPlayerId) ?? null
+    ? (players.find((player) => player.id === activeDraggedPlayerId) ?? null)
     : null;
 
   const blurActiveElement = () => {
@@ -266,7 +264,7 @@ export default function Match() {
     position: number,
   ) => {
     await api.post(
-      `/api/private/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+      `/api/private/actions/courts/assign/community/${communityId}/hosts/${hostId}/courts/${courtId}/players/${hostedPlayerId}`,
       { position },
     );
   };
@@ -276,7 +274,7 @@ export default function Match() {
     courtId: string,
   ) => {
     await api.post(
-      `/api/private/actions/courts/remove/slot/community/${communityId}/hosts/${hostId}/courts/${courtId}/${hostedPlayerId}`,
+      `/api/private/actions/courts/remove/slot/community/${communityId}/hosts/${hostId}/courts/${courtId}/players/${hostedPlayerId}`,
       {},
     );
   };
@@ -452,16 +450,12 @@ export default function Match() {
   const handleStartCourtGame = async (courtId: string) => {
     const previousCourts = courts;
     const startedCourt = previousCourts.find((court) => court.id === courtId);
-    const hostedPlayerIds =
-      startedCourt?.assignments.map(
-        (assignment) => assignment.hostedPlayerId,
-      ) ?? [];
+    const playerIds =
+      startedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
     const previousPlayers = players;
 
     setCourts(getStartedCourt(previousCourts, courtId));
-    setPlayers(
-      getPlayersWithResetTimer(previousPlayers, hostedPlayerIds, "playing"),
-    );
+    setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "playing"));
 
     try {
       await startCourtGameAPI(courtId);
@@ -480,17 +474,14 @@ export default function Match() {
     const previousPlayers = players;
     const previousPaymentsData = paymentsData;
     const endedCourt = previousCourts.find((court) => court.id === courtId);
-    const hostedPlayerIds =
-      endedCourt?.assignments.map((assignment) => assignment.hostedPlayerId) ??
-      [];
+    const playerIds =
+      endedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
 
     setCourts(getEndedCourt(previousCourts, courtId));
-    setPlayers(
-      getPlayersWithResetTimer(previousPlayers, hostedPlayerIds, "waiting"),
-    );
+    setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "waiting"));
     setPaymentsData((currentPaymentsData) => {
       const nextPlayers = currentPaymentsData.players.map((player) => {
-        if (!hostedPlayerIds.includes(player.id)) return player;
+        if (!playerIds.includes(player.id)) return player;
 
         const nextGamesPlayed = player.gamesPlayed + 1;
         const nextAmountExpected =
@@ -544,18 +535,14 @@ export default function Match() {
     const previousCourts = courts;
     const previousPlayers = players;
     const deletedCourt = previousCourts.find((court) => court.id === courtId);
-    const hostedPlayerIds =
-      deletedCourt?.assignments.map(
-        (assignment) => assignment.hostedPlayerId,
-      ) ?? [];
+    const playerIds =
+      deletedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
 
     setCourtActiveDropdown(null);
     setCourts((currentCourts) =>
       currentCourts.filter((court) => court.id !== courtId),
     );
-    setPlayers(
-      getPlayersWithoutCourtAssignments(previousPlayers, hostedPlayerIds),
-    );
+    setPlayers(getPlayersWithoutCourtAssignments(previousPlayers, playerIds));
 
     try {
       const response = await deleteCourtAPI(courtId);

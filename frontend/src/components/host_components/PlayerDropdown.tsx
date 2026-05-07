@@ -59,7 +59,7 @@ export default function PlayerSettingsDropdown({
 
   const banAPI = async () => {
     await api.post(
-      `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${player.id}`,
+      `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/players/${player.id}`,
       {},
     );
   };
@@ -88,7 +88,7 @@ export default function PlayerSettingsDropdown({
       currentCourts.map((court) => ({
         ...court,
         assignments: court.assignments.filter(
-          (assignment) => assignment.hostedPlayerId !== player.id,
+          (assignment) => assignment.playerId !== player.id,
         ),
       })),
     );

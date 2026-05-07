@@ -334,12 +334,21 @@ export default function Payments() {
         <header className="mb-3">
           <h4 className="font-semibold">Summary</h4>
         </header>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-md border p-3">
             <p className="text-xs text-stone-500">Total expected</p>
             <p className="font-semibold">
               {formatMoney(
                 paymentsData.summary.totalExpected,
+                paymentsData.pricing.currency,
+              )}
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-stone-500">Calculated expected</p>
+            <p className="font-semibold">
+              {formatMoney(
+                paymentsData.pricing.expectedFee,
                 paymentsData.pricing.currency,
               )}
             </p>

@@ -118,6 +118,7 @@ export type HostPaymentsData = {
     id: string | null;
     entranceFee: number;
     perMatchFee: number;
+    expectedFee: number;
     currency: PaymentCurrency;
   };
   summary: PaymentsSummary;
@@ -138,6 +139,7 @@ export const EMPTY_HOST_PAYMENTS_DATA: HostPaymentsData = {
     id: null,
     entranceFee: 0,
     perMatchFee: 0,
+    expectedFee: 0,
     currency: "PHP",
   },
   summary: EMPTY_PAYMENTS_SUMMARY,

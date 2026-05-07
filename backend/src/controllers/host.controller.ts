@@ -11,7 +11,7 @@ import {
 } from "../generated/prisma/enums.js";
 
 const getMatchPlayerStatus = (player: {
-  queueEntry: { id: string } | null;
+  queueAssignment: { id: string } | null;
   courtAssignment: {
     id: string;
     court: { startedAt: Date | null } | null;
@@ -19,7 +19,7 @@ const getMatchPlayerStatus = (player: {
 }) => {
   if (player.courtAssignment?.court?.startedAt) return "playing";
   if (player.courtAssignment) return "inQueue";
-  if (player.queueEntry) return "inQueue";
+  if (player.queueAssignment) return "inQueue";
   return "waiting";
 };
 
@@ -424,7 +424,7 @@ export const getHostWithPlayers = async (
           hostStatus: true,
           paymentStatus: true,
           timerStartedAt: true,
-          queueEntry: {
+          queueAssignment: {
             select: {
               id: true,
               queueId: true,
@@ -477,7 +477,7 @@ export const getHostWithPlayers = async (
         paymentStatus: acceptedPlayer.paymentStatus,
         timerStartedAt: acceptedPlayer.timerStartedAt,
         player: buildPlayerProfile(acceptedPlayer.player, host.sport),
-        queueEntry: acceptedPlayer.queueEntry,
+        queueAssignment: acceptedPlayer.queueAssignment,
         courtAssignment: acceptedPlayer.courtAssignment
           ? {
               id: acceptedPlayer.courtAssignment.id,
@@ -669,7 +669,7 @@ export const createStaticPlayer = async (
         timerStartedAt: staticPlayer.timerStartedAt,
         matchStatus: "waiting",
         player: buildPlayerProfile(staticPlayer.player, host.sport),
-        queueEntry: null,
+        queueAssignment: null,
         courtAssignment: null,
       },
     });

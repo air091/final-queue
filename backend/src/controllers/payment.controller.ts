@@ -26,6 +26,34 @@ const isNonNegativeNumber = (value: unknown): value is number =>
 
 const toMoneyNumber = (value: unknown) => Number(value ?? 0);
 
+type HostPricingAmounts = {
+  entranceFee: number;
+  perMatchFee: number;
+};
+
+const getPricingAmounts = (pricing: {
+  entranceFee: unknown;
+  perMatchFee: unknown;
+}) => ({
+  entranceFee: toMoneyNumber(pricing.entranceFee),
+  perMatchFee: toMoneyNumber(pricing.perMatchFee),
+});
+
+const getPlayerExpectedFee = (
+  pricing: HostPricingAmounts,
+  gamesPlayed: number,
+) => pricing.entranceFee + pricing.perMatchFee * gamesPlayed;
+
+const calculateExpectedFee = (
+  pricing: HostPricingAmounts,
+  players: Array<{ gamesPlayed: number }>,
+) =>
+  players.reduce(
+    (total, player) =>
+      total + getPlayerExpectedFee(pricing, player.gamesPlayed),
+    0,
+  );
+
 const getAuthorizedHost = async (
   communityId: string,
   hostId: string,
@@ -47,6 +75,7 @@ const getAuthorizedHost = async (
           id: true,
           entranceFee: true,
           perMatchFee: true,
+          expectedFee: true,
           currency: true,
         },
       },
@@ -59,12 +88,14 @@ const mapPricing = (
     id: string;
     entranceFee: unknown;
     perMatchFee: unknown;
+    expectedFee: unknown;
     currency: Currencies;
   } | null,
 ) => ({
   id: pricing?.id ?? null,
   entranceFee: toMoneyNumber(pricing?.entranceFee),
   perMatchFee: toMoneyNumber(pricing?.perMatchFee),
+  expectedFee: toMoneyNumber(pricing?.expectedFee),
   currency: pricing?.currency ?? Currencies.PHP,
 });
 
@@ -148,23 +179,45 @@ export const upsertHostPricing = async (
         .status(404)
         .json({ success: false, message: "Community or host not found" });
 
+    const playerGames = await prisma.player.findMany({
+      where: {
+        hostId: host.id,
+        hostStatus: {
+          in: ["accepted", "banned"],
+        },
+      },
+      select: {
+        gamesPlayed: true,
+      },
+    });
+
+    const pricingAmounts = getPricingAmounts({
+      entranceFee: entranceFee ?? host.pricing?.entranceFee ?? 0,
+      perMatchFee: perMatchFee ?? host.pricing?.perMatchFee ?? 0,
+    });
+
+    const expectedFeeToSave = calculateExpectedFee(pricingAmounts, playerGames);
+
     const pricing = await prisma.hostPricing.upsert({
       where: { hostId: host.id },
       update: {
         ...(entranceFee !== undefined ? { entranceFee } : {}),
         ...(perMatchFee !== undefined ? { perMatchFee } : {}),
+        expectedFee: expectedFeeToSave,
         ...(currency !== undefined ? { currency } : {}),
       },
       create: {
         hostId: host.id,
         entranceFee: entranceFee ?? 0,
         perMatchFee: perMatchFee ?? 0,
+        expectedFee: expectedFeeToSave,
         currency: currency ?? Currencies.PHP,
       },
       select: {
         id: true,
         entranceFee: true,
         perMatchFee: true,
+        expectedFee: true,
         currency: true,
       },
     });
@@ -285,11 +338,19 @@ export const getHostPayments = async (
       },
     );
 
+    const pricingAmounts = getPricingAmounts(
+      host.pricing ?? { entranceFee: 0, perMatchFee: 0 },
+    );
+    const expectedFee = calculateExpectedFee(pricingAmounts, responsePlayers);
+
     return response.status(200).json({
       success: true,
       message: "Host payments retrieved successfully",
       pricing: mapPricing(host.pricing),
-      summary,
+      summary: {
+        ...summary,
+        expectedFee,
+      },
       players: responsePlayers,
     });
   } catch (error) {

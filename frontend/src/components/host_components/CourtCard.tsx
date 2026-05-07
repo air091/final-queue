@@ -143,7 +143,7 @@ export default function CourtCard({
     );
 
     if (!assignment) return undefined;
-    return players.find((player) => player.id === assignment.hostedPlayerId);
+    return players.find((player) => player.id === assignment.playerId);
   };
 
   const getSlotLabel = (position: number) => {

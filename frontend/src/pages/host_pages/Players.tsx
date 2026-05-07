@@ -305,21 +305,21 @@ export default function Players() {
         },
       );
 
-      const hostedPlayer = response.data.hostedPlayer as AcceptedPlayers;
+      const player = response.data.hostedPlayer as AcceptedPlayers;
       const hostPlayerRecord: HostPlayerRecord = {
-        id: hostedPlayer.id,
-        status: hostedPlayer.status,
-        player: hostedPlayer.player,
+        id: player.id,
+        status: player.hostStatus,
+        player: player.player,
       };
 
       setPlayersInHost((currentPlayers) => [
         hostPlayerRecord,
         ...currentPlayers,
       ]);
-      setAcceptedPlayers((currentPlayers) => [hostedPlayer, ...currentPlayers]);
+      setAcceptedPlayers((currentPlayers) => [player, ...currentPlayers]);
       setStaticProfileUrlDrafts((currentDrafts) => ({
         ...currentDrafts,
-        [hostedPlayer.id]: hostedPlayer.player.profileUrl,
+        [player.id]: player.player.profileUrl,
       }));
       setStaticPlayerName("");
       setStaticSkillLevel("beginner");
@@ -370,7 +370,7 @@ export default function Players() {
 
     try {
       await api.post(
-        `/api/private/actions/accept/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+        `/api/private/actions/accept/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
         {},
       );
     } catch (error) {
@@ -393,7 +393,7 @@ export default function Players() {
 
     try {
       await api.post(
-        `/api/private/actions/reject/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+        `/api/private/actions/reject/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
         {},
       );
     } catch (error) {
@@ -425,14 +425,14 @@ export default function Players() {
       currentCourts.map((court) => ({
         ...court,
         assignments: court.assignments.filter(
-          (assignment) => assignment.hostedPlayerId !== hostedPlayerId,
+          (assignment) => assignment.playerId !== hostedPlayerId,
         ),
       })),
     );
 
     try {
       await api.post(
-        `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+        `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
         {},
       );
     } catch (error) {
@@ -486,7 +486,7 @@ export default function Players() {
 
     try {
       await api.post(
-        `/api/private/actions/unban/community/${communityId}/hosts/${hostId}/${hostedPlayerId}`,
+        `/api/private/actions/unban/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
         {},
       );
     } catch (error) {
