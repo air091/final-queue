@@ -71,7 +71,7 @@ export const acceptPlayer = async (
     await prisma.player.update({
       where: { id: existing.id },
       data: {
-        status: PlayerHostStatuses.accepted,
+        hostStatus: PlayerHostStatuses.accepted,
         timerStartedAt: new Date(),
       },
     });
@@ -117,7 +117,7 @@ export const rejectPlayer = async (
       where: {
         id: playerId,
         hostId: host.id,
-        status: PlayerHostStatuses.requested,
+        hostStatus: PlayerHostStatuses.requested,
       },
       select: { id: true },
     });
@@ -188,7 +188,7 @@ export const banPlayer = async (
       where: {
         id: playerId,
         hostId: host.id,
-        status: PlayerHostStatuses.accepted,
+        hostStatus: PlayerHostStatuses.accepted,
       },
       select: {
         id: true,
@@ -288,14 +288,6 @@ export const unbanPlayer = async (
     return response.status(200).json({
       success: true,
       message: "Player unbanned",
-      data: {
-        id: existing.id,
-        status: "accepted",
-        matchStatus: "waiting",
-        timerStartedAt: new Date().toISOString(),
-        queueEntry: null,
-        courtAssignment: null,
-      },
     });
   } catch (error) {
     console.error("Error unbanning player from hosts:", error);
