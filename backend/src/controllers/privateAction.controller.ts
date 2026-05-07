@@ -1,9 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
-import {
-  HostedPlayerStatus,
-  SkillLevel,
-} from "../generated/prisma/enums.js";
+import { PlayerHostStatuses, SkillLevels } from "../generated/prisma/enums.js";
 import {
   hostedPlayerProfileSelect,
   toHostedPlayerProfile,
@@ -14,16 +11,16 @@ import {
 type HostedPlayerParams = {
   communityId: string;
   hostId: string;
-  hostedPlayerId: string;
+  playerId: string;
 };
 
 const getAuthorizedHost = async (
   communityId: string,
   hostId: string,
-  adminId: string,
+  masterId: string,
 ) => {
   const community = await prisma.community.findFirst({
-    where: { id: communityId, adminId },
+    where: { id: communityId, masterId },
     select: { id: true },
   });
 
@@ -40,14 +37,14 @@ export const acceptPlayer = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
+    const { communityId, hostId, playerId } = request.params;
     const user = request.user;
     if (!user)
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!communityId || !hostId || !hostedPlayerId) {
+    if (!communityId || !hostId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -60,9 +57,9 @@ export const acceptPlayer = async (
         .status(404)
         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
       },
       select: { id: true },
@@ -75,10 +72,10 @@ export const acceptPlayer = async (
       });
     }
 
-    await prisma.hostedPlayer.update({
+    await prisma.player.update({
       where: { id: existing.id },
       data: {
-        status: HostedPlayerStatus.accepted,
+        status: PlayerHostStatuses.accepted,
         timerStartedAt: new Date(),
       },
     });
@@ -100,14 +97,14 @@ export const rejectPlayer = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
+    const { communityId, hostId, playerId } = request.params;
     const user = request.user;
     if (!user)
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!communityId || !hostId || !hostedPlayerId) {
+    if (!communityId || !hostId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -120,11 +117,11 @@ export const rejectPlayer = async (
         .status(404)
         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
-        status: HostedPlayerStatus.requested,
+        status: PlayerHostStatuses.requested,
       },
       select: { id: true },
     });
@@ -136,9 +133,9 @@ export const rejectPlayer = async (
       });
     }
 
-    await prisma.hostedPlayer.update({
+    await prisma.player.update({
       where: { id: existing.id },
-      data: { status: HostedPlayerStatus.rejected },
+      data: { hostStatus: PlayerHostStatuses.rejected },
     });
 
     return response
@@ -156,11 +153,11 @@ export const rejectPlayer = async (
 type BanPlayerParams = {
   communityId: string;
   hostId: string;
-  hostedPlayerId: string;
+  playerId: string;
 };
 
 type UpdateStaticPlayerSkillLevelBody = {
-  skillLevel?: SkillLevel;
+  skillLevel?: SkillLevels;
 };
 
 type UpdateStaticPlayerProfileUrlBody = {
@@ -172,8 +169,8 @@ export const banPlayer = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
-    if (!communityId || !hostId || !hostedPlayerId) {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -191,11 +188,11 @@ export const banPlayer = async (
         .status(404)
         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
-        status: HostedPlayerStatus.accepted,
+        status: PlayerHostStatuses.accepted,
       },
       select: {
         id: true,
@@ -222,13 +219,13 @@ export const banPlayer = async (
       });
 
     await prisma.$transaction([
-      prisma.hostedPlayer.update({
+      prisma.player.update({
         where: { id: existing.id },
-        data: { status: HostedPlayerStatus.banned },
+        data: { hostStatus: PlayerHostStatuses.banned },
       }),
 
       prisma.courtAssignment.deleteMany({
-        where: { hostedPlayerId: existing.id },
+        where: { playerId: existing.id },
       }),
     ]);
 
@@ -249,8 +246,8 @@ export const unbanPlayer = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
-    if (!communityId || !hostId || !hostedPlayerId) {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -268,26 +265,27 @@ export const unbanPlayer = async (
         .status(404)
         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
-        status: HostedPlayerStatus.banned,
+        hostStatus: PlayerHostStatuses.banned,
       },
       select: {
         id: true,
         ...hostedPlayerProfileSelect,
       },
     });
+
     if (!existing)
       return response
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    await prisma.hostedPlayer.update({
+    await prisma.player.update({
       where: { id: existing.id },
       data: {
-        status: HostedPlayerStatus.accepted,
+        hostStatus: PlayerHostStatuses.accepted,
         timerStartedAt: new Date(),
       },
     });
@@ -314,260 +312,260 @@ export const unbanPlayer = async (
   }
 };
 
-export const updateStaticPlayerSkillLevel = async (
-  request: Request<
-    BanPlayerParams,
-    unknown,
-    UpdateStaticPlayerSkillLevelBody
-  >,
-  response: Response,
-) => {
-  try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
-    const { skillLevel } = request.body;
+// export const updateStaticPlayerSkillLevel = async (
+//   request: Request<
+//     BanPlayerParams,
+//     unknown,
+//     UpdateStaticPlayerSkillLevelBody
+//   >,
+//   response: Response,
+// ) => {
+//   try {
+//     const { communityId, hostId, playerId } = request.params;
+//     const { skillLevel } = request.body;
 
-    if (!communityId || !hostId || !hostedPlayerId || !skillLevel) {
-      return response
-        .status(400)
-        .json({ success: false, message: "Missing required parameters" });
-    }
+//     if (!communityId || !hostId || !playerId || !skillLevel) {
+//       return response
+//         .status(400)
+//         .json({ success: false, message: "Missing required parameters" });
+//     }
 
-    if (!Object.values(SkillLevel).includes(skillLevel)) {
-      return response
-        .status(400)
-        .json({ success: false, message: "Invalid skill level" });
-    }
+//     if (!Object.values(SkillLevel).includes(skillLevel)) {
+//       return response
+//         .status(400)
+//         .json({ success: false, message: "Invalid skill level" });
+//     }
 
-    const user = request.user;
-    if (!user)
-      return response
-        .status(401)
-        .json({ success: false, message: "Unauthorized" });
+//     const user = request.user;
+//     if (!user)
+//       return response
+//         .status(401)
+//         .json({ success: false, message: "Unauthorized" });
 
-    const host = await getAuthorizedHost(communityId, hostId, user.sub);
-    if (!host)
-      return response
-        .status(404)
-        .json({ success: false, message: "Community or host not found" });
+//     const host = await getAuthorizedHost(communityId, hostId, user.sub);
+//     if (!host)
+//       return response
+//         .status(404)
+//         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
-      where: {
-        id: hostedPlayerId,
-        hostId: host.id,
-        playerId: null,
-      },
-      select: {
-        id: true,
-        status: true,
-        timerStartedAt: true,
-        queueEntry: {
-          select: {
-            id: true,
-            queueId: true,
-            position: true,
-          },
-        },
-        courtAssignment: {
-          select: {
-            id: true,
-            courtId: true,
-            position: true,
-          },
-        },
-      },
-    });
+//     const existing = await prisma.hostedPlayer.findFirst({
+//       where: {
+//         id: hostedPlayerId,
+//         hostId: host.id,
+//         playerId: null,
+//       },
+//       select: {
+//         id: true,
+//         status: true,
+//         timerStartedAt: true,
+//         queueEntry: {
+//           select: {
+//             id: true,
+//             queueId: true,
+//             position: true,
+//           },
+//         },
+//         courtAssignment: {
+//           select: {
+//             id: true,
+//             courtId: true,
+//             position: true,
+//           },
+//         },
+//       },
+//     });
 
-    if (!existing)
-      return response.status(404).json({
-        success: false,
-        message: "Static player not found",
-      });
+//     if (!existing)
+//       return response.status(404).json({
+//         success: false,
+//         message: "Static player not found",
+//       });
 
-    const updated = await prisma.hostedPlayer.update({
-      where: { id: existing.id },
-      data: {
-        staticSkillLevel: skillLevel,
-      },
-      select: {
-        id: true,
-        status: true,
-        timerStartedAt: true,
-        queueEntry: {
-          select: {
-            id: true,
-            queueId: true,
-            position: true,
-          },
-        },
-        courtAssignment: {
-          select: {
-            id: true,
-            courtId: true,
-            position: true,
-          },
-        },
-        ...hostedPlayerProfileSelect,
-      },
-    });
+//     const updated = await prisma.hostedPlayer.update({
+//       where: { id: existing.id },
+//       data: {
+//         staticSkillLevel: skillLevel,
+//       },
+//       select: {
+//         id: true,
+//         status: true,
+//         timerStartedAt: true,
+//         queueEntry: {
+//           select: {
+//             id: true,
+//             queueId: true,
+//             position: true,
+//           },
+//         },
+//         courtAssignment: {
+//           select: {
+//             id: true,
+//             courtId: true,
+//             position: true,
+//           },
+//         },
+//         ...hostedPlayerProfileSelect,
+//       },
+//     });
 
-    return response.status(200).json({
-      success: true,
-      message: "Static player skill updated",
-      data: {
-        id: updated.id,
-        status: updated.status,
-        timerStartedAt: updated.timerStartedAt,
-        player: toHostedPlayerProfile(updated),
-        queueEntry: updated.queueEntry,
-        courtAssignment: updated.courtAssignment,
-      },
-    });
-  } catch (error) {
-    console.error("Error updating static player skill level:", error);
-    return response.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
-  }
-};
+//     return response.status(200).json({
+//       success: true,
+//       message: "Static player skill updated",
+//       data: {
+//         id: updated.id,
+//         status: updated.status,
+//         timerStartedAt: updated.timerStartedAt,
+//         player: toHostedPlayerProfile(updated),
+//         queueEntry: updated.queueEntry,
+//         courtAssignment: updated.courtAssignment,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error updating static player skill level:", error);
+//     return response.status(500).json({
+//       success: false,
+//       message: error instanceof Error ? error.message : "Internal server error",
+//     });
+//   }
+// };
 
-export const updateStaticPlayerProfileUrl = async (
-  request: Request<
-    BanPlayerParams,
-    unknown,
-    UpdateStaticPlayerProfileUrlBody
-  >,
-  response: Response,
-) => {
-  try {
-    const { communityId, hostId, hostedPlayerId } = request.params;
-    const { profileUrl } = request.body;
+// export const updateStaticPlayerProfileUrl = async (
+//   request: Request<
+//     BanPlayerParams,
+//     unknown,
+//     UpdateStaticPlayerProfileUrlBody
+//   >,
+//   response: Response,
+// ) => {
+//   try {
+//     const { communityId, hostId, hostedPlayerId } = request.params;
+//     const { profileUrl } = request.body;
 
-    if (!communityId || !hostId || !hostedPlayerId) {
-      return response
-        .status(400)
-        .json({ success: false, message: "Missing required parameters" });
-    }
+//     if (!communityId || !hostId || !hostedPlayerId) {
+//       return response
+//         .status(400)
+//         .json({ success: false, message: "Missing required parameters" });
+//     }
 
-    const cleanedProfileUrl = profileUrl?.trim() ?? "";
+//     const cleanedProfileUrl = profileUrl?.trim() ?? "";
 
-    if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
-      try {
-        const parsedUrl = new URL(cleanedProfileUrl);
+//     if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
+//       try {
+//         const parsedUrl = new URL(cleanedProfileUrl);
 
-        if (
-          parsedUrl.protocol !== "http:" &&
-          parsedUrl.protocol !== "https:"
-        ) {
-          return response
-            .status(400)
-            .json({ success: false, message: "Profile URL must use http or https" });
-        }
-      } catch {
-        return response
-          .status(400)
-          .json({ success: false, message: "Invalid profile URL" });
-      }
-    }
+//         if (
+//           parsedUrl.protocol !== "http:" &&
+//           parsedUrl.protocol !== "https:"
+//         ) {
+//           return response
+//             .status(400)
+//             .json({ success: false, message: "Profile URL must use http or https" });
+//         }
+//       } catch {
+//         return response
+//           .status(400)
+//           .json({ success: false, message: "Invalid profile URL" });
+//       }
+//     }
 
-    const user = request.user;
-    if (!user)
-      return response
-        .status(401)
-        .json({ success: false, message: "Unauthorized" });
+//     const user = request.user;
+//     if (!user)
+//       return response
+//         .status(401)
+//         .json({ success: false, message: "Unauthorized" });
 
-    const host = await getAuthorizedHost(communityId, hostId, user.sub);
-    if (!host)
-      return response
-        .status(404)
-        .json({ success: false, message: "Community or host not found" });
+//     const host = await getAuthorizedHost(communityId, hostId, user.sub);
+//     if (!host)
+//       return response
+//         .status(404)
+//         .json({ success: false, message: "Community or host not found" });
 
-    const existing = await prisma.hostedPlayer.findFirst({
-      where: {
-        id: hostedPlayerId,
-        hostId: host.id,
-        playerId: null,
-      },
-      select: {
-        id: true,
-        status: true,
-        timerStartedAt: true,
-        queueEntry: {
-          select: {
-            id: true,
-            queueId: true,
-            position: true,
-          },
-        },
-        courtAssignment: {
-          select: {
-            id: true,
-            courtId: true,
-            position: true,
-          },
-        },
-      },
-    });
+//     const existing = await prisma.hostedPlayer.findFirst({
+//       where: {
+//         id: hostedPlayerId,
+//         hostId: host.id,
+//         playerId: null,
+//       },
+//       select: {
+//         id: true,
+//         status: true,
+//         timerStartedAt: true,
+//         queueEntry: {
+//           select: {
+//             id: true,
+//             queueId: true,
+//             position: true,
+//           },
+//         },
+//         courtAssignment: {
+//           select: {
+//             id: true,
+//             courtId: true,
+//             position: true,
+//           },
+//         },
+//       },
+//     });
 
-    if (!existing)
-      return response.status(404).json({
-        success: false,
-        message: "Static player not found",
-      });
+//     if (!existing)
+//       return response.status(404).json({
+//         success: false,
+//         message: "Static player not found",
+//       });
 
-    const updated = await prisma.hostedPlayer.update({
-      where: { id: existing.id },
-      data: {
-        staticProfileUrl: cleanedProfileUrl || null,
-      },
-      select: {
-        id: true,
-        status: true,
-        timerStartedAt: true,
-        queueEntry: {
-          select: {
-            id: true,
-            queueId: true,
-            position: true,
-          },
-        },
-        courtAssignment: {
-          select: {
-            id: true,
-            courtId: true,
-            position: true,
-          },
-        },
-        ...hostedPlayerProfileSelect,
-      },
-    });
+//     const updated = await prisma.hostedPlayer.update({
+//       where: { id: existing.id },
+//       data: {
+//         staticProfileUrl: cleanedProfileUrl || null,
+//       },
+//       select: {
+//         id: true,
+//         status: true,
+//         timerStartedAt: true,
+//         queueEntry: {
+//           select: {
+//             id: true,
+//             queueId: true,
+//             position: true,
+//           },
+//         },
+//         courtAssignment: {
+//           select: {
+//             id: true,
+//             courtId: true,
+//             position: true,
+//           },
+//         },
+//         ...hostedPlayerProfileSelect,
+//       },
+//     });
 
-    return response.status(200).json({
-      success: true,
-      message: "Static player profile updated",
-      data: {
-        id: updated.id,
-        status: updated.status,
-        timerStartedAt: updated.timerStartedAt,
-        player: toHostedPlayerProfile(updated),
-        queueEntry: updated.queueEntry,
-        courtAssignment: updated.courtAssignment,
-      },
-    });
-  } catch (error) {
-    console.error("Error updating static player profile URL:", error);
-    return response.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
-  }
-};
+//     return response.status(200).json({
+//       success: true,
+//       message: "Static player profile updated",
+//       data: {
+//         id: updated.id,
+//         status: updated.status,
+//         timerStartedAt: updated.timerStartedAt,
+//         player: toHostedPlayerProfile(updated),
+//         queueEntry: updated.queueEntry,
+//         courtAssignment: updated.courtAssignment,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error updating static player profile URL:", error);
+//     return response.status(500).json({
+//       success: false,
+//       message: error instanceof Error ? error.message : "Internal server error",
+//     });
+//   }
+// };
 
 type AssignPlayerParams = {
   communityId: string;
   hostId: string;
   courtId: string;
-  hostedPlayerId: string;
+  playerId: string;
 };
 
 export const assignPlayerToCourt = async (
@@ -581,9 +579,9 @@ export const assignPlayerToCourt = async (
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    const { communityId, hostId, courtId, hostedPlayerId } = request.params;
+    const { communityId, hostId, courtId, playerId } = request.params;
 
-    if (!communityId || !hostId || !courtId || !hostedPlayerId) {
+    if (!communityId || !hostId || !courtId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -597,7 +595,7 @@ export const assignPlayerToCourt = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -616,11 +614,11 @@ export const assignPlayerToCourt = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
-    const player = await prisma.hostedPlayer.findFirst({
+    const player = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
-        status: HostedPlayerStatus.accepted,
+        status: PlayerHostStatuses.accepted,
       },
       select: { id: true },
     });
@@ -647,9 +645,9 @@ export const assignPlayerToCourt = async (
       });
 
     const existingAssignment = await prisma.courtAssignment.findFirst({
-      where: { hostedPlayerId: player.id },
+      where: { playerId: player.id },
       select: {
-        hostedPlayerId: true,
+        playerId: true,
         court: {
           select: {
             startedAt: true,
@@ -671,7 +669,7 @@ export const assignPlayerToCourt = async (
       },
     });
 
-    if (occupied && occupied.hostedPlayerId !== player.id) {
+    if (occupied && occupied.playerId !== player.id) {
       return response.status(400).json({
         success: false,
         message: "Position already occupied",
@@ -679,13 +677,13 @@ export const assignPlayerToCourt = async (
     }
 
     await prisma.courtAssignment.upsert({
-      where: { hostedPlayerId: player.id },
+      where: { playerId: player.id },
       update: {
         courtId: court.id,
         position,
       },
       create: {
-        hostedPlayerId: player.id,
+        playerId: player.id,
         courtId: court.id,
         position,
       },
@@ -708,7 +706,7 @@ type RemovePlayerFromCourtParams = {
   communityId: string;
   hostId: string;
   courtId: string;
-  hostedPlayerId: string;
+  playerId: string;
 };
 
 export const removePlayerFromCourt = async (
@@ -716,8 +714,8 @@ export const removePlayerFromCourt = async (
   response: Response,
 ) => {
   try {
-    const { communityId, hostId, courtId, hostedPlayerId } = request.params;
-    if (!communityId || !hostId || !courtId || !hostedPlayerId) {
+    const { communityId, hostId, courtId, playerId } = request.params;
+    if (!communityId || !hostId || !courtId || !playerId) {
       return response
         .status(400)
         .json({ success: false, message: "Missing required parameters" });
@@ -730,7 +728,7 @@ export const removePlayerFromCourt = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -765,11 +763,11 @@ export const removePlayerFromCourt = async (
         message: "Cannot remove players while the game is in progress",
       });
 
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
-        id: hostedPlayerId,
+        id: playerId,
         hostId: host.id,
-        status: HostedPlayerStatus.accepted,
+        status: PlayerHostStatuses.accepted,
       },
       select: { id: true },
     });
@@ -782,7 +780,7 @@ export const removePlayerFromCourt = async (
     const assignment = await prisma.courtAssignment.findFirst({
       where: {
         courtId: court.id,
-        hostedPlayerId: existing.id,
+        playerId: existing.id,
       },
       select: { id: true },
     });
