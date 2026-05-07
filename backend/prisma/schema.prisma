@@ -228,7 +228,7 @@ model MatchParticipant {
   id                  String @id @default(uuid())
   matchId             String
   playerId            String
-  accountId           String
+  accountId           String?
   team                String?
   result              String?
   joinedAt            DateTime @default(now())
