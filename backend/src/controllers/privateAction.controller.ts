@@ -1,10 +1,6 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import { PlayerHostStatuses, SkillLevels } from "../generated/prisma/enums.js";
-import {
-  hostedPlayerProfileSelect,
-  toHostedPlayerProfile,
-} from "../lib/hostedPlayer.js";
 
 // HOST ADMIN ACTION
 
@@ -273,7 +269,6 @@ export const unbanPlayer = async (
       },
       select: {
         id: true,
-        ...hostedPlayerProfileSelect,
       },
     });
 
@@ -298,7 +293,6 @@ export const unbanPlayer = async (
         status: "accepted",
         matchStatus: "waiting",
         timerStartedAt: new Date().toISOString(),
-        player: toHostedPlayerProfile(existing),
         queueEntry: null,
         courtAssignment: null,
       },

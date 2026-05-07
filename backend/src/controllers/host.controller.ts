@@ -2,12 +2,6 @@ import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
 import { PlayerHostStatuses, SkillLevels } from "../generated/prisma/enums.js";
-import {
-  DEFAULT_HOSTED_PLAYER_PROFILE_URL,
-  hostedPlayerProfileSelect,
-  type HostedPlayerProfileSource,
-  toHostedPlayerProfile,
-} from "../lib/hostedPlayer.js";
 
 const getMatchPlayerStatus = (player: {
   queueEntry: { id: string } | null;
@@ -22,17 +16,14 @@ const getMatchPlayerStatus = (player: {
   return "waiting";
 };
 
-const mapHostPlayerRecord = (
-  player: {
-    id: string;
-    status: PlayerHostStatuses;
-    paymentStatus: string;
-  } & HostedPlayerProfileSource,
-) => ({
+const mapHostPlayerRecord = (player: {
+  id: string;
+  status: PlayerHostStatuses;
+  paymentStatus: string;
+}) => ({
   id: player.id,
   status: player.status,
   paymentStatus: player.paymentStatus,
-  player: toHostedPlayerProfile(player),
 });
 
 export const host = async (request: Request<Params>, response: Response) => {
@@ -209,7 +200,6 @@ export const getHostById = async (
           id: true,
           status: true,
           paymentStatus: true,
-          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -223,7 +213,6 @@ export const getHostById = async (
           id: true,
           status: true,
           paymentStatus: true,
-          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -237,7 +226,6 @@ export const getHostById = async (
           id: true,
           status: true,
           paymentStatus: true,
-          ...hostedPlayerProfileSelect,
         },
       }),
 
@@ -251,7 +239,6 @@ export const getHostById = async (
           id: true,
           status: true,
           paymentStatus: true,
-          ...hostedPlayerProfileSelect,
         },
       }),
     ]);
@@ -335,7 +322,6 @@ export const getHostWithPlayers = async (
           status: true,
           paymentStatus: true,
           timerStartedAt: true,
-          ...hostedPlayerProfileSelect,
           queueEntry: {
             select: {
               id: true,
@@ -373,7 +359,6 @@ export const getHostWithPlayers = async (
         status: acceptedPlayer.status,
         paymentStatus: acceptedPlayer.paymentStatus,
         timerStartedAt: acceptedPlayer.timerStartedAt,
-        player: toHostedPlayerProfile(acceptedPlayer),
         queueEntry: acceptedPlayer.queueEntry,
         courtAssignment: acceptedPlayer.courtAssignment
           ? {

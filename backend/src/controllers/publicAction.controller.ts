@@ -1,10 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
-import {
-  HostStatus,
-  HostedPlayerStatus,
-} from "../generated/prisma/enums.js";
+import { HostStatus, PlayerHostStatuses } from "../generated/prisma/enums.js";
 
 // PUBLIC ACTIONS
 export const getAvailableHosts = async (
@@ -32,7 +29,7 @@ export const getAvailableHosts = async (
             id: true,
             profileUrl: true,
             communityName: true,
-            admin: {
+            master: {
               select: {
                 id: true,
                 profileUrl: true,
@@ -58,7 +55,7 @@ export const getAvailableHosts = async (
       hosts: hosts.map(({ players, ...host }) => ({
         ...host,
         currentUserStatus: players[0]?.status ?? null,
-        isOwnedByCurrentUser: host.community.admin.id === user.sub,
+        isOwnedByCurrentUser: host.community.master.id === user.sub,
       })),
     });
   } catch (error) {
@@ -96,7 +93,7 @@ export const playerRequestToJoinHost = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
-    if (community.adminId === user.sub) {
+    if (community.masterId === user.sub) {
       return response.status(403).json({
         success: false,
         message: "Admin cannot request to join their own host",
@@ -113,7 +110,7 @@ export const playerRequestToJoinHost = async (
         .json({ success: false, message: "Host not found" });
 
     // 🚨 CHECK IF ALREADY EXISTS
-    const existing = await prisma.hostedPlayer.findFirst({
+    const existing = await prisma.player.findFirst({
       where: {
         hostId: host.id,
         playerId: user.sub,
@@ -128,7 +125,7 @@ export const playerRequestToJoinHost = async (
       });
     }
 
-    const hostedPlayer = await prisma.hostedPlayer.create({
+    const hostedPlayer = await prisma.player.create({
       data: {
         hostId: host.id,
         playerId: user.sub,
