@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import type {
   AcceptedPlayers,
   CourtType,
+  HostMeta,
   HostPaymentsData,
   HostPlayerRecord,
   QueueType,
@@ -19,6 +20,7 @@ export type HostOutletContext = {
   setQueues: Dispatch<SetStateAction<QueueType[]>>;
   paymentsData: HostPaymentsData;
   setPaymentsData: Dispatch<SetStateAction<HostPaymentsData>>;
+  host: HostMeta | null;
   refreshHostData: () => Promise<void>;
 };
 

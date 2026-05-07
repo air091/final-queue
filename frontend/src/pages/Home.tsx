@@ -8,7 +8,7 @@ type CommunityType = {
   id: string;
   profileUrl: string | null;
   communityName: string;
-  admin: {
+  master: {
     id: string;
     profileUrl: string;
     username: string;
@@ -132,13 +132,13 @@ export default function Home() {
                     <div className="flex items-center gap-x-1">
                       <div className="rounded-full w-[20px] h-[20px]">
                         <img
-                          src={availableHost.community.admin.profileUrl}
-                          alt={availableHost.community.admin.username}
+                          src={availableHost.community.master.profileUrl}
+                          alt={availableHost.community.master.username}
                           className="block border w-full h-full rounded-full object-contain"
                         />
                       </div>
                       <span className="block text-[14px] font-semibold">
-                        {availableHost.community.admin.username}
+                        {availableHost.community.master.username}
                       </span>
                     </div>
                     <div>0:00</div>

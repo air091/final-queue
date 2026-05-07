@@ -7,6 +7,8 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
+  updateStaticPlayerProfileUrl,
+  updateStaticPlayerSkillLevel,
 } from "../controllers/privateAction.controller.js";
 
 // updateStaticPlayerProfileUrl,
@@ -38,26 +40,26 @@ router.post(
   unbanPlayer,
 );
 
-// router.patch(
-//   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
-//   authenticate,
-//   updateStaticPlayerSkillLevel,
-// );
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
+  authenticate,
+  updateStaticPlayerSkillLevel,
+);
 
-// router.patch(
-//   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
-//   authenticate,
-//   updateStaticPlayerProfileUrl,
-// );
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
+  authenticate,
+  updateStaticPlayerProfileUrl,
+);
 
 router.post(
-  "/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
+  "/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/players/:playerId",
   authenticate,
   assignPlayerToCourt,
 );
 
 router.post(
-  "/courts/remove/slot/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",
+  "/courts/remove/slot/community/:communityId/hosts/:hostId/courts/:courtId/players/:playerId",
   authenticate,
   removePlayerFromCourt,
 );

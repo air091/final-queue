@@ -5,7 +5,7 @@ import { IoMdTrash } from "react-icons/io";
 import { HiPencilAlt } from "react-icons/hi";
 import { api } from "../../lib/api";
 
-type AdminType = {
+type MasterType = {
   id: string;
   profileUrl: string;
   username: string;
@@ -16,7 +16,7 @@ type CommunityType = {
   profileUrl: string;
   communityName: string;
   description: string;
-  admin: AdminType;
+  master: MasterType;
 };
 
 type HostsType = {
@@ -109,13 +109,13 @@ export default function Community() {
           <span className="flex items-center gap-x-1">
             <div className="w-4 h-4 border rounded-full">
               <img
-                src={community?.admin.profileUrl}
-                alt={community?.admin.username}
+                src={community?.master.profileUrl}
+                alt={community?.master.username}
                 className="block w-full h-full rounded-full object-contain"
               />
             </div>
             <span className="block font-semibold text-stone-400 text-[14px]">
-              {community?.admin.username}
+              {community?.master.username}
             </span>
           </span>
         </div>

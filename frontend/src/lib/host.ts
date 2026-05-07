@@ -12,7 +12,31 @@ export type PlayerType = {
   isStatic: boolean;
 };
 
-export type QueueEntryType = {
+export type HostPlayerStatus = "requested" | "accepted" | "rejected" | "banned";
+
+export type HostPlayerRecord = {
+  id: string;
+  status: HostPlayerStatus;
+  paymentStatus?: PaymentStatus | string;
+  player: PlayerType;
+};
+
+export type HostMeta = {
+  id: string;
+  hostName: string;
+  sport: string;
+  status: string;
+  createdAt: string;
+  community: {
+    profileUrl: string;
+    communityName: string;
+  };
+  _count: {
+    players: number;
+  };
+};
+
+export type QueueAssignmentType = {
   id: string;
   queueId: string;
   position: number;
@@ -26,17 +50,17 @@ export type CourtAssignmentType = {
 
 export type AcceptedPlayers = {
   id: string;
-  status: "accepted";
+  hostStatus: "accepted";
   matchStatus: MatchPlayerStatus;
   timerStartedAt: string | null;
   player: PlayerType;
-  queueEntry: QueueEntryType | null;
+  queueEntry: QueueAssignmentType | null;
   courtAssignment: CourtAssignmentType | null;
 };
 
 export type PlayerAssignedInCourt = {
   id: string;
-  hostedPlayerId: string;
+  playerId: string;
   position: number;
 };
 
@@ -54,7 +78,7 @@ export type QueueType = {
   name: string;
 };
 
-export type HostPlayerRecord = {
+export type PlayerRecord = {
   id: string;
   status: "requested" | "accepted" | "rejected" | "banned";
   paymentStatus?: PaymentStatus;
@@ -134,10 +158,8 @@ export const normalizeAcceptedPlayers = (players: AcceptedPlayers[]) =>
     matchStatus: player.matchStatus ?? getDerivedMatchStatus(player),
   }));
 
-export const getPaymentBalance = (
-  amountExpected: number,
-  amountPaid: number,
-) => Math.max(0, amountExpected - amountPaid);
+export const getPaymentBalance = (amountExpected: number, amountPaid: number) =>
+  Math.max(0, amountExpected - amountPaid);
 
 export const buildPaymentsSummary = (
   players: PaymentPlayer[],

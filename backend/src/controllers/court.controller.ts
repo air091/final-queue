@@ -49,7 +49,6 @@ export const getMatchCourts = async (
             id: true,
             playerId: true,
             position: true,
-            assignedAt: true,
           },
         },
       },

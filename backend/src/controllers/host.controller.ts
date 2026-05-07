@@ -1,10 +1,13 @@
 import type { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
 import {
   PlayerHostStatuses,
   SkillLevels,
   Sports,
+  UserRoles,
 } from "../generated/prisma/enums.js";
 
 const getMatchPlayerStatus = (player: {
@@ -20,14 +23,49 @@ const getMatchPlayerStatus = (player: {
   return "waiting";
 };
 
+const buildPlayerProfile = (
+  player:
+    | {
+        id: string;
+        username: string;
+        profileUrl: string;
+        role: UserRoles;
+        sports: { sport: string; skillLevel: SkillLevels }[];
+      }
+    | null
+    | undefined,
+  sport?: string,
+) => {
+  const skillLevel =
+    player?.sports?.find((sportRecord) =>
+      sport ? sportRecord.sport === sport : true,
+    )?.skillLevel ?? SkillLevels.beginner;
+
+  return {
+    id: player?.id ?? null,
+    username: player?.username ?? "",
+    profileUrl: player?.profileUrl ?? "",
+    skillLevel,
+    isStatic: player?.role === UserRoles.static,
+  };
+};
+
 const mapHostPlayerRecord = (player: {
   id: string;
   hostStatus: PlayerHostStatuses;
   paymentStatus: string;
+  player: {
+    id: string;
+    username: string;
+    profileUrl: string;
+    role: UserRoles;
+    sports: { sport: string; skillLevel: SkillLevels }[];
+  } | null;
 }) => ({
   id: player.id,
-  hostStatus: player.hostStatus,
+  status: player.hostStatus,
   paymentStatus: player.paymentStatus,
+  player: buildPlayerProfile(player.player),
 });
 
 export const host = async (request: Request<Params>, response: Response) => {
@@ -46,7 +84,7 @@ export const host = async (request: Request<Params>, response: Response) => {
         .status(400)
         .json({ success: false, message: "Sport is required" });
 
-    if (sportName !== Sports)
+    if (!Object.values(Sports).includes(sportName as Sports))
       return response
         .status(400)
         .json({ success: false, message: "Sport unavailable" });
@@ -208,6 +246,20 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
         },
       }),
 
@@ -221,6 +273,20 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
         },
       }),
 
@@ -234,6 +300,20 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
         },
       }),
 
@@ -247,6 +327,20 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);
@@ -349,6 +443,20 @@ export const getHostWithPlayers = async (
               },
             },
           },
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);
@@ -364,9 +472,11 @@ export const getHostWithPlayers = async (
       ...host,
       acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
         id: acceptedPlayer.id,
+        status: acceptedPlayer.hostStatus,
         hostStatus: acceptedPlayer.hostStatus,
         paymentStatus: acceptedPlayer.paymentStatus,
         timerStartedAt: acceptedPlayer.timerStartedAt,
+        player: buildPlayerProfile(acceptedPlayer.player, host.sport),
         queueEntry: acceptedPlayer.queueEntry,
         courtAssignment: acceptedPlayer.courtAssignment
           ? {
@@ -440,107 +550,134 @@ export const deleteHost = async (
   }
 };
 
-// type CreateStaticPlayerParams = {
-//   communityId: string;
-//   hostId: string;
-// };
+type CreateStaticPlayerParams = {
+  communityId: string;
+  hostId: string;
+};
 
-// type CreateStaticPlayerBody = {
-//   username?: string;
-//   skillLevel?: SkillLevels;
-//   profileUrl?: string;
-// };
+type CreateStaticPlayerBody = {
+  username?: string;
+  skillLevel?: SkillLevels;
+  profileUrl?: string;
+};
 
-// export const createStaticPlayer = async (
-//   request: Request<CreateStaticPlayerParams, unknown, CreateStaticPlayerBody>,
-//   response: Response,
-// ) => {
-//   try {
-//     const { communityId, hostId } = request.params;
-//     const { username, skillLevel, profileUrl } = request.body;
-//     const cleanUsername = username?.trim();
-//     const cleanProfileUrl = profileUrl?.trim();
-//     const user = request.user;
+export const createStaticPlayer = async (
+  request: Request<CreateStaticPlayerParams, unknown, CreateStaticPlayerBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const { username, skillLevel, profileUrl } = request.body;
+    const cleanUsername = username?.trim();
+    const cleanProfileUrl = profileUrl?.trim();
+    const user = request.user;
 
-//     if (!user)
-//       return response
-//         .status(401)
-//         .json({ success: false, message: "Unauthorized" });
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
 
-//     if (!communityId || !hostId)
-//       return response
-//         .status(400)
-//         .json({ success: false, message: "Missing required params" });
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
 
-//     if (!cleanUsername)
-//       return response
-//         .status(400)
-//         .json({ success: false, message: "Player name is required" });
+    if (!cleanUsername)
+      return response
+        .status(400)
+        .json({ success: false, message: "Player name is required" });
 
-//     if (skillLevel && !Object.values(SkillLevel).includes(skillLevel))
-//       return response
-//         .status(400)
-//         .json({ success: false, message: "Invalid skill level" });
+    if (skillLevel && !Object.values(SkillLevels).includes(skillLevel))
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
 
-//     const community = await prisma.community.findFirst({
-//       where: { id: communityId, adminId: user.sub },
-//       select: { id: true },
-//     });
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
 
-//     if (!community)
-//       return response
-//         .status(404)
-//         .json({ success: false, message: "Community not found" });
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
 
-//     const host = await prisma.host.findFirst({
-//       where: { id: hostId, communityId: community.id },
-//       select: { id: true },
-//     });
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true, sport: true },
+    });
 
-//     if (!host)
-//       return response
-//         .status(404)
-//         .json({ success: false, message: "Host not found" });
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
 
-//     const now = new Date();
-//     const staticPlayer = await prisma.hostedPlayer.create({
-//       data: {
-//         hostId: host.id,
-//         status: HostedPlayerStatus.accepted,
-//         timerStartedAt: now,
-//         staticName: cleanUsername,
-//         staticSkillLevel: skillLevel ?? SkillLevel.beginner,
-//         staticProfileUrl:
-//           cleanProfileUrl || DEFAULT_HOSTED_PLAYER_PROFILE_URL,
-//       },
-//       select: {
-//         id: true,
-//         status: true,
-//         paymentStatus: true,
-//         timerStartedAt: true,
-//         ...hostedPlayerProfileSelect,
-//       },
-//     });
+    const accountPassword = await bcrypt.hash(randomUUID(), 10);
+    const account = await prisma.account.create({
+      data: {
+        username: cleanUsername,
+        email: `static-${randomUUID()}@queue-system.local`,
+        password: accountPassword,
+        role: UserRoles.static,
+        ...(cleanProfileUrl ? { profileUrl: cleanProfileUrl } : {}),
+        sports: {
+          create: {
+            sport: host.sport as Sports,
+            skillLevel: skillLevel ?? SkillLevels.beginner,
+          },
+        },
+      },
+    });
 
-//     return response.status(201).json({
-//       success: true,
-//       message: "Static player created successfully",
-//       hostedPlayer: {
-//         id: staticPlayer.id,
-//         status: staticPlayer.status,
-//         paymentStatus: staticPlayer.paymentStatus,
-//         timerStartedAt: staticPlayer.timerStartedAt,
-//         matchStatus: "waiting",
-//         player: toHostedPlayerProfile(staticPlayer),
-//         queueEntry: null,
-//         courtAssignment: null,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Error creating static player:", error);
-//     return response.status(500).json({
-//       success: false,
-//       message: error instanceof Error ? error.message : "Internal server error",
-//     });
-//   }
-// };
+    const staticPlayer = await prisma.player.create({
+      data: {
+        hostId: host.id,
+        playerId: account.id,
+        hostStatus: PlayerHostStatuses.accepted,
+        timerStartedAt: new Date(),
+      },
+      select: {
+        id: true,
+        hostStatus: true,
+        paymentStatus: true,
+        timerStartedAt: true,
+        player: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+            role: true,
+            sports: {
+              select: {
+                sport: true,
+                skillLevel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return response.status(201).json({
+      success: true,
+      message: "Static player created successfully",
+      hostedPlayer: {
+        id: staticPlayer.id,
+        status: "accepted",
+        hostStatus: staticPlayer.hostStatus,
+        paymentStatus: staticPlayer.paymentStatus,
+        timerStartedAt: staticPlayer.timerStartedAt,
+        matchStatus: "waiting",
+        player: buildPlayerProfile(staticPlayer.player, host.sport),
+        queueEntry: null,
+        courtAssignment: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating static player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

@@ -136,7 +136,7 @@ model Player {
   // playing  => courtAssignment exists on a started court
   // timerStartedAt continues from waiting into queue,
   // resets when a game starts, and resets again when a game ends.
-  queueEntry           QueueAssignment?
+  queueAssignment      QueueAssignment?
   courtAssignment      CourtAssignment?
   matchParticipations  MatchParticipant[]
   payments             PlayerPayment[]
