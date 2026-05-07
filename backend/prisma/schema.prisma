@@ -254,6 +254,7 @@ model HostPricing {
   hostId              String @unique
   entranceFee         Decimal @default(0) @db.Decimal(10, 2)
   perMatchFee         Decimal @default(0) @db.Decimal(10, 2)
+  expectedFee         Decimal @default(0) @db.Decimal(10, 2)
   currency            Currencies @default(PHP)
   updatedAt           DateTime @updatedAt
 
