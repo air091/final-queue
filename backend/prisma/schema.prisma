@@ -12,44 +12,65 @@ datasource db {
   provider = "postgresql"
 }
 
-enum SkillLevel {
+enum AccountStatuses {
+  active
+  inactive
+}
+
+enum UserRoles {
+  player
+  master
+  static
+}
+
+model Account {
+  id                    String @id @default(uuid())
+  profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
+  username              String
+  email                 String @unique
+  password              String
+  role                  UserRoles @default(player)
+  status                AccountStatuses @default(active)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  sports                UserSport[]
+  communities           Community[]
+  hostedPlayers         Player[]
+  matchParticipants     MatchParticipant[]
+}
+
+enum SkillLevels {
   beginner
   intermediate
   advanced
   elite
 }
 
-enum AccountStatus {
-  active
+enum Sports {
+  badminton
 }
 
-model Account {
+model UserSport {
   id                    String @id @default(uuid())
-  skillLevel            SkillLevel @default(beginner)
-  profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
-  username              String
-  email                 String @unique
-  password              String
-  status                AccountStatus @default(active)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  communities           Community[]
-  hostedPlayers         HostedPlayer[]
-  matchParticipants     MatchParticipant[]
+  accountId             String
+  sport                 Sports
+  skillLevel            SkillLevels @default(beginner)
+  account               Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  @@index([accountId])
 }
 
 model Community {
   id                    String @id @default(uuid())
   profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
-  adminId               String
+  masterId              String
   communityName         String
   description           String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  admin                 Account @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  master                Account @relation(fields: [masterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   hosts                 Host[]
 
-  @@index([adminId])
+  @@index([masterId])
 }
 
 enum HostStatus {
@@ -70,7 +91,7 @@ model Host {
 
   community             Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   
-  players               HostedPlayer[]
+  players               Player[]
   courts                Court[]
   queues                Queue[]
   matches               Match[]
@@ -79,39 +100,30 @@ model Host {
   @@index([communityId])
 }
 
-enum HostedPlayerStatus {
+enum PaymentStatuses {
+  unpaid
+  paid
+}
+
+enum PaymentMethods {
+  cash
+  ewallet
+}
+
+enum PlayerHostStatuses {
   requested
   accepted
   rejected
   banned
 }
 
-enum Currency {
-  PHP
-  USD
-  EUR
-}
-
-enum PaymentStatus {
-  unpaid
-  paid
-}
-
-enum PaymentMethod {
-  cash
-  ewallet
-}
-
-model HostedPlayer {
+model Player {
   id                   String @id @default(uuid())
   hostId               String
-  playerId             String?
-  paymentStatus        PaymentStatus @default(unpaid)
+  playerId             String
+  paymentStatus        PaymentStatuses @default(unpaid)
   gamesPlayed          Int @default(0)
-  staticName           String?
-  staticProfileUrl     String?
-  staticSkillLevel     SkillLevel?
-  status               HostedPlayerStatus @default(requested)
+  hostStatus           PlayerHostStatuses @default(requested)
   timerStartedAt       DateTime?
   updatedAt            DateTime @updatedAt
 
@@ -124,13 +136,13 @@ model HostedPlayer {
   // playing  => courtAssignment exists on a started court
   // timerStartedAt continues from waiting into queue,
   // resets when a game starts, and resets again when a game ends.
-  queueEntry           QueueEntry?
+  queueEntry           QueueAssignment?
   courtAssignment      CourtAssignment?
   matchParticipations  MatchParticipant[]
   payments             PlayerPayment[]
 
   @@unique([hostId, playerId])
-  @@index([hostId, status, playerId])
+  @@index([hostId, hostStatus, playerId])
   @@index([hostId, paymentStatus])
 }
 
@@ -140,25 +152,23 @@ model Queue {
   id                  String @id @default(uuid())
   hostId              String
   name                String
-
   host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  entries             QueueEntry[]
+  entries             QueueAssignment[]
 
   @@index([hostId])
 }
 
-model QueueEntry {
+model QueueAssignment {
   id                  String @id @default(uuid())
-  hostedPlayerId      String
+  playerId            String
   queueId             String
   position            Int
-  assignedAt          DateTime @default(now())
-
-  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade)
+  assignedAt          DateTime @default(now())  
+  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   queue               Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
 
   @@unique([queueId, position])
-  @@unique([hostedPlayerId])
+  @@unique([playerId])
   @@index([queueId])
 }
 
@@ -170,7 +180,6 @@ model Court {
   name                String
   startedAt           DateTime?
   endedAt             DateTime?
-
   host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
   assignments         CourtAssignment[]
   matches             Match[]
@@ -180,17 +189,14 @@ model Court {
 
 model CourtAssignment {
   id                  String @id @default(uuid())
-  hostedPlayerId      String
+  playerId            String
   courtId             String
   position            Int
-  assignedAt          DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade)
+  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   court               Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
 
   @@unique([courtId, position])
-  @@unique([hostedPlayerId])
+  @@unique([playerId])
   @@index([courtId])
 }
 
@@ -221,24 +227,26 @@ model Match {
 model MatchParticipant {
   id                  String @id @default(uuid())
   matchId             String
-  hostedPlayerId      String
-  accountId           String?
-  staticName          String?
-  staticProfileUrl    String?
-  staticSkillLevel    SkillLevel?
+  playerId            String
+  accountId           String
   team                String?
   result              String?
   joinedAt            DateTime @default(now())
   createdAt           DateTime @default(now())
 
   match               Match @relation(fields: [matchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  player              Player @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   account             Account? @relation(fields: [accountId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  @@unique([matchId, hostedPlayerId])
+  @@unique([matchId, playerId])
   @@index([matchId])
-  @@index([hostedPlayerId])
+  @@index([playerId])
   @@index([accountId])
+}
+
+enum Currencies {
+  PHP
+  USD
 }
 
 model HostPricing {
@@ -246,8 +254,7 @@ model HostPricing {
   hostId              String @unique
   entranceFee         Decimal @default(0) @db.Decimal(10, 2)
   perMatchFee         Decimal @default(0) @db.Decimal(10, 2)
-  currency            Currency @default(PHP)
-  createdAt           DateTime @default(now())
+  currency            Currencies @default(PHP)
   updatedAt           DateTime @updatedAt
 
   host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -255,19 +262,10 @@ model HostPricing {
 
 model PlayerPayment {
   id                  String @id @default(uuid())
-  hostedPlayerId      String
-  amountExpected      Decimal @default(0) @db.Decimal(10, 2)
+  playerId            String
   amountPaid          Decimal @default(0) @db.Decimal(10, 2)
-  currency            Currency @default(PHP)
-  status              PaymentStatus @default(unpaid)
-  method              PaymentMethod?
-  providerReference   String?
-  notes               String?
-  paidAt              DateTime?
   createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  hostedPlayer        HostedPlayer @relation(fields: [hostedPlayerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([hostedPlayerId])
+  @@index([playerId])
 }
