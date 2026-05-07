@@ -47,7 +47,7 @@ export const getMatchCourts = async (
         assignments: {
           select: {
             id: true,
-            hostedPlayerId: true,
+            playerId: true,
             position: true,
             assignedAt: true,
           },
@@ -117,7 +117,7 @@ export const startMatchCourt = async (
         assignments: {
           select: {
             position: true,
-            hostedPlayerId: true,
+            playerId: true,
           },
         },
       },
@@ -148,13 +148,13 @@ export const startMatchCourt = async (
       });
 
     const now = new Date();
-    const hostedPlayerIds = court.assignments.map(
-      (assignment) => assignment.hostedPlayerId,
+    const playerIds = court.assignments.map(
+      (assignment) => assignment.playerId,
     );
 
     const [, startedCourt] = await prisma.$transaction([
-      prisma.hostedPlayer.updateMany({
-        where: { id: { in: hostedPlayerIds } },
+      prisma.player.updateMany({
+        where: { id: { in: playerIds } },
         data: { timerStartedAt: now },
       }),
       prisma.court.update({
@@ -203,7 +203,7 @@ export const endMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -230,7 +230,7 @@ export const endMatchCourt = async (
         assignments: {
           select: {
             id: true,
-            hostedPlayerId: true,
+            playerId: true,
           },
         },
       },
@@ -248,14 +248,14 @@ export const endMatchCourt = async (
       });
 
     const now = new Date();
-    const hostedPlayerIds = court.assignments.map(
-      (assignment) => assignment.hostedPlayerId,
+    const playerIds = court.assignments.map(
+      (assignment) => assignment.playerId,
     );
     const assignmentIds = court.assignments.map((assignment) => assignment.id);
 
     const [, endedCourt] = await prisma.$transaction([
-      prisma.hostedPlayer.updateMany({
-        where: { id: { in: hostedPlayerIds } },
+      prisma.player.updateMany({
+        where: { id: { in: playerIds } },
         data: {
           timerStartedAt: now,
           gamesPlayed: {
@@ -284,7 +284,7 @@ export const endMatchCourt = async (
       success: true,
       message: "Game ended",
       court: endedCourt,
-      hostedPlayerIds,
+      playerIds,
     });
   } catch (error) {
     console.error("Error ending match court host:", error);
@@ -313,7 +313,7 @@ export const createMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -382,7 +382,7 @@ export const renameMatchCourt = async (
         .json({ success: false, message: "Court name is required" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -454,7 +454,7 @@ export const deleteMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -480,7 +480,7 @@ export const deleteMatchCourt = async (
         startedAt: true,
         assignments: {
           select: {
-            hostedPlayerId: true,
+            playerId: true,
           },
         },
       },
@@ -501,15 +501,13 @@ export const deleteMatchCourt = async (
       where: { id: court.id },
     });
 
-    return response
-      .status(200)
-      .json({
-        success: true,
-        message: "Court deleted successfully",
-        hostedPlayerIds: court.assignments.map(
-          (assignment) => assignment.hostedPlayerId,
-        ),
-      });
+    return response.status(200).json({
+      success: true,
+      message: "Court deleted successfully",
+      hostedPlayerIds: court.assignments.map(
+        (assignment) => assignment.playerId,
+      ),
+    });
   } catch (error) {
     console.error("Error delete match court host:", error);
     return response.status(500).json({
@@ -587,7 +585,7 @@ export const createQueueCourt = async (
         .json({ success: false, message: "Community not found" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
