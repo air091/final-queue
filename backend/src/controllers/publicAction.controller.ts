@@ -44,7 +44,7 @@ export const getAvailableHosts = async (
           },
           select: {
             id: true,
-            status: true,
+            hostStatus: true,
           },
         },
       },
@@ -54,7 +54,7 @@ export const getAvailableHosts = async (
       success: true,
       hosts: hosts.map(({ players, ...host }) => ({
         ...host,
-        currentUserStatus: players[0]?.status ?? null,
+        currentUserStatus: players[0]?.hostStatus ?? null,
         isOwnedByCurrentUser: host.community.master.id === user.sub,
       })),
     });
@@ -125,21 +125,21 @@ export const playerRequestToJoinHost = async (
       });
     }
 
-    const hostedPlayer = await prisma.player.create({
+    const player = await prisma.player.create({
       data: {
         hostId: host.id,
         playerId: user.sub,
       },
       select: {
         id: true,
-        status: true,
+        hostStatus: true,
       },
     });
 
     return response.status(201).json({
       success: true,
       message: "Successfully requested to join",
-      hostedPlayer,
+      player,
     });
   } catch (error) {
     console.error("Error requesting to join hosts:", error);

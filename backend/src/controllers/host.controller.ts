@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
-import { PlayerHostStatuses, SkillLevels } from "../generated/prisma/enums.js";
+import {
+  PlayerHostStatuses,
+  SkillLevels,
+  Sports,
+} from "../generated/prisma/enums.js";
 
 const getMatchPlayerStatus = (player: {
   queueEntry: { id: string } | null;
@@ -18,11 +22,11 @@ const getMatchPlayerStatus = (player: {
 
 const mapHostPlayerRecord = (player: {
   id: string;
-  status: PlayerHostStatuses;
+  hostStatus: PlayerHostStatuses;
   paymentStatus: string;
 }) => ({
   id: player.id,
-  status: player.status,
+  hostStatus: player.hostStatus,
   paymentStatus: player.paymentStatus,
 });
 
@@ -30,7 +34,6 @@ export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
     const { sportName } = request.body;
-    const cleanSportName = sportName?.trim();
 
     const user = request.user;
     if (!user)
@@ -38,10 +41,15 @@ export const host = async (request: Request<Params>, response: Response) => {
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!cleanSportName)
+    if (!sportName)
       return response
         .status(400)
-        .json({ success: false, message: "Sport name is required" });
+        .json({ success: false, message: "Sport is required" });
+
+    if (sportName !== Sports)
+      return response
+        .status(400)
+        .json({ success: false, message: "Sport unavailable" });
 
     const community = await prisma.community.findFirst({
       where: { id: communityId, masterId: user.sub },
@@ -60,7 +68,7 @@ export const host = async (request: Request<Params>, response: Response) => {
       data: {
         hostName: `Host ${count + 1}`,
         communityId: community.id,
-        sport: cleanSportName,
+        sport: sportName,
       },
     });
 
@@ -194,11 +202,11 @@ export const getHostById = async (
       prisma.player.findMany({
         where: {
           hostId,
-          status: PlayerHostStatuses.requested,
+          hostStatus: PlayerHostStatuses.requested,
         },
         select: {
           id: true,
-          status: true,
+          hostStatus: true,
           paymentStatus: true,
         },
       }),
@@ -207,11 +215,11 @@ export const getHostById = async (
       prisma.player.findMany({
         where: {
           hostId,
-          status: PlayerHostStatuses.accepted,
+          hostStatus: PlayerHostStatuses.accepted,
         },
         select: {
           id: true,
-          status: true,
+          hostStatus: true,
           paymentStatus: true,
         },
       }),
@@ -220,11 +228,11 @@ export const getHostById = async (
       prisma.player.findMany({
         where: {
           hostId,
-          status: PlayerHostStatuses.rejected,
+          hostStatus: PlayerHostStatuses.rejected,
         },
         select: {
           id: true,
-          status: true,
+          hostStatus: true,
           paymentStatus: true,
         },
       }),
@@ -233,11 +241,11 @@ export const getHostById = async (
       prisma.player.findMany({
         where: {
           hostId,
-          status: PlayerHostStatuses.banned,
+          hostStatus: PlayerHostStatuses.banned,
         },
         select: {
           id: true,
-          status: true,
+          hostStatus: true,
           paymentStatus: true,
         },
       }),
@@ -315,11 +323,11 @@ export const getHostWithPlayers = async (
       prisma.player.findMany({
         where: {
           hostId,
-          status: PlayerHostStatuses.accepted,
+          hostStatus: PlayerHostStatuses.accepted,
         },
         select: {
           id: true,
-          status: true,
+          hostStatus: true,
           paymentStatus: true,
           timerStartedAt: true,
           queueEntry: {
@@ -356,7 +364,7 @@ export const getHostWithPlayers = async (
       ...host,
       acceptedPlayers: acceptedPlayers.map((acceptedPlayer) => ({
         id: acceptedPlayer.id,
-        status: acceptedPlayer.status,
+        hostStatus: acceptedPlayer.hostStatus,
         paymentStatus: acceptedPlayer.paymentStatus,
         timerStartedAt: acceptedPlayer.timerStartedAt,
         queueEntry: acceptedPlayer.queueEntry,
