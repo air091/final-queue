@@ -30,7 +30,7 @@ export const createCommunity = async (request: Request, response: Response) => {
         profileUrl,
         communityName: cleanCommunityName,
         description,
-        adminId: user.sub,
+        masterId: user.sub,
       },
     });
 
@@ -59,7 +59,7 @@ export const getCommunities = async (request: Request, response: Response) => {
     }
 
     const communities = await prisma.community.findMany({
-      where: { adminId: user.sub },
+      where: { masterId: user.sub },
       select: {
         id: true,
         profileUrl: true,
@@ -101,13 +101,13 @@ export const getCommunityById = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: {
         id: true,
         profileUrl: true,
         communityName: true,
         description: true,
-        admin: {
+        master: {
           select: {
             id: true,
             profileUrl: true,
@@ -139,7 +139,7 @@ export const getCommunityById = async (
   }
 };
 
-export const setCommunity = async (
+export const updateCommunity = async (
   request: Request<Params>,
   response: Response,
 ) => {
@@ -162,7 +162,7 @@ export const setCommunity = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
@@ -211,7 +211,7 @@ export const deleteCommunity = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
     });
 
     if (!community)
