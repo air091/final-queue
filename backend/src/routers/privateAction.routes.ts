@@ -7,9 +7,10 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
-  updateStaticPlayerProfileUrl,
-  updateStaticPlayerSkillLevel,
 } from "../controllers/privateAction.controller.js";
+
+// updateStaticPlayerProfileUrl,
+//   updateStaticPlayerSkillLevel,
 
 const router: Router = express.Router();
 
@@ -37,17 +38,17 @@ router.post(
   unbanPlayer,
 );
 
-router.patch(
-  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
-  authenticate,
-  updateStaticPlayerSkillLevel,
-);
+// router.patch(
+//   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/skill-level",
+//   authenticate,
+//   updateStaticPlayerSkillLevel,
+// );
 
-router.patch(
-  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
-  authenticate,
-  updateStaticPlayerProfileUrl,
-);
+// router.patch(
+//   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
+//   authenticate,
+//   updateStaticPlayerProfileUrl,
+// );
 
 router.post(
   "/courts/assign/community/:communityId/hosts/:hostId/courts/:courtId/:hostedPlayerId",

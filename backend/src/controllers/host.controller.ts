@@ -392,7 +392,7 @@ export const deleteHost = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
     });
 
     if (!community)

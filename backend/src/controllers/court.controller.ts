@@ -90,7 +90,7 @@ export const startMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, adminId: user.sub },
+      where: { id: communityId, masterId: user.sub },
       select: { id: true },
     });
 
