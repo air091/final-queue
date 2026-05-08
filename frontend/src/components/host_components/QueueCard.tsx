@@ -122,6 +122,7 @@ export default function QueueCard({
   onOpenPlayerDropdown,
 }: QueueCardProps) {
   const getAssignedPlayer = (position: number) => {
+    if (!queue.entries) return undefined;
     const entry = queue.entries.find((item) => item.position === position);
     if (!entry) return undefined;
     return players.find((player) => player.id === entry.playerId);

@@ -148,6 +148,7 @@ const getPlayersWithResetTimer = (
   playerIds: string[],
   nextStatus: MatchPlayerStatus,
 ) => {
+  if (!playerIds) return currentPlayers;
   const now = new Date().toISOString();
 
   return currentPlayers.map((player) =>
