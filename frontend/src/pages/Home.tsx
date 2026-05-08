@@ -112,46 +112,56 @@ export default function Home() {
     host.currentUserStatus !== null;
 
   return (
-    <div className="w-full px-4 py-6">
-      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
+    <div className="w-full  px-4 py-6">
+      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-5">
         {availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
 
           return (
             <div
               key={availableHost.id}
-              className="group rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:border-stone-300 hover:shadow-md"
+              className="group relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
             >
-              {/* Top */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="h-12 w-12 overflow-hidden rounded-full border border-stone-200 bg-stone-100">
-                    <img
-                      src={
-                        availableHost.community.profileUrl ?? fallbackProfileUrl
-                      }
-                      alt={availableHost.community.communityName}
-                      className="h-full w-full object-cover"
-                    />
+              {/* Background Accent */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 via-transparent to-[var(--color-accent)]/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+              {/* TOP */}
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                {/* LEFT */}
+                <div className="flex items-center gap-4">
+                  {/* COMMUNITY IMAGE */}
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-[var(--color-primary)] blur-md opacity-30" />
+
+                    <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[var(--color-secondary)] bg-stone-100 shadow-md">
+                      <img
+                        src={
+                          availableHost.community.profileUrl ??
+                          fallbackProfileUrl
+                        }
+                        alt={availableHost.community.communityName}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                   </div>
 
-                  {/* Info */}
+                  {/* INFO */}
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-semibold text-stone-900">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-bold text-[var(--color-text)]">
                         {availableHost.community.communityName}
                       </h2>
 
-                      {/* Sport */}
-                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
-                        {availableHost.sport}
+                      {/* SPORT BADGE */}
+                      <span className="rounded-full bg-[var(--color-secondary)]/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                        🏸 {availableHost.sport}
                       </span>
                     </div>
 
-                    <div className="mt-1 flex items-center gap-2 text-xs text-stone-500">
-                      <div className="flex items-center gap-1">
-                        <div className="h-4 w-4 overflow-hidden rounded-full border border-stone-200">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">
+                      {/* HOST */}
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-5 w-5 overflow-hidden rounded-full border border-orange-200">
                           <img
                             src={availableHost.community.master.profileUrl}
                             alt={availableHost.community.master.username}
@@ -164,60 +174,72 @@ export default function Home() {
                         </span>
                       </div>
 
-                      <span>•</span>
+                      <span className="text-orange-300">•</span>
 
-                      <span>Available now</span>
+                      {/* STATUS */}
+                      <span className="font-medium text-emerald-600">
+                        Available now
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Status */}
-                <div className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700">
-                  Open
+                {/* OPEN STATUS */}
+                <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm">
+                  OPEN
                 </div>
               </div>
 
-              {/* Match Name */}
-              <div className="mt-3">
-                <h3 className="text-base font-semibold tracking-tight text-stone-900">
+              {/* MATCH TITLE */}
+              <div className="relative z-10 mt-5">
+                <h3 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
                   {availableHost.hostName}
                 </h3>
+
+                <p className="mt-1 text-sm text-stone-500">
+                  Join the queue and start playing badminton with nearby
+                  players.
+                </p>
               </div>
 
-              {/* Footer */}
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-x-1">
+              {/* FOOTER */}
+              <div className="relative z-10 mt-5 flex items-center justify-between gap-3">
+                {/* PLAYERS */}
+                <div className="flex items-center">
                   {availableHost.acceptedPlayers
                     .slice(0, 6)
-                    .map(({ id, player }) => (
-                      <div key={id}>
-                        <div
-                          title={player.username}
-                          className="h-[36px] w-[36px] rounded-full"
-                        >
-                          <img
-                            src={player.profileUrl}
-                            alt={player.username}
-                            className="block h-full w-full rounded-full object-cover object-center"
-                          />
-                        </div>
+                    .map(({ id, player }, index) => (
+                      <div
+                        key={id}
+                        title={player.username}
+                        className={`relative h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md ${
+                          index !== 0 ? "-ml-3" : ""
+                        }`}
+                      >
+                        <img
+                          src={player.profileUrl}
+                          alt={player.username}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                     ))}
 
                   {availableHost.acceptedPlayers.length > 6 && (
-                    <div className="flex h-[36px] min-w-[36px] items-center justify-center rounded-full bg-stone-200 px-2 text-xs font-semibold text-stone-700">
+                    <div className="-ml-3 flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-white bg-[var(--color-primary)] text-xs font-bold text-white shadow-md">
                       +{availableHost.acceptedPlayers.length - 6}
                     </div>
                   )}
                 </div>
+
+                {/* BUTTON */}
                 <button
                   type="button"
                   disabled={isButtonDisabled(availableHost, isRequesting)}
                   onClick={() => handleRequestToJoinHost(availableHost)}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                  className={`rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                     isButtonDisabled(availableHost, isRequesting)
                       ? "cursor-not-allowed border border-stone-200 bg-stone-100 text-stone-400"
-                      : "bg-stone-900 text-white hover:bg-stone-800 active:scale-[0.98]"
+                      : "bg-[var(--color-primary)] text-white shadow-lg shadow-orange-200 hover:scale-[1.03] hover:bg-[var(--color-accent)] active:scale-[0.98]"
                   }`}
                 >
                   {getButtonLabel(availableHost, isRequesting)}
