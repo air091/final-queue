@@ -179,7 +179,9 @@ export default function HostLayout() {
             [player.id]: response.data.history as PlayerMatchHistoryItem[],
           }));
         } catch (error) {
-          setSelectedHistoryError("Unable to load this player's match history.");
+          setSelectedHistoryError(
+            "Unable to load this player's match history.",
+          );
 
           if (axios.isAxiosError(error))
             console.error(error.response?.data ?? error);
@@ -200,7 +202,7 @@ export default function HostLayout() {
   }, []);
 
   const selectedHistoryEntries = selectedHistoryPlayer
-    ? playerHistoryById[selectedHistoryPlayer.id] ?? []
+    ? (playerHistoryById[selectedHistoryPlayer.id] ?? [])
     : [];
   const hasLoadedSelectedHistory =
     selectedHistoryPlayer !== null &&
@@ -232,7 +234,7 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="w-full max-w-480 h-full border mx-auto my-0 flex gap-x-4 px-8">
+    <div className="w-full max-w-[1920px] h-screen border border-red-500 mx-auto my-0 flex gap-x-4 px-2">
       <Sidebar />
       <main className="w-full">
         {isHostLoading ? (
@@ -252,7 +254,7 @@ export default function HostLayout() {
           </div>
         ) : (
           <>
-            {host ? (
+            {/* {host ? (
               <div className="mb-4 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -288,7 +290,7 @@ export default function HostLayout() {
                   </div>
                 </div>
               </div>
-            ) : null}
+            ) : null} */}
             <Outlet context={outletContext} />
             <PlayerHistoryModal
               player={selectedHistoryPlayer}

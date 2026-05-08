@@ -255,8 +255,7 @@ const getQueuesWithoutPlayer = (
 
 const getFirstAvailableEmptyCourt = (currentCourts: CourtType[]) =>
   currentCourts.find(
-    (court) =>
-      !court.startedAt && court.assignments.length === 0,
+    (court) => !court.startedAt && court.assignments.length === 0,
   );
 
 const getPlayersWithPlayersTransferredToCourt = (
@@ -1194,29 +1193,44 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex">
+        <main className="flex w-full h-full">
           {/* players */}
-          <div className="border w-full max-w-fit p-2">
+          <div className="border border-stone-200 bg-white rounded-3xl p-2 shadow-sm">
             <header>
-              <h5 className="font-semibold">Players</h5>
-              <div className="flex items-center justify-between my-2">
+              <h5 className="font-semibold text-stone-800 text-lg mt-2">
+                Players
+              </h5>
+
+              <div className="flex items-center justify-between gap-1 mt-1 mb-3 rounded-xl bg-stone-100 p-1">
                 {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
                     key={playerStatus.value}
                     type="button"
                     onClick={() => setActivePlayerStatus(playerStatus.value)}
-                    className={`cursor-pointer px-2 py-1 text-[14px] w-full rounded-xs ${
-                      activePlayerStatus === playerStatus.value
-                        ? "bg-accent text-background"
-                        : "hover:bg-secondary"
-                    }`}
+                    className={`
+            cursor-pointer
+            px-3
+            py-2
+            text-sm
+            font-medium
+            w-full
+            rounded-lg
+            transition-all
+            duration-200
+            ${
+              activePlayerStatus === playerStatus.value
+                ? "bg-white text-stone-900 shadow-sm"
+                : "text-stone-500 hover:bg-stone-200 hover:text-stone-700"
+            }
+          `}
                   >
                     {playerStatus.label}
                   </button>
                 ))}
               </div>
             </header>
-            <main className="w-[360px] grid grid-cols-2 gap-1">
+
+            <main className="w-[360px] grid grid-cols-2 gap-3 rounded-2xl border border-stone-100 bg-stone-50 p-3">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
@@ -1227,17 +1241,19 @@ export default function Match() {
                   />
                 ))
               ) : (
-                <p>No players in this status</p>
+                <div className="col-span-2 flex items-center justify-center py-10 text-sm text-stone-500">
+                  No players in this status
+                </div>
               )}
             </main>
           </div>
           {/* court & queue */}
-          <div className="border w-full">
-            <main>
+          <div className="border w-full h-full">
+            <main className="flex flex-col gap-y-2 h-full">
               {/* court */}
-              <div className="p-2">
+              <div className="p-2 border flex-1 overflow-auto">
                 <h3 className="text-lg font-semibold mb-2">Match Courts</h3>
-                <div className="flex justify-center gap-3 flex-wrap">
+                <div className="flex gap-3 flex-wrap">
                   {courts.map((court) => (
                     <CourtCard
                       key={court.id}
@@ -1263,10 +1279,11 @@ export default function Match() {
                   </button>
                 </div>
               </div>
+
               {/* queue */}
-              <div className="p-2 border-t">
+              <div className="p-2 border flex-1 overflow-auto">
                 <h3 className="text-lg font-semibold mb-2">Queue Courts</h3>
-                <div className="flex justify-center gap-3 flex-wrap">
+                <div className="flex gap-3 flex-wrap border">
                   {queues.map((queue) => (
                     <QueueCard
                       key={queue.id}

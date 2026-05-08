@@ -101,11 +101,12 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0 : 1,
       }}
-      className={`relative w-full flex items-center justify-between py-1 px-1 rounded-full border ${statusClasses} ${
-        canDrag
-          ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
-          : "cursor-default"
-      } ${activeDropdown === player.id ? "z-[120]" : ""}`}
+      className={`relative w-full flex items-center justify-between py-1 px-1 rounded-full transition-all shadow-md hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)]
+ ${statusClasses} ${
+   canDrag
+     ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
+     : "cursor-default"
+ } ${activeDropdown === player.id ? "z-[120]" : ""}`}
     >
       <div className="flex items-center gap-x-2">
         <div className="w-[36px] h-[36px] rounded-full">
@@ -156,11 +157,7 @@ export default function PlayerCard({
             />
           </div>
           {activeDropdown === player.id && (
-            <PlayerSettingsDropdown
-              player={player}
-              anchorRef={dropdownRef}
-              onCloseDropdown={() => onToggleDropdown(player.id)}
-            />
+            <PlayerSettingsDropdown player={player} anchorRef={dropdownRef} />
           )}
         </div>
       </div>
