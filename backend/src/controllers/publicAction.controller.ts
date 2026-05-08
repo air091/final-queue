@@ -17,45 +17,113 @@ export const getAvailableHosts = async (
 
     // Return the current user's membership state per host so the frontend
     // can render Request / Requested / Joined correctly.
-    const hosts = await prisma.host.findMany({
-      where: { status: HostStatus.available },
-      select: {
-        id: true,
-        hostName: true,
-        sport: true,
-        status: true,
-        community: {
-          select: {
-            id: true,
-            profileUrl: true,
-            communityName: true,
-            master: {
-              select: {
-                id: true,
-                profileUrl: true,
-                username: true,
+    // const hosts = await prisma.host.findMany({
+    //   where: { status: HostStatus.available },
+    //   select: {
+    //     id: true,
+    //     hostName: true,
+    //     sport: true,
+    //     status: true,
+    //     community: {
+    //       select: {
+    //         id: true,
+    //         profileUrl: true,
+    //         communityName: true,
+    //         master: {
+    //           select: {
+    //             id: true,
+    //             profileUrl: true,
+    //             username: true,
+    //           },
+    //         },
+    //       },
+    //     },
+    //     players: {
+    //       where: {
+    //         playerId: user.sub,
+    //       },
+    //       select: {
+    //         id: true,
+    //         hostStatus: true,
+    //       },
+    //     },
+    //   },
+    // });
+
+    const [hosts, acceptedPlayers] = await Promise.all([
+      prisma.host.findMany({
+        where: {
+          status: HostStatus.available,
+        },
+        select: {
+          id: true,
+          hostName: true,
+          sport: true,
+          status: true,
+          community: {
+            select: {
+              id: true,
+              profileUrl: true,
+              communityName: true,
+              master: {
+                select: {
+                  id: true,
+                  profileUrl: true,
+                  username: true,
+                },
+              },
+            },
+          },
+          players: {
+            where: {
+              playerId: user.sub,
+            },
+            select: {
+              id: true,
+              hostStatus: true,
+            },
+          },
+        },
+      }),
+
+      prisma.player.findMany({
+        where: {
+          hostStatus: PlayerHostStatuses.accepted,
+        },
+        select: {
+          id: true,
+          hostId: true,
+          hostStatus: true,
+          paymentStatus: true,
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
               },
             },
           },
         },
-        players: {
-          where: {
-            playerId: user.sub,
-          },
-          select: {
-            id: true,
-            hostStatus: true,
-          },
-        },
-      },
-    });
+      }),
+    ]);
 
     return response.status(200).json({
       success: true,
+
       hosts: hosts.map(({ players, ...host }) => ({
         ...host,
         currentUserStatus: players[0]?.hostStatus ?? null,
         isOwnedByCurrentUser: host.community.master.id === user.sub,
+
+        acceptedPlayers: acceptedPlayers.filter(
+          (player) => player.hostId === host.id,
+        ),
       })),
     });
   } catch (error) {
