@@ -256,7 +256,7 @@ const getQueuesWithoutPlayer = (
 const getFirstAvailableEmptyCourt = (currentCourts: CourtType[]) =>
   currentCourts.find(
     (court) =>
-      !court.startedAt && !court.endedAt && court.assignments.length === 0,
+      !court.startedAt && court.assignments.length === 0,
   );
 
 const getPlayersWithPlayersTransferredToCourt = (

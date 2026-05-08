@@ -250,7 +250,6 @@ export const endMatchCourt = async (
             hostedPlayer: {
               select: {
                 playerId: true,
-                accountId: true,
               },
             },
           },
@@ -279,7 +278,7 @@ export const endMatchCourt = async (
       const team = getMatchTeam(assignment.position);
       return {
         playerId: assignment.playerId,
-        accountId: assignment.hostedPlayer?.accountId ?? undefined,
+        accountId: assignment.hostedPlayer?.playerId ?? undefined,
         team,
         result: getMatchResult(team, winner),
       };
