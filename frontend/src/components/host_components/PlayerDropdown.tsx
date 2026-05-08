@@ -119,55 +119,74 @@ export default function PlayerSettingsDropdown({
   return createPortal(
     <div
       data-dropdown
-      className="fixed z-[4000] grid w-[168px] gap-y-2 rounded-md border bg-white p-2 cursor-default shadow-md"
+      className="fixed z-[4000] w-[200px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg"
       style={{
         top: position.top,
         left: position.left,
       }}
     >
-      <div>
-        <h2 className="font-semibold text-[12px] text-stone-400 leading-[1  4px]">
+      {/* Header */}
+      <div className="mb-3 space-y-1">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
           Player settings
         </h2>
+
         <div className="flex items-center gap-2">
-          <h4 className="font-semibold">{player.player.username}</h4>
+          <h4 className="font-semibold text-stone-800">
+            {player.player.username}
+          </h4>
+
           {player.player.isStatic && (
-            <span className="rounded-md bg-stone-200 px-1.5 text-[10px] text-stone-700 uppercase">
+            <span className="rounded-full border border-stone-200 bg-stone-100 px-2 py-[2px] text-[9px] font-semibold uppercase text-stone-600">
               Static
             </span>
           )}
         </div>
-        <p className="text-[12px] text-stone-500">
+
+        <p className="text-xs text-stone-500">
           Level: {formatSkillLevel(player.player.skillLevel)}
         </p>
+
         {player.player.isStatic && (
-          <p className="text-[12px] text-stone-500">Host-only player</p>
+          <p className="text-xs text-stone-400">Host-only player</p>
         )}
       </div>
-      <div>
+
+      {/* Divider */}
+      <div className="my-2 border-t border-stone-100" />
+
+      {/* Actions */}
+      <div className="space-y-2">
         <button
           type="button"
           onClick={handleViewHistoryClick}
           disabled={isHistoryLoading}
-          className={`mb-2 block w-full rounded border px-2 py-1 text-stone-700 ${
-            isHistoryLoading
-              ? "cursor-not-allowed bg-stone-200 text-stone-500"
-              : "cursor-pointer bg-white hover:bg-stone-100"
-          }`}
+          className={`
+        w-full rounded-xl px-3 py-2 text-sm font-medium cursor-pointer transition
+        ${
+          isHistoryLoading
+            ? "cursor-not-allowed bg-stone-100 text-stone-400"
+            : "bg-white text-stone-700 hover:bg-stone-100"
+        }
+      `}
         >
           {isHistoryLoading ? "Loading..." : "View history"}
         </button>
+
         <button
           type="button"
           onClick={handleBanClick}
           disabled={isPlayerInGame}
-          className={`w-full block text-white border-none rounded py-1 px-2 ${
-            isPlayerInGame
-              ? "bg-stone-400 cursor-not-allowed"
-              : "bg-red-500 cursor-pointer hover:bg-red-700"
-          }`}
+          className={`
+        w-full rounded-xl px-3 py-2 text-sm font-medium cursor-pointer text-white transition
+        ${
+          isPlayerInGame
+            ? "cursor-not-allowed bg-stone-300"
+            : "bg-red-500 hover:bg-red-600"
+        }
+      `}
         >
-          {isPlayerInGame ? "Ban unavailable" : "Ban"}
+          {isPlayerInGame ? "Ban unavailable" : "Ban player"}
         </button>
       </div>
     </div>,

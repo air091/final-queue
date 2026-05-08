@@ -157,7 +157,11 @@ export default function PlayerCard({
             />
           </div>
           {activeDropdown === player.id && (
-            <PlayerSettingsDropdown player={player} anchorRef={dropdownRef} />
+            <PlayerSettingsDropdown
+              player={player}
+              anchorRef={dropdownRef}
+              onCloseDropdown={() => onToggleDropdown(player.id)}
+            />
           )}
         </div>
       </div>
