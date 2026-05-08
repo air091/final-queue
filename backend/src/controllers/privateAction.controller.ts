@@ -905,10 +905,10 @@ export const assignPlayerToQueue = async (
 
     const existingAssignment = await prisma.queueAssignment.findFirst({
       where: { playerId: player.id },
-      select: { playerId: true },
+      select: { playerId: true, queueId: true },
     });
 
-    if (existingAssignment)
+    if (existingAssignment && existingAssignment.queueId !== queue.id)
       return response.status(400).json({
         success: false,
         message: "Player is already in a queue",
