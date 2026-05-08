@@ -28,20 +28,27 @@ export default function QueueDropdown({
   };
 
   return (
-    <div className="absolute top-7 right-0 z-[140] w-[220px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg">
-      <div className="mb-3 space-y-1">
-        <h2 className="text-sm font-semibold text-stone-800">Queue settings</h2>
-        <p className="text-[11px] text-stone-400">
-          Click outside or press "Enter" to save
+    <div className="absolute top-8 right-0 z-[140] w-[230px] rounded-2xl border border-[var(--color-secondary)]/40 bg-white p-4 shadow-[0_10px_30px_rgba(253,154,0,0.08)]">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">
+          Queue Settings
+        </h2>
+
+        <p className="mt-1 text-[11px] text-stone-500">
+          Click outside or press Enter to save
         </p>
       </div>
-      <div className="mb-3 space-y-1">
+
+      {/* Input */}
+      <div className="mb-4 space-y-1.5">
         <label
           htmlFor="queue-name"
-          className="text-xs font-medium text-stone-500"
+          className="text-xs font-medium uppercase tracking-wide text-stone-500"
         >
           Queue name
         </label>
+
         <input
           id="queue-name"
           type="text"
@@ -51,20 +58,33 @@ export default function QueueDropdown({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 shadow-sm outline-none transition focus:border-stone-300 focus:ring-2 focus:ring-stone-100"
+          className="
+        w-full rounded-xl border border-[var(--color-secondary)]/40
+        bg-[var(--color-background)]
+        px-3 py-2 text-sm text-[var(--color-text)]
+        outline-none transition
+        focus:border-[var(--color-primary)]
+        focus:ring-4 focus:ring-[var(--color-secondary)]/30
+      "
         />
       </div>
+
       {/* Divider */}
-      <div className="my-2 border-t border-stone-100" />
-      <div>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="w-full rounded-xl px-3 py-2 text-sm font-medium transition cursor-pointer bg-red-500 text-white hover:bg-red-600"
-        >
-          Delete
-        </button>
-      </div>
+      <div className="my-3 border-t border-[var(--color-secondary)]/20" />
+
+      {/* Actions */}
+      <button
+        type="button"
+        onClick={onDelete}
+        className="
+      w-full cursor-pointer rounded-xl
+      bg-[var(--color-accent)]
+      px-3 py-2 text-sm font-medium text-white
+      transition hover:bg-[var(--color-primary)]
+    "
+      >
+        Delete queue
+      </button>
     </div>
   );
 }

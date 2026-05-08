@@ -119,54 +119,68 @@ export default function PlayerSettingsDropdown({
   return createPortal(
     <div
       data-dropdown
-      className="fixed z-[4000] w-[200px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg"
+      className="fixed z-[4000] w-[220px] rounded-3xl border border-orange-100 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
       style={{
         top: position.top,
         left: position.left,
       }}
     >
-      {/* Header */}
-      <div className="mb-3 space-y-1">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+      {/* HEADER */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-400">
           Player settings
-        </h2>
-
-        <div className="flex items-center gap-2">
-          <h4 className="font-semibold text-stone-800">
-            {player.player.username}
-          </h4>
-
-          {player.player.isStatic && (
-            <span className="rounded-full border border-stone-200 bg-stone-100 px-2 py-[2px] text-[9px] font-semibold uppercase text-stone-600">
-              Static
-            </span>
-          )}
-        </div>
-
-        <p className="text-xs text-stone-500">
-          Level: {formatSkillLevel(player.player.skillLevel)}
         </p>
 
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 overflow-hidden rounded-full border border-orange-100 bg-orange-50">
+            <img
+              src={player.player.profileUrl}
+              alt={player.player.username}
+              className="h-full w-full object-cover"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="truncate text-sm font-semibold text-[var(--color-text)]">
+                {player.player.username}
+              </h4>
+
+              {player.player.isStatic && (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                  Static
+                </span>
+              )}
+            </div>
+
+            <p className="mt-1 text-xs text-stone-500">
+              {formatSkillLevel(player.player.skillLevel)}
+            </p>
+          </div>
+        </div>
+
         {player.player.isStatic && (
-          <p className="text-xs text-stone-400">Host-only player</p>
+          <div className="rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] text-stone-600">
+            Host-only player
+          </div>
         )}
       </div>
 
-      {/* Divider */}
-      <div className="my-2 border-t border-stone-100" />
+      {/* DIVIDER */}
+      <div className="my-4 border-t border-orange-100" />
 
-      {/* Actions */}
+      {/* ACTIONS */}
       <div className="space-y-2">
         <button
           type="button"
           onClick={handleViewHistoryClick}
           disabled={isHistoryLoading}
           className={`
-        w-full rounded-xl px-3 py-2 text-sm font-medium cursor-pointer transition
+        w-full rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200
         ${
           isHistoryLoading
             ? "cursor-not-allowed bg-stone-100 text-stone-400"
-            : "bg-white text-stone-700 hover:bg-stone-100"
+            : "cursor-pointer border border-orange-100 bg-orange-50 text-[var(--color-text)] hover:bg-orange-100"
         }
       `}
         >
@@ -178,11 +192,11 @@ export default function PlayerSettingsDropdown({
           onClick={handleBanClick}
           disabled={isPlayerInGame}
           className={`
-        w-full rounded-xl px-3 py-2 text-sm font-medium cursor-pointer text-white transition
+        w-full rounded-2xl px-3 py-2.5 text-sm font-medium text-white transition-all duration-200
         ${
           isPlayerInGame
             ? "cursor-not-allowed bg-stone-300"
-            : "bg-red-500 hover:bg-red-600"
+            : "cursor-pointer bg-[var(--color-accent)] hover:bg-[#e85f00]"
         }
       `}
         >

@@ -1277,7 +1277,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                flex h-[120px] w-[520px] items-center justify-center
+                flex h-[120px] w-[520px] items-center justify-center cursor-pointer
                 rounded-2xl border border-dashed border-orange-200
                 bg-orange-50/40 text-sm font-semibold text-stone-500
                 transition-all duration-200
@@ -1325,7 +1325,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                flex h-[120px] w-[520px] items-center justify-center
+                flex h-[120px] w-[520px] items-center justify-center cursor-pointer
                 rounded-2xl border border-dashed border-orange-200
                 bg-orange-50/40 text-sm font-semibold text-stone-500
                 transition-all duration-200

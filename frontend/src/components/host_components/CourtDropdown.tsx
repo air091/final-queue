@@ -30,17 +30,20 @@ export default function CourtDropdown({
   };
 
   return (
-    <div className="absolute top-7 right-0 z-[140] w-[220px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg">
-      {/* Header */}
-      <div className="mb-3 space-y-1">
-        <h2 className="text-sm font-semibold text-stone-800">Court settings</h2>
+    <div className="absolute top-8 right-0 z-[140] w-[240px] rounded-3xl border border-orange-100 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
+      {/* HEADER */}
+      <div className="mb-4 space-y-1">
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">
+          Court Settings
+        </h2>
+
         <p className="text-[11px] text-stone-400">
           Click outside or press Enter to save
         </p>
       </div>
 
-      {/* Input */}
-      <div className="mb-3 space-y-1">
+      {/* INPUT */}
+      <div className="mb-4 space-y-2">
         <label
           htmlFor="court-name"
           className="text-xs font-medium text-stone-500"
@@ -57,24 +60,31 @@ export default function CourtDropdown({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 shadow-sm outline-none transition focus:border-stone-300 focus:ring-2 focus:ring-stone-100"
+          className="
+        w-full rounded-2xl border border-orange-100 bg-orange-50/40
+        px-3 py-2.5 text-sm text-[var(--color-text)]
+        outline-none transition-all duration-200
+        focus:border-[var(--color-primary)]
+        focus:bg-white
+        focus:ring-4 focus:ring-orange-100
+      "
         />
       </div>
 
-      {/* Divider */}
-      <div className="my-2 border-t border-stone-100" />
+      {/* DIVIDER */}
+      <div className="my-3 border-t border-orange-100" />
 
-      {/* Actions */}
+      {/* ACTION */}
       <button
         type="button"
         onClick={onDelete}
         disabled={isDeleteDisabled}
         className={`
-      w-full rounded-xl px-3 py-2 text-sm font-medium transition cursor-pointer
+      w-full rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all duration-200
       ${
         isDeleteDisabled
-          ? "cursor-not-allowed bg-stone-100 text-stone-400"
-          : "bg-red-500 text-white hover:bg-red-600"
+          ? "cursor-not-allowed bg-stone-200 text-stone-400"
+          : "cursor-pointer bg-[var(--color-accent)] text-white hover:bg-[#e85f00]"
       }
     `}
       >
