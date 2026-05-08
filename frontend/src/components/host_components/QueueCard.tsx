@@ -11,6 +11,8 @@ type QueueCardProps = {
   onRemovePlayerFromQueue: (hostedPlayerId: string, queueId: string) => void;
   onRenameQueue: (queueId: string, nextName: string) => void;
   onDeleteQueue: (queueId: string) => void;
+  onTransferToCourt: (queueId: string) => void;
+  canTransferToCourt: boolean;
   activeDropdown: string | null;
   activePlayerDropdown: string | null;
   onToggleDropdown: (queueId: string) => void;
@@ -20,6 +22,7 @@ type QueueCardProps = {
 type QueueSlotProps = {
   queueId: string;
   position: number;
+  label: string;
   player?: AcceptedPlayers;
   onRemovePlayerFromQueue: (hostedPlayerId: string, queueId: string) => void;
   activeQueueDropdown: string | null;
@@ -27,9 +30,17 @@ type QueueSlotProps = {
   onOpenPlayerDropdown: () => void;
 };
 
+const QUEUE_SLOTS = [
+  { position: 1, label: "Team A" },
+  { position: 2, label: "Team B" },
+  { position: 3, label: "Team A" },
+  { position: 4, label: "Team B" },
+];
+
 function QueueSlot({
   queueId,
   position,
+  label,
   player,
   onRemovePlayerFromQueue,
   activeQueueDropdown,
@@ -103,7 +114,7 @@ function QueueSlot({
             onRemoveFromQueue={onRemovePlayerFromQueue}
           />
         ) : (
-          <span>{position}</span>
+          <span>{label}</span>
         )}
       </div>
     </div>
@@ -116,6 +127,8 @@ export default function QueueCard({
   onRemovePlayerFromQueue,
   onRenameQueue,
   onDeleteQueue,
+  onTransferToCourt,
+  canTransferToCourt,
   activeDropdown,
   activePlayerDropdown,
   onToggleDropdown,
@@ -128,8 +141,15 @@ export default function QueueCard({
     return players.find((player) => player.id === entry.playerId);
   };
 
-  // Generate slots for positions 1 to 10 (or more if needed)
-  const queueSlots = Array.from({ length: 4 }, (_, i) => i + 1);
+  const hasTeamAPlayer = queue.entries?.some(
+    (entry) => entry.position === 1 || entry.position === 3,
+  );
+  const hasTeamBPlayer = queue.entries?.some(
+    (entry) => entry.position === 2 || entry.position === 4,
+  );
+  const canShowTransferButton = Boolean(hasTeamAPlayer && hasTeamBPlayer);
+
+  const queueSlots = QUEUE_SLOTS;
 
   return (
     <div className="relative w-[420px] p-2 rounded-md">
@@ -201,6 +221,16 @@ export default function QueueCard({
           </span>
         </div>
         <div className="flex items-center gap-x-2">
+          {canShowTransferButton && (
+            <button
+              type="button"
+              disabled={!canTransferToCourt}
+              onClick={() => onTransferToCourt(queue.id)}
+              className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-stone-400"
+            >
+              Transfer to court
+            </button>
+          )}
           <div
             data-dropdown
             onPointerDown={(e) => e.stopPropagation()}
@@ -224,11 +254,12 @@ export default function QueueCard({
         </div>
       </header>
       <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3 z-10">
-        {queueSlots.map((position) => (
+        {queueSlots.map(({ position, label }) => (
           <QueueSlot
             key={position}
             queueId={queue.id}
             position={position}
+            label={label}
             player={getAssignedPlayer(position)}
             onRemovePlayerFromQueue={onRemovePlayerFromQueue}
             activeQueueDropdown={activeDropdown}

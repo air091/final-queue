@@ -207,7 +207,7 @@ const getUpdatedQueues = (
   position: number,
 ) =>
   currentQueues.map((queue) => {
-    const entriesWithoutDraggedPlayer = queue.entries.filter(
+    const entriesWithoutDraggedPlayer = (queue.entries || []).filter(
       (entry) => entry.playerId !== playerId,
     );
 
@@ -221,7 +221,7 @@ const getUpdatedQueues = (
     const nextEntries = entriesWithoutDraggedPlayer.filter(
       (entry) => entry.position !== position,
     );
-    const existingEntry = queue.entries.find(
+    const existingEntry = (queue.entries || []).find(
       (entry) => entry.playerId === playerId,
     );
 
@@ -250,6 +250,39 @@ const getQueuesWithoutPlayer = (
           entries: queue.entries.filter((entry) => entry.playerId !== playerId),
         }
       : queue,
+  );
+
+const getFirstAvailableEmptyCourt = (currentCourts: CourtType[]) =>
+  currentCourts.find(
+    (court) =>
+      !court.startedAt && !court.endedAt && court.assignments.length === 0,
+  );
+
+const getPlayersWithPlayersTransferredToCourt = (
+  currentPlayers: AcceptedPlayers[],
+  assignments: Array<{ playerId: string; courtId: string; position: number }>,
+) =>
+  assignments.reduce(
+    (nextPlayers, assignment) =>
+      getPlayersWithCourtAssignment(
+        nextPlayers,
+        assignment.playerId,
+        assignment.courtId,
+        assignment.position,
+        false,
+      ),
+    currentPlayers,
+  );
+
+const getQueuesWithoutPlayers = (
+  currentQueues: QueueType[],
+  playerIds: string[],
+  queueId: string,
+) =>
+  playerIds.reduce(
+    (nextQueues, playerId) =>
+      getQueuesWithoutPlayer(nextQueues, playerId, queueId),
+    currentQueues,
   );
 
 const getPlayersWithQueueAssignment = (
@@ -707,6 +740,79 @@ export default function Match() {
     });
   };
 
+  const handleTransferQueueToCourt = async (queueId: string) => {
+    const queue = queues.find((queueItem) => queueItem.id === queueId);
+    const targetCourt = getFirstAvailableEmptyCourt(courts);
+    if (!queue || !queue.entries.length || !targetCourt) return;
+
+    const previousCourts = courts;
+    const previousQueues = queues;
+    const previousPlayers = players;
+
+    const assignments = queue.entries.map((entry) => ({
+      playerId: entry.playerId,
+      courtId: targetCourt.id,
+      position: entry.position,
+    }));
+
+    let nextCourts = courts;
+    assignments.forEach((assignment) => {
+      nextCourts = getUpdatedCourts(
+        nextCourts,
+        assignment.playerId,
+        assignment.courtId,
+        assignment.position,
+      );
+    });
+
+    nextCourts = getStartedCourt(nextCourts, targetCourt.id);
+
+    const transferredPlayerIds = assignments.map(
+      (assignment) => assignment.playerId,
+    );
+
+    const nextPlayers = getPlayersWithResetTimer(
+      getPlayersWithoutQueueAssignments(
+        getPlayersWithPlayersTransferredToCourt(players, assignments),
+        transferredPlayerIds,
+      ),
+      transferredPlayerIds,
+      "playing",
+    );
+
+    const nextQueues = getQueuesWithoutPlayers(
+      queues,
+      transferredPlayerIds,
+      queueId,
+    );
+
+    setCourts(nextCourts);
+    setPlayers(nextPlayers);
+    setQueues(nextQueues);
+
+    try {
+      for (const assignment of assignments) {
+        await assignPlayerToCourtAPI(
+          assignment.playerId,
+          assignment.courtId,
+          assignment.position,
+        );
+        await removePlayerFromQueueAPI(assignment.playerId, queueId);
+      }
+      await startCourtGameAPI(targetCourt.id);
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+      setQueues(previousQueues);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+
+      await refreshHostData();
+    }
+  };
+
   const handleDeleteQueue = async (queueId: string) => {
     const previousQueues = queues;
     const previousPlayers = players;
@@ -1038,6 +1144,8 @@ export default function Match() {
       : player.matchStatus === activePlayerStatus,
   );
 
+  const isEmptyCourtAvailable = Boolean(getFirstAvailableEmptyCourt(courts));
+
   return (
     <>
       <DndContext
@@ -1127,6 +1235,8 @@ export default function Match() {
                       onRemovePlayerFromQueue={handleRemovePlayerFromQueue}
                       onRenameQueue={handleRenameQueue}
                       onDeleteQueue={handleDeleteQueue}
+                      onTransferToCourt={handleTransferQueueToCourt}
+                      canTransferToCourt={isEmptyCourtAvailable}
                       activeDropdown={queueActiveDropdown}
                       activePlayerDropdown={playerActiveDropdown}
                       onToggleDropdown={handleQueueDropdown}

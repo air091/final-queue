@@ -553,6 +553,7 @@ export const getQueueCourts = async (
 
     const queues = await prisma.queue.findMany({
       where: { hostId: host.id },
+      include: { entries: true },
     });
     return response
       .status(200)
