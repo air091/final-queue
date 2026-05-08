@@ -2,8 +2,6 @@ import axios from "axios";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { FaCheck } from "react-icons/fa6";
-import { FcCancel } from "react-icons/fc";
 import { useHostData } from "../../hooks/useHostData";
 import { api } from "../../lib/api";
 import {

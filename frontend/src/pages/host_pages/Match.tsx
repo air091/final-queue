@@ -1193,36 +1193,29 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex w-full h-full">
-          {/* players */}
-          <div className="border border-stone-200 bg-white rounded-3xl p-2 shadow-sm">
-            <header>
-              <h5 className="font-semibold text-stone-800 text-lg mt-2">
+        <main className="flex h-full w-full gap-4 overflow-hidden bg-[var(--color-background)]">
+          {/* PLAYERS */}
+          <div className="flex flex-col rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
+            <header className="mb-4">
+              <h5 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
                 Players
               </h5>
 
-              <div className="flex items-center justify-between gap-1 mt-1 mb-3 rounded-xl bg-stone-100 p-1">
+              <p className="mt-1 text-sm text-stone-500">
+                Manage active and waiting players.
+              </p>
+
+              <div className="mt-4 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1">
                 {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
                     key={playerStatus.value}
                     type="button"
                     onClick={() => setActivePlayerStatus(playerStatus.value)}
-                    className={`
-            cursor-pointer
-            px-3
-            py-2
-            text-sm
-            font-medium
-            w-full
-            rounded-lg
-            transition-all
-            duration-200
-            ${
-              activePlayerStatus === playerStatus.value
-                ? "bg-white text-stone-900 shadow-sm"
-                : "text-stone-500 hover:bg-stone-200 hover:text-stone-700"
-            }
-          `}
+                    className={`w-full rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      activePlayerStatus === playerStatus.value
+                        ? "bg-white text-[var(--color-text)] shadow-sm"
+                        : "text-stone-500 hover:bg-white hover:text-[var(--color-accent)]"
+                    }`}
                   >
                     {playerStatus.label}
                   </button>
@@ -1230,7 +1223,7 @@ export default function Match() {
               </div>
             </header>
 
-            <main className="w-[360px] grid grid-cols-2 gap-3 rounded-2xl border border-stone-100 bg-stone-50 p-3">
+            <main className="grid w-[360px] grid-cols-2 gap-3 overflow-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
@@ -1241,104 +1234,117 @@ export default function Match() {
                   />
                 ))
               ) : (
-                <div className="col-span-2 flex items-center justify-center py-10 text-sm text-stone-500">
+                <div className="col-span-2 flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
                   No players in this status
                 </div>
               )}
             </main>
           </div>
-          {/* court & queue */}
-          <div className="h-full w-full ">
-            <main className="flex h-full flex-col gap-3 px-3">
+
+          {/* COURTS & QUEUES */}
+          <div className="min-w-0 flex-1">
+            <main className="flex h-full flex-col gap-4">
               {/* COURTS */}
-              <div className="flex-1 overflow-auto rounded-2xl bg-white p-4 shadow-sm">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-stone-800">
-                    Match Courts
-                  </h3>
+              <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--color-text)]">
+                      Match Courts
+                    </h3>
+
+                    <p className="mt-1 text-sm text-stone-500">
+                      Active courts and ongoing matches.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {courts.map((court) => (
-                    <CourtCard
-                      key={court.id}
-                      court={court}
-                      players={players}
-                      onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
-                      onStartCourtGame={handleStartCourtGame}
-                      onEndCourtGame={handleEndCourtGame}
-                      onRenameCourt={handleRenameCourt}
-                      onDeleteCourt={handleDeleteCourt}
-                      activeDropdown={courtActiveDropdown}
-                      activePlayerDropdown={playerActiveDropdown}
-                      onToggleDropdown={handleCourtDropdown}
-                      onOpenPlayerDropdown={handleCourtPlayerDropdown}
-                    />
-                  ))}
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="flex flex-wrap gap-3">
+                    {courts.map((court) => (
+                      <CourtCard
+                        key={court.id}
+                        court={court}
+                        players={players}
+                        onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
+                        onStartCourtGame={handleStartCourtGame}
+                        onEndCourtGame={handleEndCourtGame}
+                        onRenameCourt={handleRenameCourt}
+                        onDeleteCourt={handleDeleteCourt}
+                        activeDropdown={courtActiveDropdown}
+                        activePlayerDropdown={playerActiveDropdown}
+                        onToggleDropdown={handleCourtDropdown}
+                        onOpenPlayerDropdown={handleCourtPlayerDropdown}
+                      />
+                    ))}
 
-                  <button
-                    type="button"
-                    onClick={() => void handleAddCourt()}
-                    className="
-            h-[120px] w-[420px] cursor-pointer
-            rounded-2xl
-            border border-dashed border-stone-300
-            bg-stone-50
-            text-stone-500
-            transition
-            hover:border-stone-400
-            hover:bg-stone-100
-            hover:text-stone-700
-          "
-                  >
-                    + Add court
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddCourt()}
+                      className="
+                flex h-[120px] w-[420px] items-center justify-center
+                rounded-2xl border border-dashed border-orange-200
+                bg-orange-50/40 text-sm font-semibold text-stone-500
+                transition-all duration-200
+                hover:border-[var(--color-primary)]
+                hover:bg-orange-50
+                hover:text-[var(--color-accent)]
+              "
+                    >
+                      + Add court
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* QUEUE */}
-              <div className="flex-1 overflow-auto rounded-2xl bg-white p-4 shadow-sm">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-stone-800">
-                    Queue Courts
-                  </h3>
+              {/* QUEUES */}
+              <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--color-text)]">
+                      Queue Courts
+                    </h3>
+
+                    <p className="mt-1 text-sm text-stone-500">
+                      Waiting players and upcoming matches.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {queues.map((queue) => (
-                    <QueueCard
-                      key={queue.id}
-                      queue={queue}
-                      players={players}
-                      onRemovePlayerFromQueue={handleRemovePlayerFromQueue}
-                      onRenameQueue={handleRenameQueue}
-                      onDeleteQueue={handleDeleteQueue}
-                      onTransferToCourt={handleTransferQueueToCourt}
-                      canTransferToCourt={isEmptyCourtAvailable}
-                      activeDropdown={queueActiveDropdown}
-                      activePlayerDropdown={playerActiveDropdown}
-                      onToggleDropdown={handleQueueDropdown}
-                      onOpenPlayerDropdown={handleQueuePlayerDropdown}
-                    />
-                  ))}
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="flex flex-wrap gap-3">
+                    {queues.map((queue) => (
+                      <QueueCard
+                        key={queue.id}
+                        queue={queue}
+                        players={players}
+                        onRemovePlayerFromQueue={handleRemovePlayerFromQueue}
+                        onRenameQueue={handleRenameQueue}
+                        onDeleteQueue={handleDeleteQueue}
+                        onTransferToCourt={handleTransferQueueToCourt}
+                        canTransferToCourt={isEmptyCourtAvailable}
+                        activeDropdown={queueActiveDropdown}
+                        activePlayerDropdown={playerActiveDropdown}
+                        onToggleDropdown={handleQueueDropdown}
+                        onOpenPlayerDropdown={handleQueuePlayerDropdown}
+                      />
+                    ))}
 
-                  <button
-                    type="button"
-                    onClick={() => void handleAddQueue()}
-                    className="
-            h-[120px] w-[420px] cursor-pointer
-            rounded-2xl
-            border border-dashed border-stone-300
-            bg-stone-50
-            text-stone-500
-            transition
-            hover:border-stone-400
-            hover:bg-stone-100
-            hover:text-stone-700
-          "
-                  >
-                    + Add queue
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddQueue()}
+                      className="
+                flex h-[120px] w-[420px] items-center justify-center
+                rounded-2xl border border-dashed border-orange-200
+                bg-orange-50/40 text-sm font-semibold text-stone-500
+                transition-all duration-200
+                hover:border-[var(--color-primary)]
+                hover:bg-orange-50
+                hover:text-[var(--color-accent)]
+              "
+                    >
+                      + Add queue
+                    </button>
+                  </div>
                 </div>
               </div>
             </main>

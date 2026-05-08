@@ -1,6 +1,6 @@
-import axios from "axios";
+// import axios from "axios";
 import { NavLink } from "react-router-dom";
-import { api } from "../../lib/api";
+// import { api } from "../../lib/api";
 import { RiHome9Fill } from "react-icons/ri";
 import { RiUserCommunityLine } from "react-icons/ri";
 
@@ -18,15 +18,15 @@ export default function Sidebar() {
     },
   ];
 
-  const logout = async () => {
-    try {
-      await api.post("/api/auth/logout", {});
-      console.log("Logged out");
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
-  };
+  // const logout = async () => {
+  //   try {
+  //     await api.post("/api/auth/logout", {});
+  //     console.log("Logged out");
+  //   } catch (error) {
+  //     if (axios.isAxiosError(error)) console.error(error);
+  //     else console.error(error);
+  //   }
+  // };
 
   return (
     <nav className="w-[240px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
