@@ -15,6 +15,15 @@ type CommunityType = {
   };
 };
 
+type AcceptedPlayerType = {
+  id: string;
+  player: {
+    id: string;
+    profileUrl: string;
+    username: string;
+  };
+};
+
 type AvailableHostType = {
   id: string;
   hostName: string;
@@ -23,6 +32,7 @@ type AvailableHostType = {
   community: CommunityType;
   currentUserStatus: JoinStatus;
   isOwnedByCurrentUser: boolean;
+  acceptedPlayers: AcceptedPlayerType[];
 };
 
 export default function Home() {
@@ -33,7 +43,6 @@ export default function Home() {
   const getAvailableHosts = async () => {
     try {
       const response = await api.get("/api/public/actions/hosts/available");
-      console.log(response);
       setAvailableHost(response.data.hosts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -176,7 +185,31 @@ export default function Home() {
               </div>
 
               {/* Footer */}
-              <div className="mt-3 flex items-center justify-end">
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-x-1">
+                  {availableHost.acceptedPlayers
+                    .slice(0, 6)
+                    .map(({ id, player }) => (
+                      <div key={id}>
+                        <div
+                          title={player.username}
+                          className="h-[36px] w-[36px] rounded-full"
+                        >
+                          <img
+                            src={player.profileUrl}
+                            alt={player.username}
+                            className="block h-full w-full rounded-full object-cover object-center"
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                  {availableHost.acceptedPlayers.length > 6 && (
+                    <div className="flex h-[36px] min-w-[36px] items-center justify-center rounded-full bg-stone-200 px-2 text-xs font-semibold text-stone-700">
+                      +{availableHost.acceptedPlayers.length - 6}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   disabled={isButtonDisabled(availableHost, isRequesting)}

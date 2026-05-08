@@ -2,7 +2,6 @@ import axios from "axios";
 import { NavLink } from "react-router-dom";
 import { api } from "../../lib/api";
 import { RiHome9Fill } from "react-icons/ri";
-import { FaGamepad } from "react-icons/fa6";
 import { RiUserCommunityLine } from "react-icons/ri";
 
 export default function Sidebar() {
@@ -11,11 +10,6 @@ export default function Sidebar() {
       icon: <RiHome9Fill size={16} />,
       path: "/home",
       name: "Home",
-    },
-    {
-      icon: <FaGamepad size={16} />,
-      path: "/find/match",
-      name: "Find Match",
     },
     {
       icon: <RiUserCommunityLine size={16} />,
