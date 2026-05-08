@@ -72,74 +72,105 @@ function PlayerSection({
   extraContent,
 }: PlayerSectionProps) {
   return (
-    <section className="rounded-xl border border-stone-200 bg-white p-4">
-      <header className="mb-3 flex items-start justify-between gap-3">
+    <section className="rounded-3xl border border-orange-100 bg-white shadow-sm overflow-hidden">
+      {/* HEADER */}
+      <header className="flex items-start justify-between gap-4 border-b border-orange-50 px-5 py-4">
         <div>
-          <h4 className="text-base font-semibold">{title}</h4>
-          <p className="text-sm text-stone-500">{description}</p>
+          <h4 className="text-base font-semibold text-[var(--color-text)]">
+            {title}
+          </h4>
+
+          <p className="mt-1 text-sm text-stone-500">{description}</p>
         </div>
-        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+
+        <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-orange-50 px-3 text-xs font-semibold text-[var(--color-accent)]">
           {players.length}
         </span>
       </header>
-      {extraContent ? <div className="mb-4">{extraContent}</div> : null}
+
+      {/* EXTRA CONTENT */}
+      {extraContent ? (
+        <div className="border-b border-orange-50 px-5 py-4">
+          {extraContent}
+        </div>
+      ) : null}
+
+      {/* TABLE */}
       <div className="overflow-x-auto">
-        <table className="table-auto w-full border-collapse">
-          <thead>
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-[#fffaf2]">
             <tr>
-              <th className="px-2 py-1.5 text-start text-[14px] font-semibold">
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Player
               </th>
-              <th className="w-[144px] px-2 py-1.5 text-start text-[14px] font-semibold">
-                Skill Level
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Skill
               </th>
-              <th className="w-[280px] px-2 py-1.5 text-start text-[14px] font-semibold">
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Photo URL
               </th>
-              <th className="w-[128px] px-2 py-1.5 text-start text-[14px] font-semibold">
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Status
               </th>
-              <th className="w-[96px] px-2 py-1.5 text-start text-[14px] font-semibold">
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Matches
               </th>
-              <th className="w-[160px] px-2 py-1.5 text-start text-[14px] font-semibold">
-                Last result
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Last Result
               </th>
-              <th className="w-[220px] px-2 py-1.5 text-start text-[14px] font-semibold">
+
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody>
+
+          <tbody className="divide-y divide-orange-50">
             {players.length > 0 ? (
               players.map((playerRecord) => {
                 const acceptedPlayer = acceptedPlayers.find(
                   (accepted) => accepted.id === playerRecord.id,
                 );
+
                 const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
 
                 return (
-                  <tr key={playerRecord.id} className="hover:bg-stone-100">
-                    <td className="px-2 py-1.5">
-                      <div className="flex items-center gap-x-2 text-[14px]">
-                        <div className="h-[36px] w-[36px] rounded-full border">
+                  <tr
+                    key={playerRecord.id}
+                    className="transition hover:bg-orange-50/40"
+                  >
+                    {/* PLAYER */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 overflow-hidden rounded-full border border-orange-100 bg-orange-50">
                           <img
                             src={playerRecord.player.profileUrl}
                             alt={playerRecord.player.username}
-                            className="block h-full w-full rounded-full object-cover object-center"
+                            className="h-full w-full object-cover"
                           />
                         </div>
+
                         <div className="flex items-center gap-2">
-                          <span>{playerRecord.player.username}</span>
+                          <span className="font-medium text-[var(--color-text)]">
+                            {playerRecord.player.username}
+                          </span>
+
                           {playerRecord.player.isStatic ? (
-                            <span className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] text-stone-700">
+                            <span className="rounded-full bg-stone-100 px-2 py-1 text-[10px] font-medium text-stone-600">
                               Static
                             </span>
                           ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-1.5">
+
+                    {/* SKILL */}
+                    <td className="px-5 py-4">
                       {playerRecord.player.isStatic &&
                       onUpdateStaticPlayerSkillLevel ? (
                         <select
@@ -150,7 +181,7 @@ function PlayerSection({
                               event.target.value as SkillLevelType,
                             )
                           }
-                          className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[12px]"
+                          className="rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs font-medium text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
                         >
                           <option value="beginner">Beginner</option>
                           <option value="intermediate">Intermediate</option>
@@ -158,12 +189,14 @@ function PlayerSection({
                           <option value="elite">Elite</option>
                         </select>
                       ) : (
-                        <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
+                        <span className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-[var(--color-accent)]">
                           {formatSkillLevel(playerRecord.player.skillLevel)}
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-1.5">
+
+                    {/* PHOTO URL */}
+                    <td className="px-5 py-4">
                       {playerRecord.player.isStatic &&
                       onStaticProfileUrlDraftChange &&
                       onUpdateStaticPlayerProfileUrl ? (
@@ -181,18 +214,21 @@ function PlayerSection({
                               )
                             }
                             placeholder="https://example.com/player.jpg"
-                            className="w-full rounded-md border border-stone-300 bg-white px-2 py-1 text-[12px]"
+                            className="w-full rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
                           />
+
                           <button
                             type="button"
                             onClick={() =>
                               onUpdateStaticPlayerProfileUrl(playerRecord.id)
                             }
-                            disabled={savingStaticProfileUrlId === playerRecord.id}
-                            className={`shrink-0 rounded-md px-2 py-1 text-[12px] text-white ${
+                            disabled={
                               savingStaticProfileUrlId === playerRecord.id
-                                ? "cursor-not-allowed bg-stone-400"
-                                : "cursor-pointer bg-stone-800 hover:bg-stone-700"
+                            }
+                            className={`rounded-xl px-3 py-2 text-xs font-medium transition cursor-pointer ${
+                              savingStaticProfileUrlId === playerRecord.id
+                                ? "cursor-not-allowed bg-stone-200 text-stone-500"
+                                : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
                             }`}
                           >
                             {savingStaticProfileUrlId === playerRecord.id
@@ -201,28 +237,34 @@ function PlayerSection({
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[12px] text-stone-400">-</span>
+                        <span className="text-xs text-stone-400">—</span>
                       )}
                     </td>
-                    <td className="px-2 py-1.5">
+
+                    {/* STATUS */}
+                    <td className="px-5 py-4">
                       <span
-                        className={`inline-block cursor-default rounded-md px-2 py-0.5 text-[12px] ${
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                           playerRecord.status === "accepted"
-                            ? "border border-green-500 bg-green-200"
+                            ? "bg-emerald-100 text-emerald-700"
                             : playerRecord.status === "requested"
-                              ? "border border-yellow-500 bg-yellow-200"
+                              ? "bg-yellow-100 text-yellow-700"
                               : playerRecord.status === "rejected"
-                                ? "border border-rose-500 bg-rose-200"
-                                : "border border-stone-500 bg-stone-300"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-stone-200 text-stone-700"
                         }`}
                       >
                         {playerRecord.status}
                       </span>
                     </td>
-                    <td className="px-2 py-1.5 text-[12px]">
+
+                    {/* MATCHES */}
+                    <td className="px-5 py-4 text-sm text-stone-600">
                       {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
                     </td>
-                    <td className="px-2 py-1.5 text-[12px]">
+
+                    {/* LAST RESULT */}
+                    <td className="px-5 py-4 text-sm text-stone-600">
                       {acceptedPlayer?.matchHistory?.lastMatch?.result
                         ? formatMatchResult(
                             acceptedPlayer.matchHistory.lastMatch.result,
@@ -230,63 +272,79 @@ function PlayerSection({
                           )
                         : "-"}
                     </td>
-                    <td className="px-2 py-1.5">
+
+                    {/* ACTIONS */}
+                    <td className="px-5 py-4">
                       <div className="flex flex-wrap items-center gap-2">
+                        {/* HISTORY */}
                         <button
                           type="button"
                           onClick={() => onViewHistory(playerRecord)}
                           disabled={historyLoadingPlayerId === playerRecord.id}
-                          className={`rounded-md px-2 py-1 text-[12px] ${
+                          className={`rounded-xl border px-3 py-2 text-xs font-medium transition cursor-pointer ${
                             historyLoadingPlayerId === playerRecord.id
-                              ? "cursor-not-allowed bg-stone-200 text-stone-500"
-                              : "border border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                              ? "cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400"
+                              : "border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
                           }`}
                         >
                           {historyLoadingPlayerId === playerRecord.id
                             ? "Loading..."
                             : "History"}
                         </button>
+
+                        {/* ACCEPT */}
                         {playerRecord.status !== "accepted" &&
                         playerRecord.status !== "banned" ? (
-                          <FaCheck
-                            size={28}
+                          <button
+                            type="button"
                             title="Accept"
                             onClick={() => onAcceptPlayer(playerRecord.id)}
-                            className="cursor-pointer rounded-md bg-green-200 p-1 hover:bg-green-400"
-                          />
+                            className="rounded-xl bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-200 cursor-pointer"
+                          >
+                            Accept
+                          </button>
                         ) : null}
 
+                        {/* REJECT */}
                         {playerRecord.status === "requested" ? (
-                          <FcCancel
-                            size={28}
+                          <button
+                            type="button"
                             title="Reject"
                             onClick={() => onRejectPlayer(playerRecord.id)}
-                            className="cursor-pointer rounded-md bg-rose-200 p-1 hover:bg-rose-400"
-                          />
+                            className="rounded-xl bg-red-100 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-200 cursor-pointer"
+                          >
+                            Reject
+                          </button>
                         ) : null}
 
+                        {/* BAN */}
                         {playerRecord.status === "accepted" ? (
                           <button
                             type="button"
-                            title={isBanDisabled ? "Ban unavailable" : "Ban"}
+                            title={
+                              isBanDisabled
+                                ? "Ban unavailable"
+                                : `Ban ${playerRecord.player.username}`
+                            }
                             disabled={isBanDisabled}
                             onClick={() => onBanPlayer(playerRecord.id)}
-                            className={`rounded-md px-2 py-1 text-[12px] text-white ${
+                            className={`rounded-xl px-3 py-2 text-xs font-medium transition cursor-pointer ${
                               isBanDisabled
-                                ? "cursor-not-allowed bg-stone-400"
-                                : "cursor-pointer bg-red-500 hover:bg-red-700"
+                                ? "cursor-not-allowed bg-stone-200 text-stone-500"
+                                : "bg-red-500 text-white hover:bg-red-600"
                             }`}
                           >
                             Ban
                           </button>
                         ) : null}
 
+                        {/* UNBAN */}
                         {playerRecord.status === "banned" ? (
                           <button
                             type="button"
                             title="Unban"
                             onClick={() => onUnbanPlayer(playerRecord.id)}
-                            className="cursor-pointer rounded-md bg-stone-700 px-2 py-1 text-[12px] text-white hover:bg-stone-900"
+                            className="rounded-xl bg-stone-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-stone-800 cursor-pointer"
                           >
                             Unban
                           </button>
@@ -300,7 +358,7 @@ function PlayerSection({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-2 py-4 text-center text-sm text-stone-500"
+                  className="px-5 py-10 text-center text-sm text-stone-500"
                 >
                   {emptyMessage}
                 </td>
@@ -436,7 +494,9 @@ export default function Players() {
 
     setPlayersInHost((currentPlayers) =>
       currentPlayers.map((player) =>
-        player.id === hostedPlayerId ? { ...player, status: "accepted" } : player,
+        player.id === hostedPlayerId
+          ? { ...player, status: "accepted" }
+          : player,
       ),
     );
     setAcceptedPlayers((currentPlayers) => {
@@ -522,7 +582,9 @@ export default function Players() {
 
     setPlayersInHost((currentPlayers) =>
       currentPlayers.map((player) =>
-        player.id === hostedPlayerId ? { ...player, status: "rejected" } : player,
+        player.id === hostedPlayerId
+          ? { ...player, status: "rejected" }
+          : player,
       ),
     );
 
@@ -821,15 +883,33 @@ export default function Players() {
 
   return (
     <>
-      <header className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-        <div>
-          <h3>Players Management</h3>
+      <header className="mb-4 flex flex-col gap-2 rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-2xl">
+            🏸
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
+              Match Management
+            </p>
+
+            <h3 className="text-2xl font-bold text-[var(--color-text)]">
+              Players Management
+            </h3>
+          </div>
         </div>
+
+        <p className="text-sm text-stone-500">
+          Manage player requests, queue participation, and walk-in badminton
+          players.
+        </p>
       </header>
-      <div className="grid gap-4 p-1">
+
+      <div className="grid gap-5">
         <PlayerSection
           title="Account Players"
-          description="Real accounts."
+          description="Registered players connected to the platform."
           players={accountPlayers}
           acceptedPlayers={acceptedPlayers}
           historyLoadingPlayerId={historyLoadingPlayerId}
@@ -842,9 +922,10 @@ export default function Players() {
           onViewHistory={openPlayerHistory}
           emptyMessage="No account players yet."
         />
+
         <PlayerSection
           title="Static Players"
-          description="Walk-in players without an account."
+          description="Walk-in badminton players without an account."
           players={staticPlayers}
           acceptedPlayers={acceptedPlayers}
           historyLoadingPlayerId={historyLoadingPlayerId}
@@ -867,26 +948,31 @@ export default function Players() {
           extraContent={
             <form
               onSubmit={(event) => void handleCreateStaticPlayer(event)}
-              className="flex flex-wrap items-end gap-2"
+              className="flex flex-wrap items-end gap-3 rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
             >
-              <label className="grid gap-1 text-sm">
-                <span>Static player</span>
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">
+                  Static player
+                </span>
+
                 <input
                   type="text"
                   value={staticPlayerName}
                   onChange={(event) => setStaticPlayerName(event.target.value)}
                   placeholder="Player name"
-                  className="block min-w-[220px] rounded-md border px-3 py-1.5"
+                  className="block min-w-[220px] rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
                 />
               </label>
-              <label className="grid gap-1 text-sm">
-                <span>Skill</span>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Skill level</span>
+
                 <select
                   value={staticSkillLevel}
                   onChange={(event) =>
                     setStaticSkillLevel(event.target.value as SkillLevelType)
                   }
-                  className="rounded-md border px-3 py-1.5"
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
                 >
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
@@ -894,13 +980,14 @@ export default function Players() {
                   <option value="elite">Elite</option>
                 </select>
               </label>
+
               <button
                 type="submit"
                 disabled={isCreatingStaticPlayer}
-                className={`rounded-md px-3 py-1.5 text-sm text-white ${
+                className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                   isCreatingStaticPlayer
-                    ? "cursor-not-allowed bg-stone-400"
-                    : "cursor-pointer bg-stone-800 hover:bg-stone-700"
+                    ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                    : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
                 }`}
               >
                 {isCreatingStaticPlayer ? "Adding..." : "Add player"}

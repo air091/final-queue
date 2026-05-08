@@ -29,53 +29,43 @@ export default function Sidebar() {
   };
 
   return (
-    <nav className="w-[240px] rounded-3xl border border-orange-100 bg-white/95 p-3 shadow-xl backdrop-blur">
+    <nav className="w-[240px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
+      {/* HEADER */}
       <div className="mb-4 px-3 pt-2">
-        <h2 className="text-lg font-bold text-[var(--color-text)]">
-          SportQueue
-        </h2>
+        <h2 className="text-lg font-bold text-[#0c090c]">SportQueue</h2>
 
         <p className="text-xs text-stone-500">Badminton Queue Management</p>
       </div>
 
+      {/* NAVIGATION */}
       <ul className="grid gap-2">
         {navLinks.map((link) => (
           <li key={link.name}>
             <NavLink
               to={link.path}
               className={({ isActive }) =>
-                `group relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-[var(--color-primary)] text-white shadow-lg shadow-orange-200"
-                    : "text-stone-600 hover:bg-orange-50 hover:text-[var(--color-accent)]"
+                    ? "bg-[#fff4df] text-[#ff6900]"
+                    : "text-[#0c090c] hover:bg-[#fff7e8]"
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  {/* Hover Glow */}
-                  {!isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/0 via-[var(--color-primary)]/5 to-[var(--color-accent)]/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  )}
-
-                  {/* Icon */}
-                  <span
-                    className={`relative z-10 text-lg transition-transform duration-300 ${
+                  {/* ICON */}
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
                       isActive
-                        ? "scale-110"
-                        : "group-hover:scale-110 group-hover:text-[var(--color-primary)]"
+                        ? "bg-[#fd9a00] text-white"
+                        : "bg-[#fff4df] text-[#ff6900]"
                     }`}
                   >
                     {link.icon}
-                  </span>
+                  </div>
 
-                  {/* Text */}
-                  <span className="relative z-10">{link.name}</span>
-
-                  {/* Active Indicator */}
-                  {isActive && (
-                    <div className="ml-auto h-2 w-2 rounded-full bg-white shadow-md" />
-                  )}
+                  {/* LABEL */}
+                  <span>{link.name}</span>
                 </>
               )}
             </NavLink>
