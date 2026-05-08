@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { api } from "../../lib/api";
+import { FaArrowLeft } from "react-icons/fa6";
 
 type CommunitiesType = {
   id: string;
@@ -29,33 +30,45 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <nav className="w-50">
-      <ul>
-        <li>
+    <nav className="w-[220px] rounded-2xl bg-white p-2 shadow-sm">
+      <ul className="grid gap-1">
+        <li className="mb-2">
           <NavLink
             to="/"
-            className="block hover:bg-amber-200 px-4 py-1 text-center rounded-md"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
           >
-            Home
+            <FaArrowLeft size={16} />
+            Back to Home
           </NavLink>
         </li>
+
+        <div className="my-2 border-t border-stone-100" />
+
         <li>
           <NavLink
             to="/community/create"
-            className="block hover:bg-amber-200 px-4 py-1 text-center rounded-md"
+            className={({ isActive }) =>
+              `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                isActive
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+              }`
+            }
           >
             Create community
           </NavLink>
         </li>
-        <hr className="my-2" />
         {communities.length > 0 ? (
           communities.map((community) => (
             <li key={community.id}>
               <NavLink
                 to={`/community/${community.id}`}
                 className={({ isActive }) =>
-                  `flex items-center border gap-x-3 py-1 px-3 rounded-md
-                    ${isActive ? "bg-amber-300" : "hover:bg-amber-200"}`
+                  `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-stone-900 text-white shadow-sm"
+                      : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                  }`
                 }
               >
                 <div className="border w-8 h-8 rounded-full">

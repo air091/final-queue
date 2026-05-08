@@ -91,52 +91,60 @@ export default function Community() {
   };
 
   return (
-    <div className="w-full">
-      <header className="flex items-center gap-x-4 w-full px-4 py-2">
-        <div>
-          <div className="w-16 h-16 border rounded-full">
-            <img
-              src={community?.profileUrl}
-              alt={community?.communityName}
-              className="block w-full h-full rounded-full object-contain"
-            />
-          </div>
+    <div className="flex h-screen w-full flex-col">
+      {/* HEADER */}
+      <header className="flex items-center gap-4 bg-white px-6 py-4">
+        <div className="h-16 w-16 overflow-hidden rounded-full border border-stone-200 bg-stone-100">
+          <img
+            src={community?.profileUrl}
+            alt={community?.communityName}
+            className="h-full w-full object-cover"
+          />
         </div>
+
         <div>
-          <span className="block font-bold text-[24px]">
+          <h1 className="text-2xl font-bold text-stone-800">
             {community?.communityName}
-          </span>
-          <span className="flex items-center gap-x-1">
-            <div className="w-4 h-4 border rounded-full">
+          </h1>
+
+          <div className="mt-1 flex items-center gap-2">
+            <div className="h-5 w-5 overflow-hidden rounded-full border border-stone-200">
               <img
                 src={community?.master.profileUrl}
                 alt={community?.master.username}
-                className="block w-full h-full rounded-full object-contain"
+                className="h-full w-full object-cover"
               />
             </div>
-            <span className="block font-semibold text-stone-400 text-[14px]">
+
+            <span className="text-sm font-medium text-stone-500">
               {community?.master.username}
             </span>
-          </span>
+          </div>
         </div>
       </header>
-      <section className="w-full">
-        <div className="mb-4 rounded-lg border border-stone-200 bg-white p-3">
-          <div className="mb-2">
-            <h3 className="font-semibold">Create host</h3>
+
+      {/* MAIN */}
+      <section className="flex flex-1 flex-col gap-6 overflow-hidden px-6 pb-5 pt-0">
+        {/* CREATE HOST */}
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-stone-800">
+              Create host
+            </h3>
             <p className="text-sm text-stone-500">
               Pick a sport and a new host will be added to this community.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+
+          <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1 text-sm">
-              <span>Sport</span>
+              <span className="text-stone-600">Sport</span>
+
               <select
                 name="sport"
-                id="sport"
                 value={sportName}
                 onChange={(event) => setSportName(event.target.value)}
-                className="rounded-md border px-3 py-2 text-sm"
+                className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-stone-300 focus:ring-2 focus:ring-stone-100"
               >
                 {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
                   <option key={sportOption} value={sportOption}>
@@ -145,76 +153,96 @@ export default function Community() {
                 ))}
               </select>
             </label>
+
             <button
               type="button"
               onClick={() => void handleCreateHost()}
               disabled={isCreatingHost}
-              className={`mt-5 rounded-md px-3 py-2 text-sm text-text border ${
-                isCreatingHost
-                  ? "cursor-not-allowed bg-stone-400"
-                  : "cursor-pointer hover:bg-stone-400"
-              }`}
+              className={`
+            rounded-xl px-4 py-2 text-sm font-medium transition
+            ${
+              isCreatingHost
+                ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                : "bg-stone-900 text-white hover:bg-stone-800"
+            }
+          `}
             >
-              {isCreatingHost ? "Hosting..." : "Host"}
+              {isCreatingHost ? "Creating..." : "Create host"}
             </button>
           </div>
-          {hostError ? (
-            <p className="mt-2 text-sm text-red-600">{hostError}</p>
-          ) : null}
+
+          {hostError && (
+            <p className="mt-3 text-sm text-red-500">{hostError}</p>
+          )}
         </div>
-        {communityHosts.length > 0 ? (
-          <table className="border w-full table-auto border-collapse">
-            <thead>
-              <tr>
-                <th className="text-start">Name</th>
-                <th className="text-start">Sport</th>
-                <th className="text-start">Status</th>
-                <th className="text-start">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {communityHosts.map((communityHost) => (
-                <tr
-                  key={communityHost.id}
-                  onClick={() =>
-                    navigate(`/community/${id}/hosts/${communityHost.id}`)
-                  }
-                  className="hover:bg-stone-300 cursor-pointer"
-                >
-                  <td>{communityHost.hostName}</td>
-                  <td>{communityHost.sport}</td>
-                  <td>
-                    <span
-                      className={`block w-fit px-2 py-0.5 rounded-md ${
-                        communityHost.status == "available"
-                          ? "bg-green-200 border border-green-500"
-                          : "bg-rose-200 border border-rose-500"
-                      }`}
+
+        {/* TABLE */}
+        <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+          {/* TABLE HEADER */}
+          <div className="shrink-0 border-b border-stone-100 px-5 py-3">
+            <h3 className="text-lg font-semibold text-stone-800">Hosts</h3>
+          </div>
+
+          {/* TABLE BODY (SCROLL FIX) */}
+          <div className="min-h-0 flex-1 overflow-auto">
+            {communityHosts.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-stone-50 text-stone-500">
+                  <tr>
+                    <th className="px-5 py-3 text-left font-medium">Name</th>
+                    <th className="px-5 py-3 text-left font-medium">Sport</th>
+                    <th className="px-5 py-3 text-left font-medium">Status</th>
+                    <th className="px-5 py-3 text-left font-medium">Action</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-stone-100">
+                  {communityHosts.map((communityHost) => (
+                    <tr
+                      key={communityHost.id}
+                      onClick={() =>
+                        navigate(`/community/${id}/hosts/${communityHost.id}`)
+                      }
+                      className="cursor-pointer transition hover:bg-stone-50"
                     >
-                      {communityHost.status}
-                    </span>
-                  </td>
-                  <td className="flex items-center gap-x-2">
-                    <div>
-                      <HiPencilAlt
-                        size={20}
-                        className="text-sky-500 hover:text-sky-700 cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <IoMdTrash
-                        size={20}
-                        className="text-rose-500 hover:text-rose-700 cursor-pointer"
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>No host yet</p>
-        )}
+                      <td className="px-5 py-3 font-medium text-stone-800">
+                        {communityHost.hostName}
+                      </td>
+
+                      <td className="px-5 py-3 text-stone-600">
+                        {communityHost.sport}
+                      </td>
+
+                      <td className="px-5 py-3">
+                        <span
+                          className={`
+                        inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                        ${
+                          communityHost.status === "available"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }
+                      `}
+                        >
+                          {communityHost.status}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3 text-stone-500">
+                          <HiPencilAlt className="h-5 w-5 cursor-pointer hover:text-sky-600" />
+                          <IoMdTrash className="h-5 w-5 cursor-pointer hover:text-red-600" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-6 text-sm text-stone-500">No hosts yet</div>
+            )}
+          </div>
+        </div>
       </section>
     </div>
   );
