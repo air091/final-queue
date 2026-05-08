@@ -11,6 +11,7 @@ import {
   createStaticPlayer,
   deleteHost,
   getHostById,
+  getPlayerMatchHistory,
   getHosts,
   getHostWithPlayers,
   host,
@@ -53,6 +54,11 @@ router.get(
   "/:communityId/hosts/:hostId/players",
   authenticate,
   getHostWithPlayers,
+);
+router.get(
+  "/:communityId/hosts/:hostId/players/:playerId/history",
+  authenticate,
+  getPlayerMatchHistory,
 );
 router.post(
   "/:communityId/hosts/:hostId/players/static",

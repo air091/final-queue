@@ -1,6 +1,9 @@
 import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
+import PlayerHistoryModal, {
+  summarizePlayerHistory,
+} from "../components/host_components/PlayerHistoryModal";
 import Sidebar from "../components/host_components/Sidebar";
 import type { HostOutletContext } from "../hooks/useHostData";
 import { api } from "../lib/api";
@@ -15,6 +18,8 @@ import {
   type HostPaymentsData,
   type HostPlayerRecord,
   type PaymentStatus,
+  type PlayerHistoryTarget,
+  type PlayerMatchHistoryItem,
   type QueueType,
 } from "../lib/host";
 
@@ -30,6 +35,17 @@ export default function HostLayout() {
   );
   const [isHostLoading, setIsHostLoading] = useState(true);
   const [hostLoadError, setHostLoadError] = useState<string | null>(null);
+  const [historyLoadingPlayerId, setHistoryLoadingPlayerId] = useState<
+    string | null
+  >(null);
+  const [selectedHistoryPlayer, setSelectedHistoryPlayer] =
+    useState<PlayerHistoryTarget | null>(null);
+  const [selectedHistoryError, setSelectedHistoryError] = useState<
+    string | null
+  >(null);
+  const [playerHistoryById, setPlayerHistoryById] = useState<
+    Record<string, PlayerMatchHistoryItem[]>
+  >({});
 
   const loadHostData = useCallback(async () => {
     if (!communityId || !hostId) return;
@@ -141,6 +157,62 @@ export default function HostLayout() {
     void loadHostData();
   }, [loadHostData]);
 
+  const openPlayerHistory = useCallback(
+    (player: PlayerHistoryTarget) => {
+      if (!communityId || !hostId) return;
+
+      setSelectedHistoryPlayer(player);
+      setSelectedHistoryError(null);
+
+      if (playerHistoryById[player.id]) return;
+
+      setHistoryLoadingPlayerId(player.id);
+
+      void (async () => {
+        try {
+          const response = await api.get(
+            `/api/community/${communityId}/hosts/${hostId}/players/${player.id}/history`,
+          );
+
+          setPlayerHistoryById((currentHistory) => ({
+            ...currentHistory,
+            [player.id]: response.data.history as PlayerMatchHistoryItem[],
+          }));
+        } catch (error) {
+          setSelectedHistoryError("Unable to load this player's match history.");
+
+          if (axios.isAxiosError(error))
+            console.error(error.response?.data ?? error);
+          else console.error(error);
+        } finally {
+          setHistoryLoadingPlayerId((currentId) =>
+            currentId === player.id ? null : currentId,
+          );
+        }
+      })();
+    },
+    [communityId, hostId, playerHistoryById],
+  );
+
+  const closePlayerHistory = useCallback(() => {
+    setSelectedHistoryPlayer(null);
+    setSelectedHistoryError(null);
+  }, []);
+
+  const selectedHistoryEntries = selectedHistoryPlayer
+    ? playerHistoryById[selectedHistoryPlayer.id] ?? []
+    : [];
+  const hasLoadedSelectedHistory =
+    selectedHistoryPlayer !== null &&
+    Object.hasOwn(playerHistoryById, selectedHistoryPlayer.id);
+  const selectedAcceptedPlayer = selectedHistoryPlayer
+    ? acceptedPlayers.find((player) => player.id === selectedHistoryPlayer.id)
+    : null;
+  const selectedHistorySummary =
+    hasLoadedSelectedHistory || !selectedAcceptedPlayer?.matchHistory
+      ? summarizePlayerHistory(selectedHistoryEntries)
+      : selectedAcceptedPlayer.matchHistory;
+
   const outletContext: HostOutletContext = {
     playersInHost,
     setPlayersInHost,
@@ -153,6 +225,9 @@ export default function HostLayout() {
     paymentsData,
     setPaymentsData,
     host,
+    historyLoadingPlayerId,
+    openPlayerHistory,
+    closePlayerHistory,
     refreshHostData: loadHostData,
   };
 
@@ -215,6 +290,17 @@ export default function HostLayout() {
               </div>
             ) : null}
             <Outlet context={outletContext} />
+            <PlayerHistoryModal
+              player={selectedHistoryPlayer}
+              summary={selectedHistorySummary}
+              history={selectedHistoryEntries}
+              isLoading={
+                selectedHistoryPlayer !== null &&
+                historyLoadingPlayerId === selectedHistoryPlayer.id
+              }
+              error={selectedHistoryError}
+              onClose={closePlayerHistory}
+            />
           </>
         )}
       </main>

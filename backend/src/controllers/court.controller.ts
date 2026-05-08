@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
+import { MatchStatus } from "../generated/prisma/enums.js";
 
 export const getMatchCourts = async (
   request: Request<Params>,
@@ -184,12 +185,27 @@ export const startMatchCourt = async (
   }
 };
 
+type EndMatchCourtBody = {
+  teamWinner?: string;
+};
+
+const getMatchTeam = (position: number) =>
+  position === 1 || position === 3 ? "A" : "B";
+
+const getMatchResult = (team: string, teamWinner: string) => {
+  if (teamWinner === "A") return team === "A" ? "win" : "loss";
+  if (teamWinner === "B") return team === "B" ? "win" : "loss";
+  return "played";
+};
+
 export const endMatchCourt = async (
-  request: Request<StartCourtParams>,
+  request: Request<StartCourtParams, unknown, EndMatchCourtBody>,
   response: Response,
 ) => {
   try {
     const { communityId, hostId, courtId } = request.params;
+    const { teamWinner } = request.body;
+    const winner = teamWinner?.trim() || "unknown";
     const user = request.user;
     if (!user)
       return response
@@ -230,6 +246,13 @@ export const endMatchCourt = async (
           select: {
             id: true,
             playerId: true,
+            position: true,
+            hostedPlayer: {
+              select: {
+                playerId: true,
+                accountId: true,
+              },
+            },
           },
         },
       },
@@ -252,7 +275,17 @@ export const endMatchCourt = async (
     );
     const assignmentIds = court.assignments.map((assignment) => assignment.id);
 
-    const [, endedCourt] = await prisma.$transaction([
+    const matchParticipantsData = court.assignments.map((assignment) => {
+      const team = getMatchTeam(assignment.position);
+      return {
+        playerId: assignment.playerId,
+        accountId: assignment.hostedPlayer?.accountId ?? undefined,
+        team,
+        result: getMatchResult(team, winner),
+      };
+    });
+
+    const [, endedCourt, match] = await prisma.$transaction([
       prisma.player.updateMany({
         where: { id: { in: playerIds } },
         data: {
@@ -274,6 +307,25 @@ export const endMatchCourt = async (
           endedAt: true,
         },
       }),
+      prisma.match.create({
+        data: {
+          hostId: host.id,
+          courtId: court.id,
+          status: MatchStatus.finished,
+          startedAt: court.startedAt ?? now,
+          endedAt: now,
+          teamWinner: winner,
+          participants: {
+            create: matchParticipantsData,
+          },
+        },
+        select: {
+          id: true,
+          teamWinner: true,
+          startedAt: true,
+          endedAt: true,
+        },
+      }),
       prisma.courtAssignment.deleteMany({
         where: { id: { in: assignmentIds } },
       }),
@@ -284,6 +336,7 @@ export const endMatchCourt = async (
       message: "Game ended",
       court: endedCourt,
       playerIds,
+      match,
     });
   } catch (error) {
     console.error("Error ending match court host:", error);

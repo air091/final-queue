@@ -7,6 +7,7 @@ import { FcCancel } from "react-icons/fc";
 import { useHostData } from "../../hooks/useHostData";
 import { api } from "../../lib/api";
 import {
+  EMPTY_MATCH_HISTORY_SUMMARY,
   buildPaymentsSummary,
   type AcceptedPlayers,
   type HostPlayerRecord,
@@ -16,17 +17,28 @@ import {
 const formatSkillLevel = (skillLevel: string) =>
   skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
+const formatMatchResult = (result: string | null, team: string | null) => {
+  if (!result) return "No result";
+
+  const normalizedResult =
+    result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
+
+  return team ? `${normalizedResult} (${team})` : normalizedResult;
+};
+
 type PlayerSectionProps = {
   title: string;
   description: string;
   players: HostPlayerRecord[];
   acceptedPlayers: AcceptedPlayers[];
+  historyLoadingPlayerId: string | null;
   staticProfileUrlDrafts: Record<string, string>;
   savingStaticProfileUrlId: string | null;
   onAcceptPlayer: (hostedPlayerId: string) => void;
   onRejectPlayer: (hostedPlayerId: string) => void;
   onBanPlayer: (hostedPlayerId: string) => void;
   onUnbanPlayer: (hostedPlayerId: string) => void;
+  onViewHistory: (player: HostPlayerRecord) => void;
   onUpdateStaticPlayerSkillLevel?: (
     hostedPlayerId: string,
     skillLevel: SkillLevelType,
@@ -45,12 +57,14 @@ function PlayerSection({
   description,
   players,
   acceptedPlayers,
+  historyLoadingPlayerId,
   staticProfileUrlDrafts,
   savingStaticProfileUrlId,
   onAcceptPlayer,
   onRejectPlayer,
   onBanPlayer,
   onUnbanPlayer,
+  onViewHistory,
   onUpdateStaticPlayerSkillLevel,
   onStaticProfileUrlDraftChange,
   onUpdateStaticPlayerProfileUrl,
@@ -70,62 +84,69 @@ function PlayerSection({
       </header>
       {extraContent ? <div className="mb-4">{extraContent}</div> : null}
       <div className="overflow-x-auto">
-        <table className="table-auto border-collapse w-full">
+        <table className="table-auto w-full border-collapse">
           <thead>
             <tr>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2">
+              <th className="px-2 py-1.5 text-start text-[14px] font-semibold">
                 Player
               </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[144px]">
+              <th className="w-[144px] px-2 py-1.5 text-start text-[14px] font-semibold">
                 Skill Level
               </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[280px]">
+              <th className="w-[280px] px-2 py-1.5 text-start text-[14px] font-semibold">
                 Photo URL
               </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+              <th className="w-[128px] px-2 py-1.5 text-start text-[14px] font-semibold">
                 Status
               </th>
-              <th className="text-start font-semibold text-[14px] py-1.5 px-2 w-[128px]">
+              <th className="w-[96px] px-2 py-1.5 text-start text-[14px] font-semibold">
+                Matches
+              </th>
+              <th className="w-[160px] px-2 py-1.5 text-start text-[14px] font-semibold">
+                Last result
+              </th>
+              <th className="w-[220px] px-2 py-1.5 text-start text-[14px] font-semibold">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {players.length > 0 ? (
-              players.map((p) => {
+              players.map((playerRecord) => {
                 const acceptedPlayer = acceptedPlayers.find(
-                  (accepted) => accepted.id === p.id,
+                  (accepted) => accepted.id === playerRecord.id,
                 );
                 const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
 
                 return (
-                  <tr key={p.id} className="hover:bg-stone-100">
-                    <td className="py-1.5 px-2">
+                  <tr key={playerRecord.id} className="hover:bg-stone-100">
+                    <td className="px-2 py-1.5">
                       <div className="flex items-center gap-x-2 text-[14px]">
-                        <div className="border w-[36px] h-[36px] rounded-full">
+                        <div className="h-[36px] w-[36px] rounded-full border">
                           <img
-                            src={p.player.profileUrl}
-                            alt={p.player.username}
-                            className="block w-full h-full object-cover object-center rounded-full"
+                            src={playerRecord.player.profileUrl}
+                            alt={playerRecord.player.username}
+                            className="block h-full w-full rounded-full object-cover object-center"
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <span>{p.player.username}</span>
-                          {p.player.isStatic && (
+                          <span>{playerRecord.player.username}</span>
+                          {playerRecord.player.isStatic ? (
                             <span className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] text-stone-700">
                               Static
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="py-1.5 px-2">
-                      {p.player.isStatic && onUpdateStaticPlayerSkillLevel ? (
+                    <td className="px-2 py-1.5">
+                      {playerRecord.player.isStatic &&
+                      onUpdateStaticPlayerSkillLevel ? (
                         <select
-                          value={p.player.skillLevel}
+                          value={playerRecord.player.skillLevel}
                           onChange={(event) =>
                             onUpdateStaticPlayerSkillLevel(
-                              p.id,
+                              playerRecord.id,
                               event.target.value as SkillLevelType,
                             )
                           }
@@ -138,24 +159,24 @@ function PlayerSection({
                         </select>
                       ) : (
                         <span className="inline-block rounded-md border border-stone-300 bg-stone-100 px-2 py-0.5 text-[12px]">
-                          {formatSkillLevel(p.player.skillLevel)}
+                          {formatSkillLevel(playerRecord.player.skillLevel)}
                         </span>
                       )}
                     </td>
-                    <td className="py-1.5 px-2">
-                      {p.player.isStatic &&
+                    <td className="px-2 py-1.5">
+                      {playerRecord.player.isStatic &&
                       onStaticProfileUrlDraftChange &&
                       onUpdateStaticPlayerProfileUrl ? (
                         <div className="flex items-center gap-2">
                           <input
                             type="url"
                             value={
-                              staticProfileUrlDrafts[p.id] ??
-                              p.player.profileUrl
+                              staticProfileUrlDrafts[playerRecord.id] ??
+                              playerRecord.player.profileUrl
                             }
                             onChange={(event) =>
                               onStaticProfileUrlDraftChange(
-                                p.id,
+                                playerRecord.id,
                                 event.target.value,
                               )
                             }
@@ -164,15 +185,17 @@ function PlayerSection({
                           />
                           <button
                             type="button"
-                            onClick={() => onUpdateStaticPlayerProfileUrl(p.id)}
-                            disabled={savingStaticProfileUrlId === p.id}
+                            onClick={() =>
+                              onUpdateStaticPlayerProfileUrl(playerRecord.id)
+                            }
+                            disabled={savingStaticProfileUrlId === playerRecord.id}
                             className={`shrink-0 rounded-md px-2 py-1 text-[12px] text-white ${
-                              savingStaticProfileUrlId === p.id
+                              savingStaticProfileUrlId === playerRecord.id
                                 ? "cursor-not-allowed bg-stone-400"
                                 : "cursor-pointer bg-stone-800 hover:bg-stone-700"
                             }`}
                           >
-                            {savingStaticProfileUrlId === p.id
+                            {savingStaticProfileUrlId === playerRecord.id
                               ? "Saving..."
                               : "Save"}
                           </button>
@@ -181,67 +204,93 @@ function PlayerSection({
                         <span className="text-[12px] text-stone-400">-</span>
                       )}
                     </td>
-                    <td className="py-1.5 px-2">
+                    <td className="px-2 py-1.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[12px] cursor-default ${
-                          p.status === "accepted"
-                            ? "bg-green-200 border border-green-500"
-                            : p.status === "requested"
-                              ? "bg-yellow-200 border border-yellow-500"
-                              : p.status === "rejected"
-                                ? "bg-rose-200 border border-rose-500"
-                                : "bg-stone-300 border border-stone-500"
+                        className={`inline-block cursor-default rounded-md px-2 py-0.5 text-[12px] ${
+                          playerRecord.status === "accepted"
+                            ? "border border-green-500 bg-green-200"
+                            : playerRecord.status === "requested"
+                              ? "border border-yellow-500 bg-yellow-200"
+                              : playerRecord.status === "rejected"
+                                ? "border border-rose-500 bg-rose-200"
+                                : "border border-stone-500 bg-stone-300"
                         }`}
                       >
-                        {p.status}
+                        {playerRecord.status}
                       </span>
                     </td>
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center gap-x-2">
-                        {p.status !== "accepted" && p.status !== "banned" && (
+                    <td className="px-2 py-1.5 text-[12px]">
+                      {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
+                    </td>
+                    <td className="px-2 py-1.5 text-[12px]">
+                      {acceptedPlayer?.matchHistory?.lastMatch?.result
+                        ? formatMatchResult(
+                            acceptedPlayer.matchHistory.lastMatch.result,
+                            acceptedPlayer.matchHistory.lastMatch.team,
+                          )
+                        : "-"}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewHistory(playerRecord)}
+                          disabled={historyLoadingPlayerId === playerRecord.id}
+                          className={`rounded-md px-2 py-1 text-[12px] ${
+                            historyLoadingPlayerId === playerRecord.id
+                              ? "cursor-not-allowed bg-stone-200 text-stone-500"
+                              : "border border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                          }`}
+                        >
+                          {historyLoadingPlayerId === playerRecord.id
+                            ? "Loading..."
+                            : "History"}
+                        </button>
+                        {playerRecord.status !== "accepted" &&
+                        playerRecord.status !== "banned" ? (
                           <FaCheck
                             size={28}
                             title="Accept"
-                            onClick={() => onAcceptPlayer(p.id)}
-                            className="bg-green-200 p-1 rounded-md cursor-pointer hover:bg-green-400"
+                            onClick={() => onAcceptPlayer(playerRecord.id)}
+                            className="cursor-pointer rounded-md bg-green-200 p-1 hover:bg-green-400"
                           />
-                        )}
+                        ) : null}
 
-                        {p.status === "requested" && (
+                        {playerRecord.status === "requested" ? (
                           <FcCancel
                             size={28}
                             title="Reject"
-                            onClick={() => onRejectPlayer(p.id)}
-                            className="bg-rose-200 p-1 rounded-md cursor-pointer hover:bg-rose-400"
+                            onClick={() => onRejectPlayer(playerRecord.id)}
+                            className="cursor-pointer rounded-md bg-rose-200 p-1 hover:bg-rose-400"
                           />
-                        )}
+                        ) : null}
 
-                        {p.status === "accepted" && (
+                        {playerRecord.status === "accepted" ? (
                           <button
                             type="button"
                             title={isBanDisabled ? "Ban unavailable" : "Ban"}
                             disabled={isBanDisabled}
-                            onClick={() => onBanPlayer(p.id)}
+                            onClick={() => onBanPlayer(playerRecord.id)}
                             className={`rounded-md px-2 py-1 text-[12px] text-white ${
                               isBanDisabled
-                                ? "bg-stone-400 cursor-not-allowed"
-                                : "bg-red-500 cursor-pointer hover:bg-red-700"
+                                ? "cursor-not-allowed bg-stone-400"
+                                : "cursor-pointer bg-red-500 hover:bg-red-700"
                             }`}
                           >
                             Ban
                           </button>
-                        )}
+                        ) : null}
 
-                        {p.status === "banned" && (
+                        {playerRecord.status === "banned" ? (
                           <button
                             type="button"
                             title="Unban"
-                            onClick={() => onUnbanPlayer(p.id)}
-                            className="rounded-md bg-stone-700 px-2 py-1 text-[12px] text-white cursor-pointer hover:bg-stone-900"
+                            onClick={() => onUnbanPlayer(playerRecord.id)}
+                            className="cursor-pointer rounded-md bg-stone-700 px-2 py-1 text-[12px] text-white hover:bg-stone-900"
                           >
                             Unban
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -250,8 +299,8 @@ function PlayerSection({
             ) : (
               <tr>
                 <td
-                  colSpan={5}
-                  className="text-center py-4 px-2 text-sm text-stone-500"
+                  colSpan={7}
+                  className="px-2 py-4 text-center text-sm text-stone-500"
                 >
                   {emptyMessage}
                 </td>
@@ -275,6 +324,8 @@ export default function Players() {
     setCourts,
     paymentsData,
     setPaymentsData,
+    historyLoadingPlayerId,
+    openPlayerHistory,
   } = useHostData();
   const [staticPlayerName, setStaticPlayerName] = useState("");
   const [staticSkillLevel, setStaticSkillLevel] =
@@ -311,26 +362,33 @@ export default function Players() {
       );
 
       const player = response.data.hostedPlayer as AcceptedPlayers;
+      const nextAcceptedPlayer: AcceptedPlayers = {
+        ...player,
+        matchHistory: player.matchHistory ?? EMPTY_MATCH_HISTORY_SUMMARY,
+      };
       const hostPlayerRecord: HostPlayerRecord = {
-        id: player.id,
-        status: player.hostStatus,
-        player: player.player,
+        id: nextAcceptedPlayer.id,
+        status: nextAcceptedPlayer.hostStatus,
+        player: nextAcceptedPlayer.player,
       };
 
       setPlayersInHost((currentPlayers) => [
         hostPlayerRecord,
         ...currentPlayers,
       ]);
-      setAcceptedPlayers((currentPlayers) => [player, ...currentPlayers]);
+      setAcceptedPlayers((currentPlayers) => [
+        nextAcceptedPlayer,
+        ...currentPlayers,
+      ]);
       setPaymentsData((currentPaymentsData) => {
         const newPaymentPlayer = {
-          id: player.id,
+          id: nextAcceptedPlayer.id,
           status: "accepted" as const,
           paymentStatus: "unpaid" as const,
           gamesPlayed: 0,
           player: {
-            username: player.player.username,
-            isStatic: player.player.isStatic,
+            username: nextAcceptedPlayer.player.username,
+            isStatic: nextAcceptedPlayer.player.isStatic,
           },
           payment: {
             id: null,
@@ -353,7 +411,7 @@ export default function Players() {
       });
       setStaticProfileUrlDrafts((currentDrafts) => ({
         ...currentDrafts,
-        [player.id]: player.player.profileUrl,
+        [nextAcceptedPlayer.id]: nextAcceptedPlayer.player.profileUrl,
       }));
       setStaticPlayerName("");
       setStaticSkillLevel("beginner");
@@ -376,9 +434,9 @@ export default function Players() {
       (player) => player.id === hostedPlayerId,
     );
 
-    setPlayersInHost((prev) =>
-      prev.map((p) =>
-        p.id === hostedPlayerId ? { ...p, status: "accepted" } : p,
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.map((player) =>
+        player.id === hostedPlayerId ? { ...player, status: "accepted" } : player,
       ),
     );
     setAcceptedPlayers((currentPlayers) => {
@@ -396,12 +454,12 @@ export default function Players() {
         {
           id: nextAcceptedPlayer.id,
           hostStatus: "accepted",
-          status: "accepted",
           matchStatus: "waiting",
           timerStartedAt: new Date().toISOString(),
           player: nextAcceptedPlayer.player,
           queueEntry: null,
           courtAssignment: null,
+          matchHistory: EMPTY_MATCH_HISTORY_SUMMARY,
         },
       ];
     });
@@ -462,9 +520,9 @@ export default function Players() {
   const handleRejectPlayer = async (hostedPlayerId: string) => {
     const previousPlayers = players;
 
-    setPlayersInHost((prev) =>
-      prev.map((p) =>
-        p.id === hostedPlayerId ? { ...p, status: "rejected" } : p,
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.map((player) =>
+        player.id === hostedPlayerId ? { ...player, status: "rejected" } : player,
       ),
     );
 
@@ -566,12 +624,12 @@ export default function Players() {
         {
           id: nextAcceptedPlayer.id,
           hostStatus: "accepted",
-          status: "accepted",
           matchStatus: "waiting",
           timerStartedAt: new Date().toISOString(),
           player: nextAcceptedPlayer.player,
           queueEntry: null,
           courtAssignment: null,
+          matchHistory: EMPTY_MATCH_HISTORY_SUMMARY,
         },
       ];
     });
@@ -774,12 +832,14 @@ export default function Players() {
           description="Real accounts."
           players={accountPlayers}
           acceptedPlayers={acceptedPlayers}
+          historyLoadingPlayerId={historyLoadingPlayerId}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
           savingStaticProfileUrlId={savingStaticProfileUrlId}
           onAcceptPlayer={handleAcceptPlayer}
           onRejectPlayer={handleRejectPlayer}
           onBanPlayer={handleBanPlayer}
           onUnbanPlayer={handleUnbanPlayer}
+          onViewHistory={openPlayerHistory}
           emptyMessage="No account players yet."
         />
         <PlayerSection
@@ -787,12 +847,14 @@ export default function Players() {
           description="Walk-in players without an account."
           players={staticPlayers}
           acceptedPlayers={acceptedPlayers}
+          historyLoadingPlayerId={historyLoadingPlayerId}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
           savingStaticProfileUrlId={savingStaticProfileUrlId}
           onAcceptPlayer={handleAcceptPlayer}
           onRejectPlayer={handleRejectPlayer}
           onBanPlayer={handleBanPlayer}
           onUnbanPlayer={handleUnbanPlayer}
+          onViewHistory={openPlayerHistory}
           onUpdateStaticPlayerSkillLevel={handleUpdateStaticPlayerSkillLevel}
           onStaticProfileUrlDraftChange={(hostedPlayerId, profileUrl) =>
             setStaticProfileUrlDrafts((currentDrafts) => ({

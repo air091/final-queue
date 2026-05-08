@@ -21,6 +21,11 @@ export type HostPlayerRecord = {
   player: PlayerType;
 };
 
+export type PlayerHistoryTarget = {
+  id: string;
+  player: Pick<PlayerType, "username" | "isStatic">;
+};
+
 export type HostMeta = {
   id: string;
   hostName: string;
@@ -48,6 +53,44 @@ export type CourtAssignmentType = {
   position: number;
 };
 
+export type MatchHistorySummary = {
+  matchCount: number;
+  winCount: number;
+  lossCount: number;
+  lastMatch: {
+    team: string | null;
+    result: string | null;
+    startedAt: string | null;
+    endedAt: string | null;
+    teamWinner: string;
+    courtName: string | null;
+  } | null;
+};
+
+export type PlayerMatchHistoryItem = {
+  id: string;
+  team: string | null;
+  result: string | null;
+  joinedAt: string;
+  match: {
+    id: string;
+    startedAt: string | null;
+    endedAt: string | null;
+    teamWinner: string;
+    court: {
+      id: string;
+      name: string;
+    } | null;
+  };
+};
+
+export const EMPTY_MATCH_HISTORY_SUMMARY: MatchHistorySummary = {
+  matchCount: 0,
+  winCount: 0,
+  lossCount: 0,
+  lastMatch: null,
+};
+
 export type AcceptedPlayers = {
   id: string;
   hostStatus: "accepted";
@@ -56,6 +99,7 @@ export type AcceptedPlayers = {
   player: PlayerType;
   queueEntry: QueueAssignmentType | null;
   courtAssignment: CourtAssignmentType | null;
+  matchHistory?: MatchHistorySummary;
 };
 
 export type PlayerAssignedInCourt = {

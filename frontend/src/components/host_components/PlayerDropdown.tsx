@@ -10,6 +10,7 @@ import { api } from "../../lib/api";
 type PlayerDropdownProps = {
   player: AcceptedPlayers;
   anchorRef: RefObject<HTMLDivElement | null>;
+  onCloseDropdown: () => void;
 };
 
 const formatSkillLevel = (skillLevel: string) =>
@@ -18,6 +19,7 @@ const formatSkillLevel = (skillLevel: string) =>
 export default function PlayerSettingsDropdown({
   player,
   anchorRef,
+  onCloseDropdown,
 }: PlayerDropdownProps) {
   const { communityId, hostId } = useParams();
   const {
@@ -27,8 +29,11 @@ export default function PlayerSettingsDropdown({
     setAcceptedPlayers,
     courts,
     setCourts,
+    historyLoadingPlayerId,
+    openPlayerHistory,
   } = useHostData();
   const isPlayerInGame = player.matchStatus === "playing";
+  const isHistoryLoading = historyLoadingPlayerId === player.id;
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
@@ -106,6 +111,11 @@ export default function PlayerSettingsDropdown({
     }
   };
 
+  const handleViewHistoryClick = () => {
+    onCloseDropdown();
+    openPlayerHistory(player);
+  };
+
   return createPortal(
     <div
       data-dropdown
@@ -135,6 +145,18 @@ export default function PlayerSettingsDropdown({
         )}
       </div>
       <div>
+        <button
+          type="button"
+          onClick={handleViewHistoryClick}
+          disabled={isHistoryLoading}
+          className={`mb-2 block w-full rounded border px-2 py-1 text-stone-700 ${
+            isHistoryLoading
+              ? "cursor-not-allowed bg-stone-200 text-stone-500"
+              : "cursor-pointer bg-white hover:bg-stone-100"
+          }`}
+        >
+          {isHistoryLoading ? "Loading..." : "View history"}
+        </button>
         <button
           type="button"
           onClick={handleBanClick}
