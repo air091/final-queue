@@ -28,19 +28,17 @@ export default function QueueDropdown({
   };
 
   return (
-    <div className="absolute top-7 right-0 z-[140] grid w-[200px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
-      <div>
-        <h2 className="font-semibold text-[12px] text-black leading-[10px]">
-          Queue settings
-        </h2>
-        <p className="text-[10px] font-semibold text-stone-500">
+    <div className="absolute top-7 right-0 z-[140] w-[220px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg">
+      <div className="mb-3 space-y-1">
+        <h2 className="text-sm font-semibold text-stone-800">Queue settings</h2>
+        <p className="text-[11px] text-stone-400">
           Click outside or press "Enter" to save
         </p>
       </div>
-      <div className="grid gap-y-1">
+      <div className="mb-3 space-y-1">
         <label
           htmlFor="queue-name"
-          className="text-[12px] font-semibold text-stone-500"
+          className="text-xs font-medium text-stone-500"
         >
           Queue name
         </label>
@@ -53,14 +51,16 @@ export default function QueueDropdown({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          className="w-full rounded border px-2 py-1 text-[12px]"
+          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 shadow-sm outline-none transition focus:border-stone-300 focus:ring-2 focus:ring-stone-100"
         />
       </div>
+      {/* Divider */}
+      <div className="my-2 border-t border-stone-100" />
       <div>
         <button
           type="button"
           onClick={onDelete}
-          className="block w-full rounded py-1 px-2 text-white bg-red-500 cursor-pointer hover:bg-red-700"
+          className="w-full rounded-xl px-3 py-2 text-sm font-medium transition cursor-pointer bg-red-500 text-white hover:bg-red-600"
         >
           Delete
         </button>

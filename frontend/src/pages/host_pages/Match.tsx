@@ -1248,12 +1248,17 @@ export default function Match() {
             </main>
           </div>
           {/* court & queue */}
-          <div className="border w-full h-full">
-            <main className="flex flex-col gap-y-2 h-full">
-              {/* court */}
-              <div className="p-2 border flex-1 overflow-auto">
-                <h3 className="text-lg font-semibold mb-2">Match Courts</h3>
-                <div className="flex gap-3 flex-wrap">
+          <div className="h-full w-full ">
+            <main className="flex h-full flex-col gap-3 px-3">
+              {/* COURTS */}
+              <div className="flex-1 overflow-auto rounded-2xl bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-stone-800">
+                    Match Courts
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
                   {courts.map((court) => (
                     <CourtCard
                       key={court.id}
@@ -1270,20 +1275,36 @@ export default function Match() {
                       onOpenPlayerDropdown={handleCourtPlayerDropdown}
                     />
                   ))}
+
                   <button
                     type="button"
                     onClick={() => void handleAddCourt()}
-                    className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
+                    className="
+            h-[120px] w-[420px] cursor-pointer
+            rounded-2xl
+            border border-dashed border-stone-300
+            bg-stone-50
+            text-stone-500
+            transition
+            hover:border-stone-400
+            hover:bg-stone-100
+            hover:text-stone-700
+          "
                   >
-                    Add court
+                    + Add court
                   </button>
                 </div>
               </div>
 
-              {/* queue */}
-              <div className="p-2 border flex-1 overflow-auto">
-                <h3 className="text-lg font-semibold mb-2">Queue Courts</h3>
-                <div className="flex gap-3 flex-wrap border">
+              {/* QUEUE */}
+              <div className="flex-1 overflow-auto rounded-2xl bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-stone-800">
+                    Queue Courts
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
                   {queues.map((queue) => (
                     <QueueCard
                       key={queue.id}
@@ -1300,12 +1321,23 @@ export default function Match() {
                       onOpenPlayerDropdown={handleQueuePlayerDropdown}
                     />
                   ))}
+
                   <button
                     type="button"
                     onClick={() => void handleAddQueue()}
-                    className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
+                    className="
+            h-[120px] w-[420px] cursor-pointer
+            rounded-2xl
+            border border-dashed border-stone-300
+            bg-stone-50
+            text-stone-500
+            transition
+            hover:border-stone-400
+            hover:bg-stone-100
+            hover:text-stone-700
+          "
                   >
-                    Add queue
+                    + Add queue
                   </button>
                 </div>
               </div>

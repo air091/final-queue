@@ -93,7 +93,7 @@ function CourtSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`relative border-2 border-white text-white w-full min-h-[48px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
+      className={`relative border-2 border-white text-white w-full min-h-[56px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
     >
       {/* Blurred background layer */}
       <div
@@ -161,7 +161,7 @@ export default function CourtCard({
   const isInteractionDisabled = isGameStarted;
 
   return (
-    <div className="relative w-[420px] p-2 rounded-md">
+    <div className="relative w-[410px] rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition hover:shadow-md">
       <svg
         width="100%"
         height="100%"

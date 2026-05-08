@@ -152,7 +152,7 @@ export default function QueueCard({
   const queueSlots = QUEUE_SLOTS;
 
   return (
-    <div className="relative w-[420px] p-2 rounded-md">
+    <div className="relative w-[405px] rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition hover:shadow-md">
       <svg
         width="100%"
         height="100%"
@@ -238,7 +238,7 @@ export default function QueueCard({
           >
             <div
               title="Queue settings"
-              className="cursor-pointer text-background hover:bg-blue-700 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]"
+              className="cursor-pointer text-background hover:bg-yellow-700 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]"
               onClick={() => onToggleDropdown(queue.id)}
             >
               <HiOutlineDotsVertical />

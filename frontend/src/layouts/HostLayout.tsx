@@ -234,7 +234,7 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="w-full max-w-[1920px] h-screen border border-red-500 mx-auto my-0 flex gap-x-4 px-2">
+    <div className="w-full max-w-[1920px] h-screen border border-red-500 mx-auto my-0 flex gap-x-3 p-2">
       <Sidebar />
       <main className="w-full">
         {isHostLoading ? (
