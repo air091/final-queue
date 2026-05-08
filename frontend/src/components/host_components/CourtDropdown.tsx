@@ -30,22 +30,24 @@ export default function CourtDropdown({
   };
 
   return (
-    <div className="absolute top-7 right-0 z-[140] grid w-[200px] gap-y-2 rounded-md border bg-white p-2 cursor-default">
-      <div>
-        <h2 className="font-semibold text-[12px] text-black leading-[10px]">
-          Court settings
-        </h2>
-        <p className="text-[10px] font-semibold text-stone-500">
-          Click outside or press "Enter" to save
+    <div className="absolute top-7 right-0 z-[140] w-[220px] rounded-2xl border border-stone-200 bg-white p-3 shadow-lg">
+      {/* Header */}
+      <div className="mb-3 space-y-1">
+        <h2 className="text-sm font-semibold text-stone-800">Court settings</h2>
+        <p className="text-[11px] text-stone-400">
+          Click outside or press Enter to save
         </p>
       </div>
-      <div className="grid gap-y-1">
+
+      {/* Input */}
+      <div className="mb-3 space-y-1">
         <label
           htmlFor="court-name"
-          className="text-[12px] font-semibold text-stone-500"
+          className="text-xs font-medium text-stone-500"
         >
           Court name
         </label>
+
         <input
           id="court-name"
           type="text"
@@ -55,23 +57,29 @@ export default function CourtDropdown({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          className="w-full rounded border px-2 py-1 text-[12px]"
+          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 shadow-sm outline-none transition focus:border-stone-300 focus:ring-2 focus:ring-stone-100"
         />
       </div>
-      <div>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isDeleteDisabled}
-          className={`block w-full rounded py-1 px-2 text-white ${
-            isDeleteDisabled
-              ? "bg-stone-400 cursor-not-allowed"
-              : "bg-red-500 cursor-pointer hover:bg-red-700"
-          }`}
-        >
-          {isDeleteDisabled ? "Delete unavailable" : "Delete"}
-        </button>
-      </div>
+
+      {/* Divider */}
+      <div className="my-2 border-t border-stone-100" />
+
+      {/* Actions */}
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={isDeleteDisabled}
+        className={`
+      w-full rounded-xl px-3 py-2 text-sm font-medium transition cursor-pointer
+      ${
+        isDeleteDisabled
+          ? "cursor-not-allowed bg-stone-100 text-stone-400"
+          : "bg-red-500 text-white hover:bg-red-600"
+      }
+    `}
+      >
+        {isDeleteDisabled ? "Delete unavailable" : "Delete court"}
+      </button>
     </div>
   );
 }
