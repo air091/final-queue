@@ -622,3 +622,150 @@ export const createQueueCourt = async (
     });
   }
 };
+
+export const deleteQueueCourt = async (
+  request: Request<Params & { queueId: string }>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, queueId } = request.params;
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !queueId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const queue = await prisma.queue.findFirst({
+      where: { id: queueId, hostId: host.id },
+      include: { entries: true },
+    });
+
+    if (!queue)
+      return response
+        .status(404)
+        .json({ success: false, message: "Queue not found" });
+
+    if (queue.entries.length > 0) {
+      await prisma.queueAssignment.deleteMany({
+        where: { queueId: queue.id },
+      });
+    }
+
+    await prisma.queue.delete({
+      where: { id: queue.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Queue deleted successfully",
+      hostedPlayerIds: queue.entries.map((entry) => entry.playerId),
+    });
+  } catch (error) {
+    console.error("Error deleting queue court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const renameQueueCourt = async (
+  request: Request<Params & { queueId: string }>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, queueId } = request.params;
+    const { name } = request.body;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !queueId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    if (typeof name !== "string" || !name.trim())
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid queue name" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const queue = await prisma.queue.findFirst({
+      where: { id: queueId, hostId: host.id },
+      select: { id: true, name: true },
+    });
+
+    if (!queue)
+      return response
+        .status(404)
+        .json({ success: false, message: "Queue not found" });
+
+    const updatedQueue = await prisma.queue.update({
+      where: { id: queue.id },
+      data: { name: name.trim() },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Queue renamed successfully",
+      queue: {
+        id: updatedQueue.id,
+        name: updatedQueue.name,
+      },
+    });
+  } catch (error) {
+    console.error("Error renaming queue court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

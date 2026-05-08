@@ -129,6 +129,7 @@ const getPlayersWithCourtAssignment = (
     player.id === playerId
       ? {
           ...player,
+          queueEntry: null,
           courtAssignment: {
             id:
               player.courtAssignment?.id ??
@@ -295,6 +296,7 @@ const getPlayersWithQueueAssignment = (
     player.id === playerId
       ? {
           ...player,
+          courtAssignment: null,
           queueEntry: {
             id: player.queueEntry?.id ?? `${queueId}-${playerId}-${position}`,
             queueId,
@@ -606,7 +608,19 @@ export default function Match() {
         (court) => court.id === dropData.courtId,
       );
 
+      // Check if player is coming from a queue and remove them from it
+      const player = players.find((p) => p.id === hostedPlayerId);
+      let updatedQueues = queues;
+      if (player?.queueEntry) {
+        updatedQueues = getQueuesWithoutPlayer(
+          queues,
+          hostedPlayerId,
+          player.queueEntry.queueId,
+        );
+      }
+
       setCourts(updatedCourts);
+      setQueues(updatedQueues);
       setPlayers(
         getPlayersWithCourtAssignment(
           players,
@@ -624,6 +638,13 @@ export default function Match() {
             dropData.courtId,
             dropData.position,
           );
+          // Remove from queue if they were in one
+          if (player?.queueEntry) {
+            await removePlayerFromQueueAPI(
+              hostedPlayerId,
+              player.queueEntry.queueId,
+            );
+          }
         } catch (error) {
           if (axios.isAxiosError(error))
             console.error(error.response?.data ?? error);
@@ -643,7 +664,19 @@ export default function Match() {
         dropData.position,
       );
 
+      // Check if player is coming from a court and remove them from it
+      const player = players.find((p) => p.id === hostedPlayerId);
+      let updatedCourts = courts;
+      if (player?.courtAssignment) {
+        updatedCourts = getCourtsWithoutPlayer(
+          courts,
+          hostedPlayerId,
+          player.courtAssignment.courtId,
+        );
+      }
+
       setQueues(updatedQueues);
+      setCourts(updatedCourts);
       setPlayers(
         getPlayersWithQueueAssignment(
           players,
@@ -660,6 +693,13 @@ export default function Match() {
             dropData.queueId,
             dropData.position,
           );
+          // Remove from court if they were in one
+          if (player?.courtAssignment) {
+            await removePlayerFromCourtAPI(
+              hostedPlayerId,
+              player.courtAssignment.courtId,
+            );
+          }
         } catch (error) {
           if (axios.isAxiosError(error))
             console.error(error.response?.data ?? error);

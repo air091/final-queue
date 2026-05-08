@@ -19,10 +19,12 @@ import {
   createMatchCourt,
   createQueueCourt,
   deleteMatchCourt,
+  deleteQueueCourt,
   endMatchCourt,
   getMatchCourts,
   getQueueCourts,
   renameMatchCourt,
+  renameQueueCourt,
   startMatchCourt,
 } from "../controllers/court.controller.js";
 import {
@@ -95,6 +97,16 @@ router.post(
   "/:communityId/hosts/:hostId/queues/add",
   authenticate,
   createQueueCourt,
+);
+router.delete(
+  "/:communityId/hosts/:hostId/queues/:queueId",
+  authenticate,
+  deleteQueueCourt,
+);
+router.patch(
+  "/:communityId/hosts/:hostId/queues/:queueId",
+  authenticate,
+  renameQueueCourt,
 );
 
 // PAYMENTS

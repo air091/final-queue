@@ -26,7 +26,7 @@ type HostsType = {
   status: string;
 };
 
-const DEFAULT_SPORT_OPTIONS = ["Badminton"];
+const DEFAULT_SPORT_OPTIONS = ["badminton"];
 
 export default function Community() {
   const { id } = useParams();
@@ -140,7 +140,7 @@ export default function Community() {
               >
                 {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
                   <option key={sportOption} value={sportOption}>
-                    {sportOption}
+                    {sportOption.charAt(0).toUpperCase() + sportOption.slice(1)}
                   </option>
                 ))}
               </select>
@@ -155,7 +155,7 @@ export default function Community() {
                   : "cursor-pointer hover:bg-stone-400"
               }`}
             >
-              {isCreatingHost ? "Creating..." : "Add host"}
+              {isCreatingHost ? "Hosting..." : "Host"}
             </button>
           </div>
           {hostError ? (

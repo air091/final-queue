@@ -28,10 +28,10 @@ export default function PlayerCard({
   draggableId = `player-list-${player.id}`,
   isInSlot = false,
   canDrag = true,
-  canRemoveFromCourt = true,
+  canRemoveFromCourt = false,
   courtId,
   onRemoveFromCourt,
-  canRemoveFromQueue = true,
+  canRemoveFromQueue = false,
   queueId,
   onRemoveFromQueue,
 }: PlayerCardProps) {
