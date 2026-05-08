@@ -1223,7 +1223,7 @@ export default function Match() {
               </div>
             </header>
 
-            <main className="grid w-[360px] grid-cols-2 gap-3 overflow-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
+            <main className="grid w-[460px] grid-cols-2 gap-3 overflow-none rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
@@ -1251,10 +1251,6 @@ export default function Match() {
                     <h3 className="text-lg font-bold text-[var(--color-text)]">
                       Match Courts
                     </h3>
-
-                    <p className="mt-1 text-sm text-stone-500">
-                      Active courts and ongoing matches.
-                    </p>
                   </div>
                 </div>
 
@@ -1281,7 +1277,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                flex h-[120px] w-[420px] items-center justify-center
+                flex h-[120px] w-[520px] items-center justify-center
                 rounded-2xl border border-dashed border-orange-200
                 bg-orange-50/40 text-sm font-semibold text-stone-500
                 transition-all duration-200
@@ -1303,10 +1299,6 @@ export default function Match() {
                     <h3 className="text-lg font-bold text-[var(--color-text)]">
                       Queue Courts
                     </h3>
-
-                    <p className="mt-1 text-sm text-stone-500">
-                      Waiting players and upcoming matches.
-                    </p>
                   </div>
                 </div>
 
@@ -1333,7 +1325,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                flex h-[120px] w-[420px] items-center justify-center
+                flex h-[120px] w-[520px] items-center justify-center
                 rounded-2xl border border-dashed border-orange-200
                 bg-orange-50/40 text-sm font-semibold text-stone-500
                 transition-all duration-200

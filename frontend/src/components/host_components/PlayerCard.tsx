@@ -101,61 +101,79 @@ export default function PlayerCard({
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0 : 1,
       }}
-      className={`relative w-full flex items-center justify-between py-1 px-1 rounded-full transition-all shadow-md hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)]
- ${statusClasses} ${
-   canDrag
-     ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
-     : "cursor-default"
- } ${activeDropdown === player.id ? "z-[120]" : ""}`}
+      className={`relative flex w-full items-center justify-between rounded-2xl border px-2 py-2 shadow-sm transition-all duration-200
+  ${statusClasses}
+  ${
+    canDrag
+      ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
+      : "cursor-default"
+  }
+  ${
+    activeDropdown === player.id
+      ? "z-[120] border-[var(--color-primary)]"
+      : "border-orange-100"
+  }`}
     >
-      <div className="flex items-center gap-x-2">
-        <div className="w-[36px] h-[36px] rounded-full">
+      {/* PLAYER */}
+      <div className="flex items-center gap-2">
+        <div className="h-[36px] w-[36px] overflow-hidden rounded-full border border-orange-100 bg-orange-50">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
-            className="block w-full h-full object-cover object-center rounded-full"
+            className="block h-full w-full rounded-full object-cover object-center"
           />
         </div>
-        <div>
-          <span className="flex items-center gap-2 font-semibold leading-[12px]">
-            <span className="text-[12px]">{player.player.username}</span>
+
+        <div className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="truncate text-[12px] font-semibold text-[var(--color-text)]">
+              {player.player.username}
+            </span>
+
             {player.player.isStatic && (
-              <span className="rounded-md bg-stone-200 px-1  text-[8px] font-semibold uppercase  text-stone-700">
+              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 Static
               </span>
             )}
           </span>
-          <span className="block font-semibold text-[10px] text-stone-500">
+
+          <span className="mt-0.5 block text-[11px] font-medium text-stone-500">
             {formattedTimer}
           </span>
         </div>
       </div>
-      <div className="flex items-center">
+
+      {/* ACTIONS */}
+      <div className="flex items-center gap-1">
         {isInSlot && (canRemoveFromCourt || canRemoveFromQueue) && (
           <button
             type="button"
             title="Remove slot"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
-            className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-50 hover:text-[var(--color-accent)]"
           >
-            <TbArrowBack />
+            <TbArrowBack size={16} />
           </button>
         )}
+
         <div
           data-dropdown
           ref={dropdownRef}
           onPointerDown={(e) => e.stopPropagation()}
-          className={`relative w-full ${activeDropdown === player.id ? "z-[130]" : ""}`}
+          className={`relative ${
+            activeDropdown === player.id ? "z-[130]" : ""
+          }`}
         >
-          <div
+          <button
+            type="button"
             title="Player settings"
-            className="hover:bg-stone-400 p-1 rounded-full cursor-pointer"
+            onClick={() => onToggleDropdown(player.id)}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-50 hover:text-[var(--color-accent)]"
           >
-            <HiOutlineDotsVertical
-              onClick={() => onToggleDropdown(player.id)}
-            />
-          </div>
+            <HiOutlineDotsVertical size={16} />
+          </button>
+
           {activeDropdown === player.id && (
             <PlayerSettingsDropdown
               player={player}
