@@ -34,7 +34,7 @@ export default function Sidebar() {
       <ul className="grid gap-1">
         <li className="mb-2">
           <NavLink
-            to="/"
+            to="/home"
             className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
           >
             <FaArrowLeft size={16} />

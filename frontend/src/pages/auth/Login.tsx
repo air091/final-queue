@@ -22,7 +22,7 @@ export default function Login() {
         password: credentials.password,
       });
       setCredentials({ email: "", password: "" });
-      navigate("/");
+      navigate("/home");
     } catch (error) {
       if (axios.isAxiosError(error))
         console.error(error.response?.data?.message);
