@@ -8,9 +8,7 @@ import {
   getPaymentBalance,
   type HostPaymentsData,
   type PaymentCurrency,
-  type PaymentMethod,
   type PaymentPlayer,
-  type PaymentStatus,
 } from "../../lib/host";
 
 type PricingDraft = {
@@ -20,15 +18,10 @@ type PricingDraft = {
 };
 
 type PlayerPaymentDraft = {
-  amountExpected: string;
   amountPaid: string;
-  status: PaymentStatus;
-  method: PaymentMethod | "";
 };
 
 const CURRENCY_OPTIONS: PaymentCurrency[] = ["PHP", "USD", "EUR"];
-const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = ["unpaid", "paid"];
-const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = ["cash", "ewallet"];
 
 const formatMoney = (amount: number, currency: PaymentCurrency) =>
   new Intl.NumberFormat("en-US", {
@@ -68,10 +61,7 @@ export default function Payments() {
         paymentsData.players.map((player) => [
           player.id,
           {
-            amountExpected: String(player.payment.amountExpected),
             amountPaid: String(player.payment.amountPaid),
-            status: player.payment.status,
-            method: player.payment.method ?? "",
           },
         ]),
       ),
@@ -84,19 +74,8 @@ export default function Payments() {
     setPaymentsData((current) => updater(current));
   };
 
-  const getNextPaymentStatus = ({
-    explicitStatus,
-    amountExpected,
-    amountPaid,
-  }: {
-    explicitStatus: PaymentStatus;
-    amountExpected: number;
-    amountPaid: number;
-  }) => {
-    if (amountExpected <= 0 && amountPaid <= 0) return explicitStatus;
-    if (amountPaid <= 0 || amountPaid < amountExpected) return "unpaid";
-    return "paid";
-  };
+  const getNextPaymentStatus = (amountPaid: number) =>
+    amountPaid > 0 ? "paid" : "unpaid";
 
   const withUpdatedPlayer = (
     current: HostPaymentsData,
@@ -197,13 +176,8 @@ export default function Payments() {
     setSavingPlayerId(hostedPlayerId);
     setError(null);
     const previousPaymentsData = paymentsData;
-    const nextAmountExpected = toAmount(draft.amountExpected);
     const nextAmountPaid = toAmount(draft.amountPaid);
-    const nextStatus = getNextPaymentStatus({
-      explicitStatus: draft.status,
-      amountExpected: nextAmountExpected,
-      amountPaid: nextAmountPaid,
-    });
+    const nextStatus = getNextPaymentStatus(nextAmountPaid);
 
     updatePaymentsData((current) =>
       withUpdatedPlayer(current, hostedPlayerId, (player) => ({
@@ -211,25 +185,36 @@ export default function Payments() {
         paymentStatus: nextStatus,
         payment: {
           ...player.payment,
-          amountExpected: nextAmountExpected,
           amountPaid: nextAmountPaid,
-          balance: getPaymentBalance(nextAmountExpected, nextAmountPaid),
+          balance: getPaymentBalance(
+            player.payment.amountExpected,
+            nextAmountPaid,
+          ),
           status: nextStatus,
-          method: draft.method || null,
         },
       })),
     );
 
     try {
-      await api.patch(
-        `/api/community/${communityId}/hosts/${hostId}/payments/${hostedPlayerId}`,
+      const response = await api.post(
+        `/api/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}/payment`,
         {
-          amountExpected: toAmount(draft.amountExpected),
-          amountPaid: toAmount(draft.amountPaid),
-          status: draft.status,
-          method: draft.method || null,
+          amountPaid: nextAmountPaid,
         },
       );
+
+      const savedPaymentId = response.data.payment?.id ?? null;
+      if (savedPaymentId) {
+        updatePaymentsData((current) =>
+          withUpdatedPlayer(current, hostedPlayerId, (player) => ({
+            ...player,
+            payment: {
+              ...player.payment,
+              id: savedPaymentId,
+            },
+          })),
+        );
+      }
     } catch (saveError) {
       setPaymentsData(previousPaymentsData);
       setError("Unable to save player payment.");
@@ -408,9 +393,6 @@ export default function Payments() {
                   Paid
                 </th>
                 <th className="px-2 py-2 text-left text-sm font-semibold">
-                  Method
-                </th>
-                <th className="px-2 py-2 text-left text-sm font-semibold">
                   Balance
                 </th>
                 <th className="px-2 py-2 text-left text-sm font-semibold">
@@ -422,10 +404,9 @@ export default function Payments() {
               {paymentsData.players.length > 0 ? (
                 paymentsData.players.map((player) => {
                   const draft = playerDrafts[player.id];
-                  const expectedAmount = toAmount(
-                    draft?.amountExpected ??
-                      String(player.payment.amountExpected),
-                  );
+                  const expectedAmount =
+                    paymentsData.pricing.entranceFee +
+                    paymentsData.pricing.perMatchFee * player.gamesPlayed;
                   const paidAmount = toAmount(
                     draft?.amountPaid ?? String(player.payment.amountPaid),
                   );
@@ -444,64 +425,19 @@ export default function Payments() {
                         </div>
                       </td>
                       <td className="px-2 py-2 text-sm">{player.status}</td>
-                      <td className="px-2 py-2">
-                        <select
-                          value={draft?.status ?? player.payment.status}
-                          onChange={(event) =>
-                            setPlayerDrafts((current) => ({
-                              ...current,
-                              [player.id]: {
-                                ...(current[player.id] ?? {
-                                  amountExpected: String(
-                                    player.payment.amountExpected,
-                                  ),
-                                  amountPaid: String(player.payment.amountPaid),
-                                  status: player.payment.status,
-                                  method: player.payment.method ?? "",
-                                }),
-                                status: event.target.value as PaymentStatus,
-                              },
-                            }))
-                          }
-                          className="rounded-md border px-2 py-1 text-sm"
-                        >
-                          {PAYMENT_STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
+                      <td className="px-2 py-2 text-sm">
+                        {player.paymentStatus}
                       </td>
                       <td className="px-2 py-2 text-sm">
                         {player.gamesPlayed}
                       </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={
-                            draft?.amountExpected ??
-                            String(player.payment.amountExpected)
-                          }
-                          onChange={(event) =>
-                            setPlayerDrafts((current) => ({
-                              ...current,
-                              [player.id]: {
-                                ...(current[player.id] ?? {
-                                  amountExpected: String(
-                                    player.payment.amountExpected,
-                                  ),
-                                  amountPaid: String(player.payment.amountPaid),
-                                  status: player.payment.status,
-                                  method: player.payment.method ?? "",
-                                }),
-                                amountExpected: event.target.value,
-                              },
-                            }))
-                          }
-                          className="w-[112px] rounded-md border px-2 py-1 text-sm"
-                        />
+                      <td className="px-2 py-2 text-sm">
+                        {formatMoney(
+                          paymentsData.pricing.entranceFee +
+                            paymentsData.pricing.perMatchFee *
+                              player.gamesPlayed,
+                          paymentsData.pricing.currency,
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <input
@@ -517,50 +453,14 @@ export default function Payments() {
                               ...current,
                               [player.id]: {
                                 ...(current[player.id] ?? {
-                                  amountExpected: String(
-                                    player.payment.amountExpected,
-                                  ),
                                   amountPaid: String(player.payment.amountPaid),
-                                  status: player.payment.status,
-                                  method: player.payment.method ?? "",
                                 }),
                                 amountPaid: event.target.value,
                               },
                             }))
                           }
-                          className="w-[112px] rounded-md border px-2 py-1 text-sm"
+                          className="w-28 rounded-md border px-2 py-1 text-sm"
                         />
-                      </td>
-                      <td className="px-2 py-2">
-                        <select
-                          value={draft?.method ?? player.payment.method ?? ""}
-                          onChange={(event) =>
-                            setPlayerDrafts((current) => ({
-                              ...current,
-                              [player.id]: {
-                                ...(current[player.id] ?? {
-                                  amountExpected: String(
-                                    player.payment.amountExpected,
-                                  ),
-                                  amountPaid: String(player.payment.amountPaid),
-                                  status: player.payment.status,
-                                  method: player.payment.method ?? "",
-                                }),
-                                method: event.target.value as
-                                  | PaymentMethod
-                                  | "",
-                              },
-                            }))
-                          }
-                          className="rounded-md border px-2 py-1 text-sm"
-                        >
-                          <option value="">None</option>
-                          {PAYMENT_METHOD_OPTIONS.map((method) => (
-                            <option key={method} value={method}>
-                              {method}
-                            </option>
-                          ))}
-                        </select>
                       </td>
                       <td className="px-2 py-2 text-sm">
                         {formatMoney(balance, paymentsData.pricing.currency)}
@@ -587,7 +487,7 @@ export default function Payments() {
               ) : (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={8}
                     className="px-2 py-4 text-center text-sm text-stone-500"
                   >
                     No players available for payments.

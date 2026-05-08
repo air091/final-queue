@@ -6,12 +6,15 @@ import type { HostOutletContext } from "../hooks/useHostData";
 import { api } from "../lib/api";
 import {
   EMPTY_HOST_PAYMENTS_DATA,
+  buildPaymentsSummary,
+  getPaymentBalance,
   normalizeAcceptedPlayers,
   type AcceptedPlayers,
   type CourtType,
   type HostMeta,
   type HostPaymentsData,
   type HostPlayerRecord,
+  type PaymentStatus,
   type QueueType,
 } from "../lib/host";
 
@@ -33,6 +36,52 @@ export default function HostLayout() {
 
     setIsHostLoading(true);
     setHostLoadError(null);
+
+    const normalizePaymentsData = (
+      pricing: HostPaymentsData["pricing"],
+      players: Array<{
+        id: string;
+        hostStatus: string;
+        paymentStatus: string;
+        gamesPlayed: number;
+        player?: { username?: string } | null;
+        payment?: { id: string; amountPaid: number } | null;
+      }>,
+    ): HostPaymentsData => {
+      const normalizedPlayers = players.map((player) => {
+        const amountPaid = Number(player.payment?.amountPaid ?? 0);
+        const amountExpected =
+          pricing.entranceFee + pricing.perMatchFee * player.gamesPlayed;
+        const paymentStatus: PaymentStatus =
+          player.paymentStatus === "paid" ? "paid" : "unpaid";
+
+        return {
+          id: player.id,
+          status: player.hostStatus as "accepted" | "banned",
+          paymentStatus,
+          gamesPlayed: player.gamesPlayed,
+          player: {
+            username: player.player?.username ?? "",
+            isStatic: false,
+          },
+          payment: {
+            id: player.payment?.id ?? null,
+            amountExpected,
+            amountPaid,
+            balance: getPaymentBalance(amountExpected, amountPaid),
+            currency: pricing.currency,
+            status: paymentStatus,
+            method: null,
+          },
+        };
+      });
+
+      return {
+        pricing,
+        players: normalizedPlayers,
+        summary: buildPaymentsSummary(normalizedPlayers),
+      };
+    };
 
     try {
       const [
@@ -71,11 +120,12 @@ export default function HostLayout() {
       );
       setCourts(courtsResponse.data.courts);
       setQueues(queuesResponse.data.queues);
-      setPaymentsData({
-        pricing: paymentsResponse.data.pricing,
-        summary: paymentsResponse.data.summary,
-        players: paymentsResponse.data.players,
-      });
+      setPaymentsData(
+        normalizePaymentsData(
+          paymentsResponse.data.pricing,
+          paymentsResponse.data.players,
+        ),
+      );
     } catch (error) {
       setHostLoadError("Unable to load host data.");
 
@@ -107,7 +157,7 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="w-full max-w-480 h-full border mx-auto my-0 flex gap-x-4 px-[32px]">
+    <div className="w-full max-w-480 h-full border mx-auto my-0 flex gap-x-4 px-8">
       <Sidebar />
       <main className="w-full">
         {isHostLoading ? (

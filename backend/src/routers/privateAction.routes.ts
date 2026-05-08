@@ -9,6 +9,8 @@ import {
   unbanPlayer,
   updateStaticPlayerProfileUrl,
   updateStaticPlayerSkillLevel,
+  assignPlayerToQueue,
+  removePlayerFromQueue,
 } from "../controllers/privateAction.controller.js";
 
 // updateStaticPlayerProfileUrl,
@@ -62,6 +64,18 @@ router.post(
   "/courts/remove/slot/community/:communityId/hosts/:hostId/courts/:courtId/players/:playerId",
   authenticate,
   removePlayerFromCourt,
+);
+
+router.post(
+  "/queues/assign/community/:communityId/hosts/:hostId/queues/:queueId/players/:playerId",
+  authenticate,
+  assignPlayerToQueue,
+);
+
+router.post(
+  "/queues/remove/slot/community/:communityId/hosts/:hostId/queues/:queueId/players/:playerId",
+  authenticate,
+  removePlayerFromQueue,
 );
 
 export default router;

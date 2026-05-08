@@ -825,3 +825,230 @@ export const removePlayerFromCourt = async (
     });
   }
 };
+
+type AssignPlayerToQueueParams = {
+  communityId: string;
+  hostId: string;
+  queueId: string;
+  playerId: string;
+};
+
+export const assignPlayerToQueue = async (
+  request: Request<AssignPlayerToQueueParams>,
+  response: Response,
+) => {
+  try {
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const { communityId, hostId, queueId, playerId } = request.params;
+
+    if (!communityId || !hostId || !queueId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const { position } = request.body;
+    if (typeof position !== "number" || position < 1) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid position" });
+    }
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const player = await prisma.player.findFirst({
+      where: {
+        id: playerId,
+        hostId: host.id,
+        hostStatus: PlayerHostStatuses.accepted,
+      },
+      select: { id: true },
+    });
+
+    if (!player)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found or not accepted" });
+
+    const queue = await prisma.queue.findFirst({
+      where: { id: queueId, hostId: host.id },
+      select: { id: true },
+    });
+
+    if (!queue)
+      return response
+        .status(404)
+        .json({ success: false, message: "Queue not found" });
+
+    const existingAssignment = await prisma.queueAssignment.findFirst({
+      where: { playerId: player.id },
+      select: { playerId: true },
+    });
+
+    if (existingAssignment)
+      return response.status(400).json({
+        success: false,
+        message: "Player is already in a queue",
+      });
+
+    const occupied = await prisma.queueAssignment.findFirst({
+      where: {
+        queueId: queue.id,
+        position,
+      },
+    });
+
+    if (occupied && occupied.playerId !== player.id) {
+      return response.status(400).json({
+        success: false,
+        message: "Position already occupied",
+      });
+    }
+
+    await prisma.queueAssignment.upsert({
+      where: { playerId: player.id },
+      update: {
+        queueId: queue.id,
+        position,
+      },
+      create: {
+        playerId: player.id,
+        queueId: queue.id,
+        position,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Player assigned to queue successfully",
+    });
+  } catch (error) {
+    console.error("Error assigning player to queue:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+type RemovePlayerFromQueueParams = {
+  communityId: string;
+  hostId: string;
+  queueId: string;
+  playerId: string;
+};
+
+export const removePlayerFromQueue = async (
+  request: Request<RemovePlayerFromQueueParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, queueId, playerId } = request.params;
+    if (!communityId || !hostId || !queueId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const queue = await prisma.queue.findFirst({
+      where: { id: queueId, hostId: host.id },
+      select: { id: true },
+    });
+
+    if (!queue)
+      return response
+        .status(404)
+        .json({ success: false, message: "Queue not found" });
+
+    const existing = await prisma.player.findFirst({
+      where: {
+        id: playerId,
+        hostId: host.id,
+        hostStatus: PlayerHostStatuses.accepted,
+      },
+      select: { id: true },
+    });
+
+    if (!existing)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    const assignment = await prisma.queueAssignment.findFirst({
+      where: {
+        queueId: queue.id,
+        playerId: existing.id,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment)
+      return response.status(200).json({
+        success: true,
+        message: "Player already removed from the queue",
+      });
+
+    await prisma.queueAssignment.delete({
+      where: { id: assignment.id },
+    });
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Player removed from the queue" });
+  } catch (error) {
+    console.error("Error removing player from queue:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};

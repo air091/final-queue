@@ -72,10 +72,17 @@ export type CourtType = {
   assignments: PlayerAssignedInCourt[];
 };
 
+export type QueueEntryType = {
+  id: string;
+  playerId: string;
+  position: number;
+};
+
 export type QueueType = {
   id: string;
   hostId: string;
   name: string;
+  entries: QueueEntryType[];
 };
 
 export type PlayerRecord = {

@@ -16,6 +16,9 @@ type PlayerCardProps = {
   canRemoveFromCourt?: boolean;
   courtId?: string;
   onRemoveFromCourt?: (hostedPlayerId: string, courtId: string) => void;
+  canRemoveFromQueue?: boolean;
+  queueId?: string;
+  onRemoveFromQueue?: (hostedPlayerId: string, queueId: string) => void;
 };
 
 export default function PlayerCard({
@@ -28,6 +31,9 @@ export default function PlayerCard({
   canRemoveFromCourt = true,
   courtId,
   onRemoveFromCourt,
+  canRemoveFromQueue = true,
+  queueId,
+  onRemoveFromQueue,
 }: PlayerCardProps) {
   const { setNodeRef, attributes, listeners, transform, isDragging } =
     useDraggable({
@@ -43,8 +49,11 @@ export default function PlayerCard({
   const [now, setNow] = useState(() => Date.now());
 
   const handleRemoveClick = () => {
-    if (!courtId || !onRemoveFromCourt) return;
-    onRemoveFromCourt(player.id, courtId);
+    if (courtId && onRemoveFromCourt) {
+      onRemoveFromCourt(player.id, courtId);
+    } else if (queueId && onRemoveFromQueue) {
+      onRemoveFromQueue(player.id, queueId);
+    }
   };
 
   useEffect(() => {
@@ -121,7 +130,7 @@ export default function PlayerCard({
         </div>
       </div>
       <div className="flex items-center">
-        {isInSlot && canRemoveFromCourt && (
+        {isInSlot && (canRemoveFromCourt || canRemoveFromQueue) && (
           <button
             type="button"
             title="Remove slot"

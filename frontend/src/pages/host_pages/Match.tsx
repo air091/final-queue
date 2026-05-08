@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import PlayerCard from "../../components/host_components/PlayerCard";
 import CourtCard from "../../components/host_components/CourtCard";
+import QueueCard from "../../components/host_components/QueueCard";
 import { useHostData } from "../../hooks/useHostData";
 import { api } from "../../lib/api";
 import {
@@ -21,6 +22,7 @@ import {
   type AcceptedPlayers,
   type CourtType,
   type MatchPlayerStatus,
+  type QueueType,
 } from "../../lib/host";
 
 type CourtDropData = {
@@ -28,6 +30,14 @@ type CourtDropData = {
   courtId: string;
   position: number;
 };
+
+type QueueDropData = {
+  type: "queue-slot";
+  queueId: string;
+  position: number;
+};
+
+type DropData = CourtDropData | QueueDropData;
 
 type PlayerStatusFilter = "all" | MatchPlayerStatus;
 
@@ -189,6 +199,114 @@ const getPlayersWithoutCourtAssignments = (
     };
   });
 
+const getUpdatedQueues = (
+  currentQueues: QueueType[],
+  playerId: string,
+  queueId: string,
+  position: number,
+) =>
+  currentQueues.map((queue) => {
+    const entriesWithoutDraggedPlayer = queue.entries.filter(
+      (entry) => entry.playerId !== playerId,
+    );
+
+    if (queue.id !== queueId) {
+      return {
+        ...queue,
+        entries: entriesWithoutDraggedPlayer,
+      };
+    }
+
+    const nextEntries = entriesWithoutDraggedPlayer.filter(
+      (entry) => entry.position !== position,
+    );
+    const existingEntry = queue.entries.find(
+      (entry) => entry.playerId === playerId,
+    );
+
+    return {
+      ...queue,
+      entries: [
+        ...nextEntries,
+        {
+          id: existingEntry?.id ?? `${queue.id}-${playerId}-${position}`,
+          playerId,
+          position,
+        },
+      ].sort((a, b) => a.position - b.position),
+    };
+  });
+
+const getQueuesWithoutPlayer = (
+  currentQueues: QueueType[],
+  playerId: string,
+  queueId: string,
+) =>
+  currentQueues.map((queue) =>
+    queue.id === queueId
+      ? {
+          ...queue,
+          entries: queue.entries.filter((entry) => entry.playerId !== playerId),
+        }
+      : queue,
+  );
+
+const getPlayersWithQueueAssignment = (
+  currentPlayers: AcceptedPlayers[],
+  playerId: string,
+  queueId: string,
+  position: number,
+) =>
+  currentPlayers.map((player) =>
+    player.id === playerId
+      ? {
+          ...player,
+          queueEntry: {
+            id: player.queueEntry?.id ?? `${queueId}-${playerId}-${position}`,
+            queueId,
+            position,
+          },
+          matchStatus: "inQueue" as MatchPlayerStatus,
+        }
+      : player,
+  );
+
+const getPlayersWithoutQueueAssignment = (
+  currentPlayers: AcceptedPlayers[],
+  playerId: string,
+) =>
+  currentPlayers.map((player) => {
+    if (player.id !== playerId) return player;
+
+    const nextPlayer = {
+      ...player,
+      queueEntry: null,
+    };
+
+    return {
+      ...nextPlayer,
+      matchStatus: getDerivedMatchStatus(nextPlayer),
+    };
+  });
+
+const getPlayersWithoutQueueAssignments = (
+  currentPlayers: AcceptedPlayers[],
+  playerIds: string[],
+) =>
+  currentPlayers.map((player) => {
+    if (!playerIds.includes(player.id)) return player;
+
+    const nextPlayer = {
+      ...player,
+      queueEntry: null,
+    };
+
+    return {
+      ...nextPlayer,
+      matchStatus: getDerivedMatchStatus(nextPlayer),
+    };
+  });
+
 const PLAYER_STATUS_FILTERS: Array<{
   label: string;
   value: PlayerStatusFilter;
@@ -206,6 +324,8 @@ export default function Match() {
     setAcceptedPlayers: setPlayers,
     courts,
     setCourts,
+    queues,
+    setQueues,
     paymentsData,
     setPaymentsData,
     refreshHostData,
@@ -218,10 +338,16 @@ export default function Match() {
   const [courtActiveDropdown, setCourtActiveDropdown] = useState<string | null>(
     null,
   );
+  const [queueActiveDropdown, setQueueActiveDropdown] = useState<string | null>(
+    null,
+  );
   const [activeDraggedPlayerId, setActiveDraggedPlayerId] = useState<
     string | null
   >(null);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
+    new Map(),
+  );
+  const pendingQueuePlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
   const sensors = useSensors(useSensor(PointerSensor));
@@ -255,6 +381,29 @@ export default function Match() {
       });
 
     pendingCourtPlayerOperationsRef.current.set(hostedPlayerId, nextOperation);
+    return nextOperation;
+  };
+
+  const queueQueuePlayerOperation = (
+    hostedPlayerId: string,
+    operation: () => Promise<void>,
+  ) => {
+    const previousOperation =
+      pendingQueuePlayerOperationsRef.current.get(hostedPlayerId) ??
+      Promise.resolve();
+
+    const nextOperation = previousOperation
+      .catch(() => undefined)
+      .then(operation)
+      .finally(() => {
+        const currentOperation =
+          pendingQueuePlayerOperationsRef.current.get(hostedPlayerId);
+        if (currentOperation === nextOperation) {
+          pendingQueuePlayerOperationsRef.current.delete(hostedPlayerId);
+        }
+      });
+
+    pendingQueuePlayerOperationsRef.current.set(hostedPlayerId, nextOperation);
     return nextOperation;
   };
 
@@ -335,62 +484,157 @@ export default function Match() {
     };
   };
 
+  const assignPlayerToQueueAPI = async (
+    hostedPlayerId: string,
+    queueId: string,
+    position: number,
+  ) => {
+    await api.post(
+      `/api/private/actions/queues/assign/community/${communityId}/hosts/${hostId}/queues/${queueId}/players/${hostedPlayerId}`,
+      { position },
+    );
+  };
+
+  const removePlayerFromQueueAPI = async (
+    hostedPlayerId: string,
+    queueId: string,
+  ) => {
+    await api.post(
+      `/api/private/actions/queues/remove/slot/community/${communityId}/hosts/${hostId}/queues/${queueId}/players/${hostedPlayerId}`,
+      {},
+    );
+  };
+
+  const deleteQueueAPI = async (queueId: string) => {
+    const response = await api.delete(
+      `/api/community/${communityId}/hosts/${hostId}/queues/${queueId}`,
+    );
+
+    return response.data as { hostedPlayerIds: string[] };
+  };
+
+  const renameQueueAPI = async (queueId: string, name: string) => {
+    const response = await api.patch(
+      `/api/community/${communityId}/hosts/${hostId}/queues/${queueId}`,
+      { name },
+    );
+
+    return response.data as {
+      queue: {
+        id: string;
+        name: string;
+      };
+    };
+  };
+
+  const createQueueAPI = async () => {
+    const response = await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/queues/add`,
+      {},
+    );
+
+    return response.data as {
+      queue: {
+        id: string;
+        name: string;
+      };
+    };
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDraggedPlayerId(null);
 
     const { active, over } = event;
     if (!over) return;
 
-    const dropData = over.data.current as CourtDropData | undefined;
-    if (dropData?.type !== "court-slot") return;
+    const dropData = over.data.current as DropData | undefined;
+    if (!dropData) return;
 
-    const sourceCourtId = active.data.current?.courtId as string | undefined;
-    const sourceCourt = sourceCourtId
-      ? courts.find((court) => court.id === sourceCourtId)
-      : null;
-    const targetCourt = courts.find((court) => court.id === dropData.courtId);
+    if (dropData.type === "court-slot") {
+      const sourceCourtId = active.data.current?.courtId as string | undefined;
+      const sourceCourt = sourceCourtId
+        ? courts.find((court) => court.id === sourceCourtId)
+        : null;
+      const targetCourt = courts.find((court) => court.id === dropData.courtId);
 
-    if (sourceCourt?.startedAt || targetCourt?.startedAt) return;
+      if (sourceCourt?.startedAt || targetCourt?.startedAt) return;
 
-    const hostedPlayerId =
-      (active.data.current?.hostedPlayerId as string | undefined) ??
-      String(active.id);
-    const updatedCourts = getUpdatedCourts(
-      courts,
-      hostedPlayerId,
-      dropData.courtId,
-      dropData.position,
-    );
-    const updatedTargetCourt = updatedCourts.find(
-      (court) => court.id === dropData.courtId,
-    );
-
-    setCourts(updatedCourts);
-    setPlayers(
-      getPlayersWithCourtAssignment(
-        players,
+      const hostedPlayerId =
+        (active.data.current?.hostedPlayerId as string | undefined) ??
+        String(active.id);
+      const updatedCourts = getUpdatedCourts(
+        courts,
         hostedPlayerId,
         dropData.courtId,
         dropData.position,
-        Boolean(updatedTargetCourt?.startedAt),
-      ),
-    );
+      );
+      const updatedTargetCourt = updatedCourts.find(
+        (court) => court.id === dropData.courtId,
+      );
 
-    void queueCourtPlayerOperation(hostedPlayerId, async () => {
-      try {
-        await assignPlayerToCourtAPI(
+      setCourts(updatedCourts);
+      setPlayers(
+        getPlayersWithCourtAssignment(
+          players,
           hostedPlayerId,
           dropData.courtId,
           dropData.position,
-        );
-      } catch (error) {
-        if (axios.isAxiosError(error))
-          console.error(error.response?.data ?? error);
-        else console.error(error);
+          Boolean(updatedTargetCourt?.startedAt),
+        ),
+      );
 
-        await refreshHostData();
-      }
-    });
+      void queueCourtPlayerOperation(hostedPlayerId, async () => {
+        try {
+          await assignPlayerToCourtAPI(
+            hostedPlayerId,
+            dropData.courtId,
+            dropData.position,
+          );
+        } catch (error) {
+          if (axios.isAxiosError(error))
+            console.error(error.response?.data ?? error);
+          else console.error(error);
+
+          await refreshHostData();
+        }
+      });
+    } else if (dropData.type === "queue-slot") {
+      const hostedPlayerId =
+        (active.data.current?.hostedPlayerId as string | undefined) ??
+        String(active.id);
+      const updatedQueues = getUpdatedQueues(
+        queues,
+        hostedPlayerId,
+        dropData.queueId,
+        dropData.position,
+      );
+
+      setQueues(updatedQueues);
+      setPlayers(
+        getPlayersWithQueueAssignment(
+          players,
+          hostedPlayerId,
+          dropData.queueId,
+          dropData.position,
+        ),
+      );
+
+      void queueQueuePlayerOperation(hostedPlayerId, async () => {
+        try {
+          await assignPlayerToQueueAPI(
+            hostedPlayerId,
+            dropData.queueId,
+            dropData.position,
+          );
+        } catch (error) {
+          if (axios.isAxiosError(error))
+            console.error(error.response?.data ?? error);
+          else console.error(error);
+
+          await refreshHostData();
+        }
+      });
+    }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -419,6 +663,144 @@ export default function Match() {
     if (courtActiveDropdown !== null) blurActiveElement();
     setPlayerActiveDropdown(null);
     setCourtActiveDropdown(null);
+    setQueueActiveDropdown(null);
+  };
+
+  const handleQueueDropdown = (queueId: string) => {
+    if (queueActiveDropdown !== null) blurActiveElement();
+    setPlayerActiveDropdown(null);
+    setCourtActiveDropdown(null);
+    setQueueActiveDropdown((prev) => (prev === queueId ? null : queueId));
+  };
+
+  const handleQueuePlayerDropdown = () => {
+    if (queueActiveDropdown !== null) blurActiveElement();
+    setPlayerActiveDropdown(null);
+    setCourtActiveDropdown(null);
+    setQueueActiveDropdown(null);
+  };
+
+  const handleRemovePlayerFromQueue = (
+    hostedPlayerId: string,
+    queueId: string,
+  ) => {
+    const updatedQueues = getQueuesWithoutPlayer(
+      queues,
+      hostedPlayerId,
+      queueId,
+    );
+
+    setQueues(updatedQueues);
+    setPlayers(getPlayersWithoutQueueAssignment(players, hostedPlayerId));
+
+    void queueQueuePlayerOperation(hostedPlayerId, async () => {
+      try {
+        await removePlayerFromQueueAPI(hostedPlayerId, queueId);
+      } catch (error) {
+        if (axios.isAxiosError(error))
+          console.error(error.response?.data ?? error);
+        else console.error(error);
+
+        await refreshHostData();
+      }
+    });
+  };
+
+  const handleDeleteQueue = async (queueId: string) => {
+    const previousQueues = queues;
+    const previousPlayers = players;
+    const deletedQueue = previousQueues.find((queue) => queue.id === queueId);
+    const playerIds =
+      deletedQueue?.entries.map((entry) => entry.playerId) ?? [];
+
+    setQueueActiveDropdown(null);
+    setQueues((currentQueues) =>
+      currentQueues.filter((queue) => queue.id !== queueId),
+    );
+    setPlayers(getPlayersWithoutQueueAssignments(previousPlayers, playerIds));
+
+    try {
+      const response = await deleteQueueAPI(queueId);
+      setPlayers((currentPlayers) =>
+        getPlayersWithoutQueueAssignments(
+          currentPlayers,
+          response.hostedPlayerIds,
+        ),
+      );
+    } catch (error) {
+      setQueues(previousQueues);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
+  const handleRenameQueue = async (queueId: string, nextName: string) => {
+    const cleanName = nextName.trim();
+    if (!cleanName) return;
+
+    const previousQueues = queues;
+
+    setQueues((currentQueues) =>
+      currentQueues.map((queue) =>
+        queue.id === queueId ? { ...queue, name: cleanName } : queue,
+      ),
+    );
+
+    try {
+      const response = await renameQueueAPI(queueId, cleanName);
+      setQueues((currentQueues) =>
+        currentQueues.map((queue) =>
+          queue.id === queueId
+            ? { ...queue, name: response.queue.name }
+            : queue,
+        ),
+      );
+    } catch (error) {
+      setQueues(previousQueues);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
+  const handleAddQueue = async () => {
+    const tempQueueId = `temp-queue-${Date.now()}`;
+    const optimisticQueue: QueueType = {
+      id: tempQueueId,
+      hostId: hostId ?? "",
+      name: `Queue ${queues.length + 1}`,
+      entries: [],
+    };
+
+    setQueues((currentQueues) => [...currentQueues, optimisticQueue]);
+
+    try {
+      const response = await createQueueAPI();
+      setQueues((currentQueues) =>
+        currentQueues.map((queue) =>
+          queue.id === tempQueueId
+            ? {
+                id: response.queue.id,
+                hostId: hostId ?? "",
+                name: response.queue.name,
+                entries: [],
+              }
+            : queue,
+        ),
+      );
+    } catch (error) {
+      setQueues((currentQueues) =>
+        currentQueues.filter((queue) => queue.id !== tempQueueId),
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
   };
 
   const handleRemovePlayerFromCourt = (
@@ -642,11 +1024,12 @@ export default function Match() {
         if (courtActiveDropdown !== null) blurActiveElement();
         setPlayerActiveDropdown(null);
         setCourtActiveDropdown(null);
+        setQueueActiveDropdown(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [courtActiveDropdown]);
+  }, [courtActiveDropdown, queueActiveDropdown]);
 
   const filteredPlayers = players.filter((player) =>
     activePlayerStatus === "all"
@@ -703,30 +1086,60 @@ export default function Match() {
           <div className="border w-full">
             <main>
               {/* court */}
-              <div className="flex justify-center gap-3 flex-wrap p-2">
-                {courts.map((court) => (
-                  <CourtCard
-                    key={court.id}
-                    court={court}
-                    players={players}
-                    onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
-                    onStartCourtGame={handleStartCourtGame}
-                    onEndCourtGame={handleEndCourtGame}
-                    onRenameCourt={handleRenameCourt}
-                    onDeleteCourt={handleDeleteCourt}
-                    activeDropdown={courtActiveDropdown}
-                    activePlayerDropdown={playerActiveDropdown}
-                    onToggleDropdown={handleCourtDropdown}
-                    onOpenPlayerDropdown={handleCourtPlayerDropdown}
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => void handleAddCourt()}
-                  className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
-                >
-                  Add court
-                </button>
+              <div className="p-2">
+                <h3 className="text-lg font-semibold mb-2">Match Courts</h3>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  {courts.map((court) => (
+                    <CourtCard
+                      key={court.id}
+                      court={court}
+                      players={players}
+                      onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
+                      onStartCourtGame={handleStartCourtGame}
+                      onEndCourtGame={handleEndCourtGame}
+                      onRenameCourt={handleRenameCourt}
+                      onDeleteCourt={handleDeleteCourt}
+                      activeDropdown={courtActiveDropdown}
+                      activePlayerDropdown={playerActiveDropdown}
+                      onToggleDropdown={handleCourtDropdown}
+                      onOpenPlayerDropdown={handleCourtPlayerDropdown}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => void handleAddCourt()}
+                    className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
+                  >
+                    Add court
+                  </button>
+                </div>
+              </div>
+              {/* queue */}
+              <div className="p-2 border-t">
+                <h3 className="text-lg font-semibold mb-2">Queue Courts</h3>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  {queues.map((queue) => (
+                    <QueueCard
+                      key={queue.id}
+                      queue={queue}
+                      players={players}
+                      onRemovePlayerFromQueue={handleRemovePlayerFromQueue}
+                      onRenameQueue={handleRenameQueue}
+                      onDeleteQueue={handleDeleteQueue}
+                      activeDropdown={queueActiveDropdown}
+                      activePlayerDropdown={playerActiveDropdown}
+                      onToggleDropdown={handleQueueDropdown}
+                      onOpenPlayerDropdown={handleQueuePlayerDropdown}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => void handleAddQueue()}
+                    className="w-[420px] h-[120px] border rounded-md cursor-pointer hover:bg-stone-200"
+                  >
+                    Add queue
+                  </button>
+                </div>
               </div>
             </main>
           </div>

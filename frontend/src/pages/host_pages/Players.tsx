@@ -358,6 +358,7 @@ export default function Players() {
         ...currentPlayers,
         {
           id: nextAcceptedPlayer.id,
+          hostStatus: "accepted",
           status: "accepted",
           matchStatus: "waiting",
           timerStartedAt: new Date().toISOString(),
@@ -474,6 +475,7 @@ export default function Players() {
         ...currentPlayers,
         {
           id: nextAcceptedPlayer.id,
+          hostStatus: "accepted",
           status: "accepted",
           matchStatus: "waiting",
           timerStartedAt: new Date().toISOString(),
