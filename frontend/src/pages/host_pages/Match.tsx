@@ -1193,7 +1193,7 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex h-full w-full gap-4 overflow-hidden bg-[var(--color-background)]">
+        <main className="flex h-full w-full gap-4 overflow-hidden  py-2">
           {/* PLAYERS */}
           <div className="flex flex-col rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
             <header className="mb-4">

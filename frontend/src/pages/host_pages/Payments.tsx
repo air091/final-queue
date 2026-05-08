@@ -432,10 +432,6 @@ export default function Payments() {
                 </th>
 
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Payment
-                </th>
-
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
                   Games
                 </th>
 
@@ -493,12 +489,6 @@ export default function Payments() {
 
                       <td className="px-4 py-4 text-sm text-stone-600">
                         {player.status}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm">
-                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600">
-                          {player.paymentStatus}
-                        </span>
                       </td>
 
                       <td className="px-4 py-4 text-sm text-stone-600">
