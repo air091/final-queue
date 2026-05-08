@@ -6,10 +6,11 @@ import { FaCheck } from "react-icons/fa6";
 import { FcCancel } from "react-icons/fc";
 import { useHostData } from "../../hooks/useHostData";
 import { api } from "../../lib/api";
-import type {
-  AcceptedPlayers,
-  HostPlayerRecord,
-  SkillLevelType,
+import {
+  buildPaymentsSummary,
+  type AcceptedPlayers,
+  type HostPlayerRecord,
+  type SkillLevelType,
 } from "../../lib/host";
 
 const formatSkillLevel = (skillLevel: string) =>
@@ -272,6 +273,8 @@ export default function Players() {
     setAcceptedPlayers,
     courts,
     setCourts,
+    paymentsData,
+    setPaymentsData,
   } = useHostData();
   const [staticPlayerName, setStaticPlayerName] = useState("");
   const [staticSkillLevel, setStaticSkillLevel] =
@@ -296,6 +299,8 @@ export default function Players() {
 
     setIsCreatingStaticPlayer(true);
 
+    const previousPaymentsData = paymentsData;
+
     try {
       const response = await api.post(
         `/api/community/${communityId}/hosts/${hostId}/players/static`,
@@ -317,6 +322,35 @@ export default function Players() {
         ...currentPlayers,
       ]);
       setAcceptedPlayers((currentPlayers) => [player, ...currentPlayers]);
+      setPaymentsData((currentPaymentsData) => {
+        const newPaymentPlayer = {
+          id: player.id,
+          status: "accepted" as const,
+          paymentStatus: "unpaid" as const,
+          gamesPlayed: 0,
+          player: {
+            username: player.player.username,
+            isStatic: player.player.isStatic,
+          },
+          payment: {
+            id: null,
+            amountExpected: currentPaymentsData.pricing.expectedFee,
+            amountPaid: 0,
+            balance: currentPaymentsData.pricing.expectedFee,
+            currency: currentPaymentsData.pricing.currency,
+            status: "unpaid" as const,
+            method: null,
+          },
+        };
+
+        const nextPlayers = [...currentPaymentsData.players, newPaymentPlayer];
+
+        return {
+          ...currentPaymentsData,
+          players: nextPlayers,
+          summary: buildPaymentsSummary(nextPlayers),
+        };
+      });
       setStaticProfileUrlDrafts((currentDrafts) => ({
         ...currentDrafts,
         [player.id]: player.player.profileUrl,
@@ -324,6 +358,8 @@ export default function Players() {
       setStaticPlayerName("");
       setStaticSkillLevel("beginner");
     } catch (error) {
+      setPaymentsData(previousPaymentsData);
+
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
@@ -335,6 +371,7 @@ export default function Players() {
   const handleAcceptPlayer = async (hostedPlayerId: string) => {
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
+    const previousPaymentsData = paymentsData;
     const nextAcceptedPlayer = previousPlayers.find(
       (player) => player.id === hostedPlayerId,
     );
@@ -368,6 +405,44 @@ export default function Players() {
         },
       ];
     });
+    setPaymentsData((currentPaymentsData) => {
+      if (!nextAcceptedPlayer) return currentPaymentsData;
+      if (
+        currentPaymentsData.players.some(
+          (currentPlayer) => currentPlayer.id === nextAcceptedPlayer.id,
+        )
+      ) {
+        return currentPaymentsData;
+      }
+
+      const newPaymentPlayer = {
+        id: nextAcceptedPlayer.id,
+        status: "accepted" as const,
+        paymentStatus: "unpaid" as const,
+        gamesPlayed: 0,
+        player: {
+          username: nextAcceptedPlayer.player.username,
+          isStatic: nextAcceptedPlayer.player.isStatic,
+        },
+        payment: {
+          id: null,
+          amountExpected: currentPaymentsData.pricing.expectedFee,
+          amountPaid: 0,
+          balance: currentPaymentsData.pricing.expectedFee,
+          currency: currentPaymentsData.pricing.currency,
+          status: "unpaid" as const,
+          method: null,
+        },
+      };
+
+      const nextPlayers = [...currentPaymentsData.players, newPaymentPlayer];
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
 
     try {
       await api.post(
@@ -377,6 +452,7 @@ export default function Players() {
     } catch (error) {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
+      setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error)) console.error(error);
       else console.error(error);
@@ -409,6 +485,7 @@ export default function Players() {
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
+    const previousPaymentsData = paymentsData;
 
     setPlayersInHost((currentPlayers) =>
       currentPlayers.map((currentPlayer) =>
@@ -430,6 +507,17 @@ export default function Players() {
         ),
       })),
     );
+    setPaymentsData((currentPaymentsData) => {
+      const nextPlayers = currentPaymentsData.players.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
+      );
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
 
     try {
       await api.post(
@@ -440,6 +528,7 @@ export default function Players() {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
       setCourts(previousCourts);
+      setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -450,6 +539,7 @@ export default function Players() {
   const handleUnbanPlayer = async (hostedPlayerId: string) => {
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
+    const previousPaymentsData = paymentsData;
     const nextAcceptedPlayer = previousPlayers.find(
       (player) => player.id === hostedPlayerId,
     );
@@ -485,6 +575,44 @@ export default function Players() {
         },
       ];
     });
+    setPaymentsData((currentPaymentsData) => {
+      if (!nextAcceptedPlayer) return currentPaymentsData;
+      if (
+        currentPaymentsData.players.some(
+          (currentPlayer) => currentPlayer.id === nextAcceptedPlayer.id,
+        )
+      ) {
+        return currentPaymentsData;
+      }
+
+      const newPaymentPlayer = {
+        id: nextAcceptedPlayer.id,
+        status: "accepted" as const,
+        paymentStatus: "unpaid" as const,
+        gamesPlayed: 0,
+        player: {
+          username: nextAcceptedPlayer.player.username,
+          isStatic: nextAcceptedPlayer.player.isStatic,
+        },
+        payment: {
+          id: null,
+          amountExpected: currentPaymentsData.pricing.expectedFee,
+          amountPaid: 0,
+          balance: currentPaymentsData.pricing.expectedFee,
+          currency: currentPaymentsData.pricing.currency,
+          status: "unpaid" as const,
+          method: null,
+        },
+      };
+
+      const nextPlayers = [...currentPaymentsData.players, newPaymentPlayer];
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
 
     try {
       await api.post(
@@ -494,6 +622,7 @@ export default function Players() {
     } catch (error) {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
+      setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);

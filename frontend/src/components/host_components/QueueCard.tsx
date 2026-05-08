@@ -129,10 +129,71 @@ export default function QueueCard({
   };
 
   // Generate slots for positions 1 to 10 (or more if needed)
-  const queueSlots = Array.from({ length: 10 }, (_, i) => i + 1);
+  const queueSlots = Array.from({ length: 4 }, (_, i) => i + 1);
 
   return (
-    <div className="relative w-[420px] p-2 rounded-md bg-blue-800/80">
+    <div className="relative w-[420px] p-2 rounded-md">
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 300 150"
+        fill="none"
+        stroke="rgba(200, 200, 200, 0.8)"
+        strokeWidth="2"
+        preserveAspectRatio="none"
+        className="bg-yellow-500 absolute top-0 left-0 z-0 rounded-md"
+      >
+        <rect
+          x="25"
+          y="25"
+          width="250"
+          height="100"
+          fill="none"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="2"
+        />
+        <line
+          x1="150"
+          y1="25"
+          x2="150"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="2"
+          strokeDasharray="5,5"
+        />
+        <line
+          x1="25"
+          y1="50"
+          x2="275"
+          y2="50"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="1.5"
+        />
+        <line
+          x1="25"
+          y1="100"
+          x2="275"
+          y2="100"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="1.5"
+        />
+        <line
+          x1="50"
+          y1="25"
+          x2="50"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="1.5"
+        />
+        <line
+          x1="250"
+          y1="25"
+          x2="250"
+          y2="125"
+          stroke="rgba(200, 200, 200, 0.8)"
+          strokeWidth="1.5"
+        />
+      </svg>
       <header className="relative z-[120] flex items-center justify-between">
         <div className="grid">
           <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
