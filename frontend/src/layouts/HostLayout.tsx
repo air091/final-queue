@@ -60,7 +60,7 @@ export default function HostLayout() {
         hostStatus: string;
         paymentStatus: string;
         gamesPlayed: number;
-        player?: { username?: string } | null;
+        player?: { username?: string; profileUrl?: string; isStatic?: boolean } | null;
         payment?: { id: string; amountPaid: number } | null;
       }>,
     ): HostPaymentsData => {
@@ -78,7 +78,8 @@ export default function HostLayout() {
           gamesPlayed: player.gamesPlayed,
           player: {
             username: player.player?.username ?? "",
-            isStatic: false,
+            profileUrl: player.player?.profileUrl ?? "",
+            isStatic: player.player?.isStatic ?? false,
           },
           payment: {
             id: player.payment?.id ?? null,

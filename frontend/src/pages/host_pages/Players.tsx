@@ -446,6 +446,7 @@ export default function Players() {
           gamesPlayed: 0,
           player: {
             username: nextAcceptedPlayer.player.username,
+            profileUrl: nextAcceptedPlayer.player.profileUrl,
             isStatic: nextAcceptedPlayer.player.isStatic,
           },
           payment: {
@@ -540,6 +541,7 @@ export default function Players() {
         gamesPlayed: 0,
         player: {
           username: nextAcceptedPlayer.player.username,
+          profileUrl: nextAcceptedPlayer.player.profileUrl,
           isStatic: nextAcceptedPlayer.player.isStatic,
         },
         payment: {
@@ -712,6 +714,7 @@ export default function Players() {
         gamesPlayed: 0,
         player: {
           username: nextAcceptedPlayer.player.username,
+          profileUrl: nextAcceptedPlayer.player.profileUrl,
           isStatic: nextAcceptedPlayer.player.isStatic,
         },
         payment: {

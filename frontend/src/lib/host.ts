@@ -151,7 +151,7 @@ export type PaymentPlayer = {
   status: "accepted" | "banned";
   paymentStatus: PaymentStatus;
   gamesPlayed: number;
-  player: Pick<PlayerType, "username" | "isStatic">;
+  player: Pick<PlayerType, "username" | "isStatic" | "profileUrl">;
   payment: PaymentRecord;
 };
 

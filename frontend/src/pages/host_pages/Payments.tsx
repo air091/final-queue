@@ -22,6 +22,7 @@ type PlayerPaymentDraft = {
 };
 
 const CURRENCY_OPTIONS: PaymentCurrency[] = ["PHP", "USD", "EUR"];
+const FALLBACK_PROFILE_URL = "https://image.pngaaa.com/189/734189-middle.png";
 
 const formatMoney = (amount: number, currency: PaymentCurrency) =>
   new Intl.NumberFormat("en-US", {
@@ -419,7 +420,8 @@ export default function Payments() {
           </p>
         </header>
 
-        <div className="overflow-x-auto">
+        {/* ===================== DESKTOP TABLE (md+) ===================== */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full border-collapse">
             <thead className="bg-orange-50/60">
               <tr>
@@ -471,19 +473,29 @@ export default function Payments() {
                   return (
                     <tr
                       key={player.id}
-                      className="border-t border-orange-100 transition hover:bg-orange-50/30"
+                      className="border-t border-orange-100 hover:bg-orange-50/30"
                     >
-                      <td className="px-4 py-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-[var(--color-text)]">
-                            {player.player.username}
-                          </span>
+                      <td className="px-4 py-4 text-sm font-medium text-[var(--color-text)]">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 overflow-hidden rounded-full border border-orange-100 bg-orange-50">
+                            <img
+                              src={
+                                player.player.profileUrl || FALLBACK_PROFILE_URL
+                              }
+                              alt={player.player.username}
+                              className="block h-full w-full rounded-full object-cover object-center"
+                            />
+                          </div>
 
-                          {player.player.isStatic && (
-                            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
-                              Static
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span>{player.player.username}</span>
+
+                            {player.player.isStatic && (
+                              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
+                                Static
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -507,8 +519,6 @@ export default function Payments() {
                       <td className="px-4 py-4">
                         <input
                           type="number"
-                          min="0"
-                          step="0.01"
                           value={
                             draft?.amountPaid ??
                             String(player.payment.amountPaid)
@@ -524,7 +534,7 @@ export default function Payments() {
                               },
                             }))
                           }
-                          className="w-28 rounded-xl border border-orange-100 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
+                          className="w-28 rounded-xl border border-orange-100 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
                         />
                       </td>
 
@@ -539,11 +549,7 @@ export default function Payments() {
                             void handleSavePlayerPayment(player.id)
                           }
                           disabled={savingPlayerId === player.id}
-                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                            savingPlayerId === player.id
-                              ? "cursor-not-allowed bg-stone-200 text-stone-400"
-                              : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
-                          }`}
+                          className="rounded-xl px-4 py-2 text-sm font-semibold bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
                         >
                           {savingPlayerId === player.id ? "Saving..." : "Save"}
                         </button>
@@ -554,7 +560,7 @@ export default function Payments() {
               ) : (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-4 py-10 text-center text-sm text-stone-500"
                   >
                     No players available for payments.
@@ -563,6 +569,117 @@ export default function Payments() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ===================== MOBILE CARDS (< md) ===================== */}
+        <div className="grid gap-3 p-4 md:hidden">
+          {paymentsData.players.length > 0 ? (
+            paymentsData.players.map((player) => {
+              const draft = playerDrafts[player.id];
+
+              const expectedAmount =
+                paymentsData.pricing.entranceFee +
+                paymentsData.pricing.perMatchFee * player.gamesPlayed;
+
+              const paidAmount = toAmount(
+                draft?.amountPaid ?? String(player.payment.amountPaid),
+              );
+
+              const balance = Math.max(0, expectedAmount - paidAmount);
+
+              return (
+                <div
+                  key={player.id}
+                  className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 overflow-hidden rounded-full border border-orange-100 bg-orange-50">
+                        <img
+                          src={player.player.profileUrl || FALLBACK_PROFILE_URL}
+                          alt={player.player.username}
+                          className="block h-full w-full rounded-full object-cover object-center"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span>{player.player.username}</span>
+
+                        {player.player.isStatic && (
+                          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
+                            Static
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {player.player.isStatic && (
+                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                        Static
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 text-xs text-stone-500">
+                    {player.status} • {player.gamesPlayed} games
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-stone-500 text-xs">Expected</p>
+                      <p className="font-medium">
+                        {formatMoney(
+                          expectedAmount,
+                          paymentsData.pricing.currency,
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-stone-500 text-xs">Balance</p>
+                      <p className="font-semibold text-red-500">
+                        {formatMoney(balance, paymentsData.pricing.currency)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={
+                        draft?.amountPaid ?? String(player.payment.amountPaid)
+                      }
+                      onChange={(event) =>
+                        setPlayerDrafts((current) => ({
+                          ...current,
+                          [player.id]: {
+                            ...(current[player.id] ?? {
+                              amountPaid: String(player.payment.amountPaid),
+                            }),
+                            amountPaid: event.target.value,
+                          },
+                        }))
+                      }
+                      className="flex-1 rounded-xl border border-orange-100 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => void handleSavePlayerPayment(player.id)}
+                      disabled={savingPlayerId === player.id}
+                      className="rounded-xl px-4 py-2 text-sm font-semibold bg-[var(--color-primary)] text-white"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-center text-sm text-stone-500 py-8">
+              No players available for payments.
+            </p>
+          )}
         </div>
       </section>
     </div>
