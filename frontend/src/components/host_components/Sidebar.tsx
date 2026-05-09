@@ -9,146 +9,114 @@ import ProfileBar from "../ProfileBar";
 export default function Sidebar() {
   const { communityId, hostId } = useParams();
   return (
-    <nav className="flex w-[240px] flex-col justify-between w-[240px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm my-2">
-      <ul className="grid gap-2">
+    <nav
+      className="
+      fixed bottom-0 left-0 right-0 z-50
+      flex h-20 items-center justify-between
+      border-t border-primary/10 bg-white px-2 shadow-lg
+
+      md:sticky md:top-4 md:h-[calc(100vh-2rem)]
+      md:w-[90px] md:flex-col md:rounded-3xl
+      md:border md:p-3
+
+      lg:w-[240px]
+    "
+    >
+      {/* NAVIGATION */}
+      <ul className="flex w-full md:grid md:gap-2">
         {/* BACK */}
-        <li className="mb-1">
+        <li className="hidden lg:block">
           <NavLink
             to={`/community/${communityId}`}
-            className="flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-[#0c090c] transition-colors duration-200 hover:bg-[#fff7e8]"
+            className="
+            mb-2 flex items-center gap-3
+            rounded-2xl px-3 py-2
+            text-sm font-medium text-text
+            transition hover:bg-primary/5
+          "
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#fff4df] text-[#ff6900]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-accent">
               <FaArrowLeft size={14} />
             </div>
 
-            <span>Back to Community</span>
+            <span>Back</span>
           </NavLink>
         </li>
 
-        {/* DIVIDER */}
-        <div className="my-1 border-t border-orange-100" />
+        {[
+          {
+            path: `/community/${communityId}/hosts/${hostId}/dashboard`,
+            label: "Dashboard",
+            icon: <MdSpaceDashboard size={16} />,
+          },
+          {
+            path: `/community/${communityId}/hosts/${hostId}/players`,
+            label: "Players",
+            icon: <HiUsers size={16} />,
+          },
+          {
+            path: `/community/${communityId}/hosts/${hostId}/match`,
+            label: "Match",
+            icon: <GiMatchHead size={16} />,
+          },
+          {
+            path: `/community/${communityId}/hosts/${hostId}/payments`,
+            label: "Payments",
+            icon: <MdOutlinePayment size={16} />,
+          },
+        ].map((item) => (
+          <li key={item.label}>
+            <NavLink
+              to={item.path}
+              className={({ isActive }) =>
+                `
+              flex items-center justify-center gap-3
+              rounded-2xl px-3 py-2.5
+              text-sm font-medium transition-all duration-200
 
-        {/* DASHBOARD */}
-        <li>
-          <NavLink
-            to={`/community/${communityId}/hosts/${hostId}/dashboard`}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+              md:justify-start
+
+              ${
                 isActive
-                  ? "bg-[#fff4df] text-[#ff6900]"
-                  : "text-[#0c090c] hover:bg-[#fff7e8]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                    isActive
-                      ? "bg-[#fd9a00] text-white"
-                      : "bg-[#fff4df] text-[#ff6900]"
-                  }`}
-                >
-                  <MdSpaceDashboard size={16} />
-                </div>
+                  ? "bg-primary/10 text-accent"
+                  : "text-text hover:bg-primary/5"
+              }
+            `
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`
+                    flex h-9 w-9 items-center justify-center
+                    rounded-xl transition
+                    ${
+                      isActive
+                        ? "bg-primary text-white"
+                        : "bg-primary/10 text-accent"
+                    }
+                  `}
+                  >
+                    {item.icon}
+                  </div>
 
-                <span>Dashboard</span>
-              </>
-            )}
-          </NavLink>
-        </li>
-
-        {/* PLAYERS */}
-        <li>
-          <NavLink
-            to={`/community/${communityId}/hosts/${hostId}/players`}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-[#fff4df] text-[#ff6900]"
-                  : "text-[#0c090c] hover:bg-[#fff7e8]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                    isActive
-                      ? "bg-[#fd9a00] text-white"
-                      : "bg-[#fff4df] text-[#ff6900]"
-                  }`}
-                >
-                  <HiUsers size={16} />
-                </div>
-
-                <span>Players</span>
-              </>
-            )}
-          </NavLink>
-        </li>
-
-        {/* MATCH */}
-        <li>
-          <NavLink
-            to={`/community/${communityId}/hosts/${hostId}/match`}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-[#fff4df] text-[#ff6900]"
-                  : "text-[#0c090c] hover:bg-[#fff7e8]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                    isActive
-                      ? "bg-[#fd9a00] text-white"
-                      : "bg-[#fff4df] text-[#ff6900]"
-                  }`}
-                >
-                  <GiMatchHead size={16} />
-                </div>
-
-                <span>Match</span>
-              </>
-            )}
-          </NavLink>
-        </li>
-
-        {/* PAYMENTS */}
-        <li>
-          <NavLink
-            to={`/community/${communityId}/hosts/${hostId}/payments`}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-[#fff4df] text-[#ff6900]"
-                  : "text-[#0c090c] hover:bg-[#fff7e8]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                    isActive
-                      ? "bg-[#fd9a00] text-white"
-                      : "bg-[#fff4df] text-[#ff6900]"
-                  }`}
-                >
-                  <MdOutlinePayment size={16} />
-                </div>
-
-                <span>Payments</span>
-              </>
-            )}
-          </NavLink>
-        </li>
+                  <span className="hidden lg:block">{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
       </ul>
-      <ProfileBar />
+
+      {/* PROFILE */}
+      <div className="hidden md:block md:w-full">
+        <ProfileBar />
+      </div>
+
+      {/* MOBILE PROFILE */}
+      <div className="md:hidden">
+        <ProfileBar />
+      </div>
     </nav>
   );
 }

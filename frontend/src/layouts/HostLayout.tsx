@@ -234,78 +234,46 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="w-full max-w-[1920px] h-screen mx-auto my-0 flex gap-x-3 px-2">
-      <Sidebar />
-      <main className="w-full">
-        {isHostLoading ? (
-          <div className="p-4">
-            <p className="text-sm text-stone-600">Loading host data...</p>
-          </div>
-        ) : hostLoadError ? (
-          <div className="p-4 grid gap-y-3">
-            <p className="text-sm text-red-600">{hostLoadError}</p>
-            <button
-              type="button"
-              onClick={() => void loadHostData()}
-              className="w-fit rounded-md bg-stone-800 px-3 py-1.5 text-sm text-white hover:bg-stone-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* {host ? (
-              <div className="mb-4 rounded-xl border border-stone-200 bg-white p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.24em] text-stone-500">
-                      Host overview
-                    </p>
-                    <h1 className="text-2xl font-semibold text-stone-900">
-                      {host.hostName}
-                    </h1>
-                    <p className="text-sm text-stone-500">
-                      {host.community.communityName} · {host.sport}
-                    </p>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl bg-stone-50 p-3 text-sm">
-                      <div className="text-stone-500">Players</div>
-                      <div className="mt-1 text-xl font-semibold text-stone-900">
-                        {host._count.players}
-                      </div>
-                    </div>
-                    <div className="rounded-xl bg-stone-50 p-3 text-sm">
-                      <div className="text-stone-500">Status</div>
-                      <div className="mt-1 text-xl font-semibold text-stone-900">
-                        {host.status}
-                      </div>
-                    </div>
-                    <div className="rounded-xl bg-stone-50 p-3 text-sm">
-                      <div className="text-stone-500">Created</div>
-                      <div className="mt-1 text-xl font-semibold text-stone-900">
-                        {new Date(host.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null} */}
-            <Outlet context={outletContext} />
-            <PlayerHistoryModal
-              player={selectedHistoryPlayer}
-              summary={selectedHistorySummary}
-              history={selectedHistoryEntries}
-              isLoading={
-                selectedHistoryPlayer !== null &&
-                historyLoadingPlayerId === selectedHistoryPlayer.id
-              }
-              error={selectedHistoryError}
-              onClose={closePlayerHistory}
-            />
-          </>
-        )}
-      </main>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto flex min-h-screen max-w-[1920px] gap-3 p-2 md:p-4">
+        <Sidebar />
+
+        <main className="flex-1 overflow-hidden pb-24 md:pb-0">
+          {isHostLoading ? (
+            <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
+              <p className="text-sm text-stone-500">Loading host data...</p>
+            </div>
+          ) : hostLoadError ? (
+            <div className="grid gap-3 rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
+              <p className="text-sm text-red-600">{hostLoadError}</p>
+
+              <button
+                type="button"
+                onClick={() => void loadHostData()}
+                className="w-fit rounded-2xl bg-text px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <>
+              <Outlet context={outletContext} />
+
+              <PlayerHistoryModal
+                player={selectedHistoryPlayer}
+                summary={selectedHistorySummary}
+                history={selectedHistoryEntries}
+                isLoading={
+                  selectedHistoryPlayer !== null &&
+                  historyLoadingPlayerId === selectedHistoryPlayer.id
+                }
+                error={selectedHistoryError}
+                onClose={closePlayerHistory}
+              />
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { useParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -385,7 +386,15 @@ export default function Match() {
   const pendingQueuePlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 8,
+      },
+    }),
+  );
 
   const activeDraggedPlayer = activeDraggedPlayerId
     ? (players.find((player) => player.id === activeDraggedPlayerId) ?? null)
@@ -1193,9 +1202,9 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex h-full w-full gap-4 overflow-hidden  py-2">
+        <main className="flex flex-col min-[1280px]:flex-row h-full w-full gap-4 overflow-hidden py-2">
           {/* PLAYERS */}
-          <div className="flex flex-col rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div className="order-1 min-[1280px]:order-none flex flex-col flex-shrink min-w-0 w-full min-[1280px]:w-[360px] xl:w-[420px] rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
             <header className="mb-4">
               <h5 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
                 Players
@@ -1223,7 +1232,7 @@ export default function Match() {
               </div>
             </header>
 
-            <main className="grid w-[460px] grid-cols-2 gap-3 overflow-none rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
+            <main className="grid w-full grid-cols-3 min-[1280px]:grid-cols-2 gap-3 overflow-hidden rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
@@ -1242,7 +1251,7 @@ export default function Match() {
           </div>
 
           {/* COURTS & QUEUES */}
-          <div className="min-w-0 flex-1">
+          <div className="order-2 min-[1280px]:order-none flex-1 min-w-0 lg:min-w-[700px]">
             <main className="flex h-full flex-col gap-4">
               {/* COURTS */}
               <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
@@ -1277,14 +1286,14 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                flex h-[120px] w-[520px] items-center justify-center cursor-pointer
-                rounded-2xl border border-dashed border-orange-200
-                bg-orange-50/40 text-sm font-semibold text-stone-500
-                transition-all duration-200
-                hover:border-[var(--color-primary)]
-                hover:bg-orange-50
-                hover:text-[var(--color-accent)]
-              "
+                    flex h-[120px] w-[520px] items-center justify-center cursor-pointer
+                    rounded-2xl border border-dashed border-orange-200
+                    bg-orange-50/40 text-sm font-semibold text-stone-500
+                    transition-all duration-200
+                    hover:border-[var(--color-primary)]
+                    hover:bg-orange-50
+                    hover:text-[var(--color-accent)]
+                  "
                     >
                       + Add court
                     </button>
@@ -1325,14 +1334,14 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                flex h-[120px] w-[520px] items-center justify-center cursor-pointer
-                rounded-2xl border border-dashed border-orange-200
-                bg-orange-50/40 text-sm font-semibold text-stone-500
-                transition-all duration-200
-                hover:border-[var(--color-primary)]
-                hover:bg-orange-50
-                hover:text-[var(--color-accent)]
-              "
+                    flex h-[120px] w-[520px] items-center justify-center cursor-pointer
+                    rounded-2xl border border-dashed border-orange-200
+                    bg-orange-50/40 text-sm font-semibold text-stone-500
+                    transition-all duration-200
+                    hover:border-[var(--color-primary)]
+                    hover:bg-orange-50
+                    hover:text-[var(--color-accent)]
+                  "
                     >
                       + Add queue
                     </button>
@@ -1341,20 +1350,22 @@ export default function Match() {
               </div>
             </main>
           </div>
+
+          {/* DRAG OVERLAY */}
+          <DragOverlay zIndex={2000}>
+            {activeDraggedPlayer ? (
+              <div className="w-[176px]">
+                <PlayerCard
+                  player={activeDraggedPlayer}
+                  activeDropdown={null}
+                  onToggleDropdown={() => undefined}
+                  canDrag={false}
+                  canRemoveFromCourt={false}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
         </main>
-        <DragOverlay zIndex={2000}>
-          {activeDraggedPlayer ? (
-            <div className="w-[176px]">
-              <PlayerCard
-                player={activeDraggedPlayer}
-                activeDropdown={null}
-                onToggleDropdown={() => undefined}
-                canDrag={false}
-                canRemoveFromCourt={false}
-              />
-            </div>
-          ) : null}
-        </DragOverlay>
       </DndContext>
     </>
   );

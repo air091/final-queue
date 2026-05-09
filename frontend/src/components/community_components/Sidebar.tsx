@@ -7,110 +7,146 @@ export default function Sidebar() {
   const { communities } = useCommunities();
 
   return (
-    <nav className="flex w-[240px] flex-col justify-between w-[260px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
-      <ul className="grid gap-2">
-        {/* BACK BUTTON */}
-        <li className="mb-1">
+    <nav
+      className="
+      fixed bottom-0 left-0 right-0 z-50
+      flex h-20 items-center justify-between gap-2
+      border-t border-gray-200 bg-white px-2
+
+      md:sticky md:top-4 md:h-[calc(100vh-2rem)]
+      md:w-[90px] md:flex-col md:justify-between
+      md:rounded-3xl md:border md:px-2 md:py-4
+
+      lg:w-[240px]
+    "
+    >
+      {/* Navigation */}
+      <ul className="flex w-full md:grid md:gap-2">
+        {/* Desktop Logo */}
+        <div className="mb-4 hidden px-3 lg:block">
+          <h2 className="text-lg font-bold text-text">SportQueue</h2>
+
+          <p className="text-xs text-gray-500">Communities</p>
+        </div>
+
+        {/* Back */}
+        <li>
           <NavLink
             to="/home"
-            className="flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-[#0c090c] transition-colors duration-200 hover:bg-[#fff7e8]"
+            className={({ isActive }) =>
+              `
+            flex items-center justify-center gap-3
+            rounded-2xl px-3 py-3
+            text-sm font-medium transition
+
+            md:justify-start
+
+            ${
+              isActive
+                ? "bg-primary/10 text-primary"
+                : "text-text hover:bg-gray-100"
+            }
+          `
+            }
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#fff4df] text-[#ff6900]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-primary">
               <FaArrowLeft size={14} />
             </div>
 
-            <span>Back to Home</span>
+            <span className="hidden lg:block">Home</span>
           </NavLink>
         </li>
 
-        {/* DIVIDER */}
-        <div className="my-1 border-t border-orange-100" />
-
-        {/* CREATE COMMUNITY */}
+        {/* Create Community */}
         <li>
           <NavLink
             to="/community/create"
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-[#fff4df] text-[#ff6900]"
-                  : "text-[#0c090c] hover:bg-[#fff7e8]"
-              }`
+              `
+            flex items-center justify-center gap-3
+            rounded-2xl px-3 py-3
+            text-sm font-medium transition
+
+            md:justify-start
+
+            ${
+              isActive
+                ? "bg-primary/10 text-primary"
+                : "text-text hover:bg-gray-100"
+            }
+          `
             }
           >
             {({ isActive }) => (
               <>
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                  className={`
+                  flex h-9 w-9 items-center justify-center rounded-xl
+                  ${
                     isActive
-                      ? "bg-[#fd9a00] text-white"
-                      : "bg-[#fff4df] text-[#ff6900]"
-                  }`}
+                      ? "bg-primary text-white"
+                      : "bg-gray-100 text-primary"
+                  }
+                `}
                 >
                   🏸
                 </div>
 
-                <span>Create Community</span>
+                <span className="hidden lg:block">Create</span>
               </>
             )}
           </NavLink>
         </li>
 
-        {/* COMMUNITIES */}
-        {communities.length > 0 ? (
-          communities.map((community) => (
-            <li key={community.id}>
-              <NavLink
-                to={`/community/${community.id}`}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-2xl px-3 py-2 transition-all duration-200 ${
-                    isActive
-                      ? "bg-[#fff4df] text-[#ff6900]"
-                      : "text-[#0c090c] hover:bg-[#fff7e8]"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {/* COMMUNITY IMAGE */}
-                    <div
-                      className={`h-9 w-9 overflow-hidden rounded-xl border ${
-                        isActive ? "border-[#fd9a00]" : "border-orange-100"
-                      }`}
-                    >
-                      <img
-                        src={community.profileUrl}
-                        alt={community.communityName}
-                        className="block h-full w-full object-cover"
-                      />
-                    </div>
+        {/* Communities */}
+        {communities.map((community) => (
+          <li key={community.id}>
+            <NavLink
+              to={`/community/${community.id}`}
+              className={({ isActive }) =>
+                `
+              flex items-center justify-center gap-3
+              rounded-2xl px-3 py-3 transition
 
-                    {/* INFO */}
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                      <span className="truncate text-sm font-medium">
-                        {community.communityName}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))
-        ) : (
-          <div className="rounded-2xl border border-dashed border-orange-200 bg-[#fffaf0] px-4 py-8 text-center">
-            <div className="mb-3 text-3xl">🏸</div>
+              md:justify-start
 
-            <p className="text-sm font-medium text-[#0c090c]">
-              No communities yet
-            </p>
+              ${
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-text hover:bg-gray-100"
+              }
+            `
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`
+                    h-9 w-9 overflow-hidden rounded-xl border
+                    ${isActive ? "border-primary" : "border-gray-200"}
+                  `}
+                  >
+                    <img
+                      src={community.profileUrl}
+                      alt={community.communityName}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
 
-            <p className="mt-1 text-xs text-stone-500">
-              Create your first badminton community.
-            </p>
-          </div>
-        )}
+                  <span className="hidden truncate lg:block">
+                    {community.communityName}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
       </ul>
-      <ProfileBar />
+
+      {/* Profile */}
+      <div className="flex items-center justify-center md:w-full">
+        <ProfileBar />
+      </div>
     </nav>
   );
 }

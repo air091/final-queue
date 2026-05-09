@@ -3,11 +3,16 @@ import Sidebar from "../components/community_components/Sidebar";
 
 export default function CommunityLayout() {
   return (
-    <div className="w-full h-screen p-2 max-w-480 bg-[var(--color-background)] mx-auto flex gap-x-4 overflow-auto">
-      <Sidebar />
-      <main className="w-full">
-        <Outlet />
-      </main>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto flex max-w-[1440px] gap-4 px-4 py-4">
+        {/* Sidebar */}
+        <Sidebar />
+
+        {/* Main */}
+        <main className="flex-1 pb-24 md:pb-0">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -48,22 +48,24 @@ export default function CreateCommunity() {
   };
 
   return (
-    <div className="flex items-center justify-center px-6 py-10">
-      <div className="w-full max-w-xl rounded-3xl border border-orange-100 bg-white p-8 shadow-sm">
-        {/* HEADER */}
+    <div className="flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-xl rounded-3xl border border-gray-200 bg-white p-6 sm:p-8">
+        {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[#0c090c]">
-            Create Community
-          </h1>
+          <h1 className="text-2xl font-bold text-text">Create Community</h1>
+
+          <p className="mt-2 text-sm text-gray-500">
+            Build your badminton community.
+          </p>
         </div>
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="grid gap-5">
-          {/* COMMUNITY NAME */}
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Name */}
           <div>
             <label
               htmlFor="communityName"
-              className="mb-2 block text-sm font-medium text-[#0c090c]"
+              className="mb-2 block text-sm font-medium text-text"
             >
               Community Name
             </label>
@@ -76,15 +78,15 @@ export default function CreateCommunity() {
               value={communityInfo.communityName}
               onChange={handleChange}
               placeholder="Enter community name"
-              className="block w-full rounded-2xl border border-orange-100 bg-[#fffdf9] px-4 py-3 text-sm text-[#0c090c] outline-none transition-all duration-200 placeholder:text-stone-400 focus:border-[#ff6900] focus:ring-4 focus:ring-orange-100"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
           </div>
 
-          {/* DESCRIPTION */}
+          {/* Description */}
           <div>
             <label
               htmlFor="description"
-              className="mb-2 block text-sm font-medium text-[#0c090c]"
+              className="mb-2 block text-sm font-medium text-text"
             >
               Description
             </label>
@@ -97,14 +99,14 @@ export default function CreateCommunity() {
               onChange={handleChange}
               placeholder="Describe your community"
               rows={5}
-              className="block w-full resize-none rounded-2xl border border-orange-100 bg-[#fffdf9] px-4 py-3 text-sm text-[#0c090c] outline-none transition-all duration-200 placeholder:text-stone-400 focus:border-[#ff6900] focus:ring-4 focus:ring-orange-100"
+              className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
           </div>
 
-          {/* SUBMIT */}
+          {/* Submit */}
           <button
             type="submit"
-            className="mt-2 cursor-pointer rounded-2xl bg-[#ff6900] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#e55d00]"
+            className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent"
           >
             Create Community
           </button>

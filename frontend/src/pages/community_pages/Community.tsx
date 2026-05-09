@@ -91,14 +91,13 @@ export default function Community() {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-[#fbfbf9]">
-      {/* HEADER */}
-      <header className="px-6 py-5">
-        <div className="flex items-center justify-between">
-          {/* LEFT */}
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Left */}
           <div className="flex items-center gap-4">
-            {/* COMMUNITY IMAGE */}
-            <div className="h-16 w-16 overflow-hidden rounded-2xl border border-orange-100 bg-[#fff7e8]">
+            <div className="h-14 w-14 overflow-hidden rounded-2xl border border-gray-200">
               <img
                 src={community?.profileUrl}
                 alt={community?.communityName}
@@ -106,76 +105,58 @@ export default function Community() {
               />
             </div>
 
-            {/* INFO */}
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-[#0c090c]">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-text">
                   {community?.communityName}
                 </h1>
 
-                <span className="rounded-full bg-[#fff4df] px-3 py-1 text-xs font-medium text-[#ff6900]">
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                   🏸 Badminton
                 </span>
               </div>
 
-              <div className="mt-2 flex items-center gap-2">
-                <div className="h-5 w-5 overflow-hidden rounded-full border border-orange-100">
-                  <img
-                    src={community?.master.profileUrl}
-                    alt={community?.master.username}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-
-                <span className="text-sm text-stone-500">
-                  Hosted by {community?.master.username}
+              <p className="mt-1 text-sm text-gray-500">
+                Hosted by{" "}
+                <span className="font-medium text-text">
+                  {community?.master.username}
                 </span>
-              </div>
-            </div>
-          </div>
-
-          {/* STATUS */}
-          <div className="hidden rounded-2xl border border-orange-100 bg-[#fffaf2] px-4 py-2 md:block">
-            <p className="text-xs font-medium text-[#ff6900]">
-              Active Community
-            </p>
-
-            <p className="mt-1 text-sm font-semibold text-[#0c090c]">
-              Match Queue Open
-            </p>
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN */}
-      <section className="flex flex-1 flex-col gap-5 overflow-hidden p-6">
-        {/* CREATE HOST */}
-        <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff4df] text-xl text-[#ff6900]">
-              🏸
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold text-[#0c090c]">
-                Create Match Host
-              </h3>
-
-              <p className="text-sm text-stone-500">
-                Start a badminton queue for your community.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-4">
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-stone-600">Select sport</span>
+          {/* Status */}
+          <div className="w-fit rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-600">
+            Active
+          </div>
+        </div>
+      </header>
+
+      {/* Main */}
+      <section className="flex flex-1 flex-col gap-5 p-4 sm:p-6">
+        {/* Create Host */}
+        <div className="rounded-3xl border border-gray-200 bg-white p-5">
+          <div className="mb-5">
+            <h3 className="text-lg font-semibold text-text">
+              Create Match Host
+            </h3>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Start a badminton queue session.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <label className="flex-1">
+              <span className="mb-2 block text-sm font-medium text-text">
+                Sport
+              </span>
 
               <select
                 name="sport"
                 value={sportName}
                 onChange={(event) => setSportName(event.target.value)}
-                className="rounded-2xl border border-orange-100 bg-[#fbfbf9] px-4 py-3 text-sm outline-none transition focus:border-[#fd9a00] focus:ring-4 focus:ring-[#ffd230]/30"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
               >
                 {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
                   <option key={sportOption} value={sportOption}>
@@ -189,142 +170,304 @@ export default function Community() {
               type="button"
               onClick={() => void handleCreateHost()}
               disabled={isCreatingHost}
-              className={`rounded-2xl px-5 py-3 text-sm font-medium transition-all duration-200 cursor-pointer ${
+              className={`
+              rounded-xl px-5 py-3 text-sm font-semibold transition
+
+              ${
                 isCreatingHost
-                  ? "cursor-not-allowed bg-stone-200 text-stone-400"
-                  : "bg-[#fd9a00] text-white hover:bg-[#ff6900]"
-              }`}
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "bg-primary text-white hover:bg-accent"
+              }
+            `}
             >
               {isCreatingHost ? "Hosting..." : "Host"}
             </button>
           </div>
 
           {hostError && (
-            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
               {hostError}
             </div>
           )}
         </div>
 
-        {/* HOST TABLE */}
-        <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-          {/* TABLE HEADER */}
-          <div className="flex items-center justify-between border-b border-orange-100 px-6 py-5">
+        {/* Hosts */}
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
             <div>
-              <h3 className="text-lg font-semibold text-[#0c090c]">
-                Active Hosts
-              </h3>
+              <h3 className="text-lg font-semibold text-text">Active Hosts</h3>
 
-              <p className="mt-1 text-sm text-stone-500">
-                Manage badminton hosts and queues.
-              </p>
+              <p className="text-sm text-gray-500">Manage match queues</p>
             </div>
 
-            <div className="rounded-full bg-[#fff4df] px-4 py-2 text-sm font-medium text-[#ff6900]">
-              {communityHosts.length} Hosts
+            <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              {communityHosts.length}
             </div>
           </div>
 
-          {/* TABLE */}
-          <div className="min-h-0 flex-1 overflow-auto">
+          {/* Table */}
+          <div className="overflow-auto">
             {communityHosts.length > 0 ? (
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-[#fffaf2]">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                      Match Host
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                      Host
                     </th>
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                       Sport
                     </th>
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                       Status
-                    </th>
-
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                      Actions
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-orange-50">
+                <tbody className="divide-y divide-gray-100">
                   {communityHosts.map((communityHost) => (
                     <tr
                       key={communityHost.id}
                       onClick={() =>
                         navigate(`/community/${id}/hosts/${communityHost.id}`)
                       }
-                      className="cursor-pointer transition hover:bg-[#fffaf2]"
+                      className="cursor-pointer transition hover:bg-gray-50"
                     >
-                      {/* HOST NAME */}
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-[#0c090c]">
-                            {communityHost.hostName}
-                          </p>
-
-                          <p className="mt-1 text-xs text-stone-500">
-                            Badminton queue session
-                          </p>
-                        </div>
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-text">
+                          {communityHost.hostName}
+                        </p>
                       </td>
 
-                      {/* SPORT */}
-                      <td className="px-6 py-4">
-                        <span className="rounded-full bg-[#fff4df] px-3 py-1 text-xs font-medium text-[#ff6900]">
+                      <td className="px-5 py-4">
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                           🏸 {communityHost.sport}
                         </span>
                       </td>
 
-                      {/* STATUS */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                          className={`
+                          rounded-full px-3 py-1 text-xs font-medium
+                          ${
                             communityHost.status === "available"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
+                          }
+                        `}
                         >
                           {communityHost.status}
                         </span>
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            className="rounded-xl bg-sky-50 p-2 text-sky-600 transition hover:bg-sky-100"
-                          >
-                            <HiPencilAlt className="h-4 w-4" />
-                          </button>
-
-                          <button
-                            type="button"
-                            className="rounded-xl bg-red-50 p-2 text-red-600 transition hover:bg-red-100"
-                          >
-                            <IoMdTrash className="h-4 w-4" />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center p-10 text-center">
-                <div className="mb-4 flex h-18 w-18 items-center justify-center rounded-full bg-[#fff4df] text-3xl">
-                  🏸
-                </div>
+              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <div className="text-4xl">🏸</div>
 
-                <h3 className="text-lg font-semibold text-[#0c090c]">
+                <h3 className="mt-4 text-lg font-semibold text-text">
                   No hosts yet
                 </h3>
 
-                <p className="mt-2 max-w-sm text-sm text-stone-500">
-                  Create your first badminton host and start organizing matches.
+                <p className="mt-2 text-sm text-gray-500">
+                  Create your first match host.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Left */}
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 overflow-hidden rounded-2xl border border-gray-200">
+              <img
+                src={community?.profileUrl}
+                alt={community?.communityName}
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-text">
+                  {community?.communityName}
+                </h1>
+
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  🏸 Badminton
+                </span>
+              </div>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Hosted by{" "}
+                <span className="font-medium text-text">
+                  {community?.master.username}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="w-fit rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-600">
+            Active
+          </div>
+        </div>
+      </header>
+
+      {/* Main */}
+      <section className="flex flex-1 flex-col gap-5 p-4 sm:p-6">
+        {/* Create Host */}
+        <div className="rounded-3xl border border-gray-200 bg-white p-5">
+          <div className="mb-5">
+            <h3 className="text-lg font-semibold text-text">
+              Create Match Host
+            </h3>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Start a badminton queue session.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <label className="flex-1">
+              <span className="mb-2 block text-sm font-medium text-text">
+                Sport
+              </span>
+
+              <select
+                name="sport"
+                value={sportName}
+                onChange={(event) => setSportName(event.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+              >
+                {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
+                  <option key={sportOption} value={sportOption}>
+                    {sportOption.charAt(0).toUpperCase() + sportOption.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              onClick={() => void handleCreateHost()}
+              disabled={isCreatingHost}
+              className={`
+              rounded-xl px-5 py-3 text-sm font-semibold transition
+
+              ${
+                isCreatingHost
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "bg-primary text-white hover:bg-accent"
+              }
+            `}
+            >
+              {isCreatingHost ? "Hosting..." : "Host"}
+            </button>
+          </div>
+
+          {hostError && (
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              {hostError}
+            </div>
+          )}
+        </div>
+
+        {/* Hosts */}
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <div>
+              <h3 className="text-lg font-semibold text-text">Active Hosts</h3>
+
+              <p className="text-sm text-gray-500">Manage match queues</p>
+            </div>
+
+            <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              {communityHosts.length}
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-auto">
+            {communityHosts.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                      Host
+                    </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                      Sport
+                    </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                  {communityHosts.map((communityHost) => (
+                    <tr
+                      key={communityHost.id}
+                      onClick={() =>
+                        navigate(`/community/${id}/hosts/${communityHost.id}`)
+                      }
+                      className="cursor-pointer transition hover:bg-gray-50"
+                    >
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-text">
+                          {communityHost.hostName}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                          🏸 {communityHost.sport}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span
+                          className={`
+                          rounded-full px-3 py-1 text-xs font-medium
+                          ${
+                            communityHost.status === "available"
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
+                          }
+                        `}
+                        >
+                          {communityHost.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                <div className="text-4xl">🏸</div>
+
+                <h3 className="mt-4 text-lg font-semibold text-text">
+                  No hosts yet
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  Create your first match host.
                 </p>
               </div>
             )}

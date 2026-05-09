@@ -86,12 +86,6 @@ export default function PlayerCard({
     playing: "border-red-500 bg-red-300",
   }[player.matchStatus];
 
-  const hoverClasses = {
-    waiting: "hover:bg-green-400",
-    inQueue: "hover:bg-yellow-400",
-    playing: "hover:bg-red-400",
-  }[player.matchStatus];
-
   return (
     <div
       ref={setNodeRef}
@@ -99,64 +93,74 @@ export default function PlayerCard({
       {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: canDrag ? "manipulation" : "auto",
       }}
-      className={`relative flex w-full items-center justify-between rounded-2xl border px-2 py-2 shadow-sm transition-all duration-200
-  ${statusClasses}
-  ${
-    canDrag
-      ? `cursor-grab active:cursor-grabbing ${hoverClasses}`
-      : "cursor-default"
-  }
-  ${
-    activeDropdown === player.id
-      ? "z-[120] border-[var(--color-primary)]"
-      : "border-orange-100"
-  }`}
+      className={`
+      relative flex items-center justify-between
+      gap-3 rounded-2xl border bg-white
+      px-3 py-2 shadow-sm transition-all duration-200
+
+      ${statusClasses}
+
+      ${canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
+
+      ${
+        activeDropdown === player.id
+          ? "z-[120] border-primary"
+          : "border-gray-200 hover:border-primary/30"
+      }
+    `}
     >
-      {/* PLAYER */}
-      <div className="flex items-center gap-2">
-        <div className="h-[36px] w-[36px] overflow-hidden rounded-full border border-orange-100 bg-orange-50">
+      {/* ================= PLAYER INFO ================= */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {/* AVATAR */}
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
-            className="block h-full w-full rounded-full object-cover object-center"
+            className="h-full w-full object-cover"
           />
         </div>
 
-        <div className="min-w-0">
-          <span className="flex items-center gap-2">
-            <span className="truncate text-[12px] font-semibold text-[var(--color-text)]">
+        {/* TEXT */}
+        <div className="min-w-0 flex flex-col">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate text-sm font-semibold text-text">
               {player.player.username}
             </span>
 
             {player.player.isStatic && (
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                 Static
               </span>
             )}
-          </span>
+          </div>
 
-          <span className="mt-0.5 block text-[11px] font-medium text-stone-500">
-            {formattedTimer}
-          </span>
+          <span className="mt-0.5 text-xs text-gray-500">{formattedTimer}</span>
         </div>
       </div>
 
-      {/* ACTIONS */}
-      <div className="flex items-center gap-1">
+      {/* ================= ACTIONS ================= */}
+      <div className="flex items-center gap-1 shrink-0">
+        {/* REMOVE */}
         {isInSlot && (canRemoveFromCourt || canRemoveFromQueue) && (
           <button
             type="button"
-            title="Remove slot"
+            title="Remove"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-50 hover:text-[var(--color-accent)]"
+            className="
+            flex h-9 w-9 items-center justify-center
+            rounded-xl text-gray-500 transition
+            hover:bg-gray-100 hover:text-primary
+          "
           >
             <TbArrowBack size={16} />
           </button>
         )}
 
+        {/* DROPDOWN */}
         <div
           data-dropdown
           ref={dropdownRef}
@@ -167,9 +171,13 @@ export default function PlayerCard({
         >
           <button
             type="button"
-            title="Player settings"
+            title="Settings"
             onClick={() => onToggleDropdown(player.id)}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-stone-500 transition hover:bg-orange-50 hover:text-[var(--color-accent)]"
+            className="
+            flex h-9 w-9 items-center justify-center
+            rounded-xl text-gray-500 transition
+            hover:bg-gray-100 hover:text-primary
+          "
           >
             <HiOutlineDotsVertical size={16} />
           </button>
