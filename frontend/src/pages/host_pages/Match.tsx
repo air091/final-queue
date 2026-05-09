@@ -4,8 +4,7 @@ import { useParams } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -387,11 +386,9 @@ export default function Match() {
     new Map(),
   );
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 150,
-        tolerance: 8,
+        distance: 8,
       },
     }),
   );

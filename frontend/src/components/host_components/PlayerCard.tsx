@@ -35,16 +35,22 @@ export default function PlayerCard({
   queueId,
   onRemoveFromQueue,
 }: PlayerCardProps) {
-  const { setNodeRef, attributes, listeners, transform, isDragging } =
-    useDraggable({
-      id: draggableId,
-      disabled: !canDrag,
-      data: {
-        type: "player",
-        hostedPlayerId: player.id,
-        courtId,
-      },
-    });
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    attributes,
+    listeners,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: draggableId,
+    disabled: !canDrag,
+    data: {
+      type: "player",
+      hostedPlayerId: player.id,
+      courtId,
+    },
+  });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -89,12 +95,9 @@ export default function PlayerCard({
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       style={{
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.4 : 1,
-        touchAction: canDrag ? "manipulation" : "auto",
       }}
       className={`
       relative flex items-center justify-between
@@ -113,7 +116,17 @@ export default function PlayerCard({
     `}
     >
       {/* ================= PLAYER INFO ================= */}
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div
+        ref={canDrag ? setActivatorNodeRef : undefined}
+        {...attributes}
+        {...listeners}
+        className={`flex min-w-0 flex-1 items-center gap-3 ${
+          canDrag ? "touch-none" : ""
+        }`}
+        style={{
+          touchAction: canDrag ? "none" : "auto",
+        }}
+      >
         {/* AVATAR */}
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
           <img
