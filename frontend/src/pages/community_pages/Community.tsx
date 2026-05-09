@@ -1,8 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { IoMdTrash } from "react-icons/io";
-import { HiPencilAlt } from "react-icons/hi";
 import { api } from "../../lib/api";
 
 type MasterType = {
