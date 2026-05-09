@@ -127,25 +127,31 @@ export default function Home() {
     host.currentUserStatus !== null;
 
   return (
-    <div className="w-full  px-4 py-6">
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-5">
+    <div className="w-full px-3 py-4 sm:px-4 sm:py-6">
+      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-5 pb-24 md:pb-6">
         {availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
 
           return (
             <div
               key={availableHost.id}
-              className="group relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+              className="
+              group relative overflow-hidden
+              rounded-3xl border border-orange-100
+              bg-white p-4 shadow-sm
+              transition-all duration-300
+              hover:shadow-2xl
+            "
             >
               {/* Background Accent */}
               <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 via-transparent to-[var(--color-accent)]/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
               {/* TOP */}
-              <div className="relative z-10 flex items-start justify-between gap-3">
+              <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 {/* LEFT */}
-                <div className="flex items-center gap-4">
-                  {/* COMMUNITY IMAGE */}
-                  <div className="relative">
+                <div className="flex items-start gap-4">
+                  {/* IMAGE */}
+                  <div className="relative shrink-0">
                     <div className="absolute inset-0 rounded-full bg-[var(--color-primary)] blur-md opacity-30" />
 
                     <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[var(--color-secondary)] bg-stone-100 shadow-md">
@@ -161,20 +167,18 @@ export default function Home() {
                   </div>
 
                   {/* INFO */}
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-bold text-[var(--color-text)]">
+                      <h2 className="truncate text-base font-bold text-[var(--color-text)]">
                         {availableHost.community.communityName}
                       </h2>
 
-                      {/* SPORT BADGE */}
                       <span className="rounded-full bg-[var(--color-secondary)]/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                         🏸 {availableHost.sport}
                       </span>
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                      {/* HOST */}
                       <div className="flex items-center gap-1.5">
                         <div className="h-5 w-5 overflow-hidden rounded-full border border-orange-200">
                           <img
@@ -191,7 +195,6 @@ export default function Home() {
 
                       <span className="text-orange-300">•</span>
 
-                      {/* STATUS */}
                       <span className="font-medium text-emerald-600">
                         Available now
                       </span>
@@ -199,15 +202,15 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* OPEN STATUS */}
-                <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm">
+                {/* STATUS */}
+                <div className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm">
                   OPEN
                 </div>
               </div>
 
               {/* MATCH TITLE */}
               <div className="relative z-10 mt-5">
-                <h3 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
+                <h3 className="text-lg font-bold tracking-tight text-[var(--color-text)] sm:text-xl">
                   {availableHost.hostName}
                 </h3>
 
@@ -218,18 +221,21 @@ export default function Home() {
               </div>
 
               {/* FOOTER */}
-              <div className="relative z-10 mt-5 flex items-center justify-between gap-3">
+              <div className="relative z-10 mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* PLAYERS */}
-                <div className="flex items-center">
+                <div className="flex items-center overflow-x-auto pb-1">
                   {availableHost.acceptedPlayers
                     .slice(0, 6)
                     .map(({ id, player }, index) => (
                       <div
                         key={id}
                         title={player.username}
-                        className={`relative h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md ${
-                          index !== 0 ? "-ml-3" : ""
-                        }`}
+                        className={`
+                        relative h-10 w-10 shrink-0
+                        overflow-hidden rounded-full
+                        border-2 border-white shadow-md
+                        ${index !== 0 ? "-ml-3" : ""}
+                      `}
                       >
                         <img
                           src={player.profileUrl}
@@ -251,11 +257,18 @@ export default function Home() {
                   type="button"
                   disabled={isButtonDisabled(availableHost, isRequesting)}
                   onClick={() => handleRequestToJoinHost(availableHost)}
-                  className={`rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                  className={`
+                  w-full rounded-2xl px-5 py-3
+                  text-sm font-semibold transition-all duration-200
+
+                  sm:w-auto
+
+                  ${
                     isButtonDisabled(availableHost, isRequesting)
                       ? "cursor-not-allowed border border-stone-200 bg-stone-100 text-stone-400"
                       : "bg-[var(--color-primary)] text-white shadow-lg shadow-orange-200 hover:scale-[1.03] hover:bg-[var(--color-accent)] active:scale-[0.98]"
-                  }`}
+                  }
+                `}
                 >
                   {getButtonLabel(availableHost, isRequesting)}
                 </button>

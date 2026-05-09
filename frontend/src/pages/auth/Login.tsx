@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import axios from "axios";
 
 type LoginCredentialsType = {
   email: string;
@@ -17,9 +18,15 @@ export default function Login() {
 
   const handleOnSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await login({ email: credentials.email, password: credentials.password });
-    setCredentials({ email: "", password: "" });
-    navigate("/home");
+    try {
+      await login({ email: credentials.email, password: credentials.password });
+      setCredentials({ email: "", password: "" });
+      navigate("/home");
+    } catch (error) {
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data.message);
+      else console.error(error);
+    }
   };
 
   const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {

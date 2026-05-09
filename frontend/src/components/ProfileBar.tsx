@@ -22,11 +22,17 @@ export default function ProfileBar() {
     };
   }, []);
   return (
-    <div className="relative" ref={profileRef}>
+    <div className="relative w-full" ref={profileRef}>
       <button
         type="button"
         onClick={() => setOpenProfile((prev) => !prev)}
-        className="flex w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[#0c090c] transition-all duration-200 hover:bg-[#fff4df]"
+        className="
+        flex w-full items-center gap-3
+        rounded-2xl px-3 py-2.5
+        text-left text-[#0c090c]
+        transition-all duration-200
+        hover:bg-[#fff4df]
+      "
       >
         <div className="h-8 w-8 overflow-hidden rounded-xl">
           <img
@@ -36,7 +42,7 @@ export default function ProfileBar() {
           />
         </div>
 
-        <div>
+        <div className="hidden lg:block">
           <span className="block text-sm font-medium">{user?.username}</span>
         </div>
       </button>
@@ -64,24 +70,50 @@ export function ProfileDropdown({ open }: ProfileDropdownProps) {
 
   return (
     <div
-      className={`absolute bottom-16 left-0 w-full origin-bottom rounded-2xl border border-orange-100 bg-white p-2 shadow-lg transition-all duration-200 ${
+      className={`
+      absolute z-50
+
+      bottom-20 left-1/2 w-[220px] -translate-x-1/2
+      origin-bottom
+
+      rounded-2xl border border-orange-100
+      bg-white p-2 shadow-xl
+
+      transition-all duration-200
+
+      md:bottom-16 md:left-0 md:w-full md:translate-x-0
+      md:origin-bottom
+
+      lg:w-full
+
+      ${
         open
           ? "pointer-events-auto scale-100 opacity-100"
           : "pointer-events-none scale-95 opacity-0"
-      }`}
+      }
+    `}
     >
       <button
         type="button"
         onClick={handleLogout}
-        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#0c090c] transition-all duration-200 hover:bg-[#fff4df] hover:text-[#ff6900]"
+        className="
+        flex w-full items-center gap-3
+        rounded-xl px-3 py-2.5
+        text-sm font-medium text-[#0c090c]
+
+        transition-all duration-200
+
+        hover:bg-[#fff4df]
+        hover:text-[#ff6900]
+      "
       >
         {/* ICON */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#fff4df] text-[#ff6900]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#fff4df] text-[#ff6900]">
           <RiLogoutBoxLine size={16} />
         </div>
 
         {/* LABEL */}
-        <span>Logout</span>
+        <span className="truncate">Logout</span>
       </button>
     </div>
   );
