@@ -2,6 +2,7 @@ import axios from "axios";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
+import { useAuth } from "../../hooks/useAuth";
 
 type LoginCredentialsType = {
   email: string;
@@ -13,31 +14,19 @@ export default function Login() {
     email: "",
     password: "",
   });
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const loginAPI = async () => {
-    try {
-      await api.post("/api/auth/login", {
-        email: credentials.email,
-        password: credentials.password,
-      });
-      setCredentials({ email: "", password: "" });
-      navigate("/home");
-    } catch (error) {
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data?.message);
-      else console.error("Login api failed:", error);
-    }
+  const handleOnSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await login({ email: credentials.email, password: credentials.password });
+    setCredentials({ email: "", password: "" });
+    navigate("/home");
   };
 
   const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setCredentials((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleOnSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await loginAPI();
   };
 
   return (

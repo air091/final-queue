@@ -65,7 +65,7 @@ export function AuthProvider({ children }: AuthProvideProps) {
         { withCredentials: true },
       );
 
-      const response = await axios.get("/api/auth/me", {
+      const response = await axios.get("/api/auth/check-auth", {
         withCredentials: true,
       });
 

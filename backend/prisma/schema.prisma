@@ -33,10 +33,23 @@ model Account {
   status                AccountStatuses @default(active)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+  tokens                RefreshToken[]
   sports                UserSport[]
   communities           Community[]
   hostedPlayers         Player[]
   matchParticipants     MatchParticipant[]
+}
+
+model RefreshToken {
+  id                    String @id @default(uuid())
+  accountId             String
+  hashedToken           String @unique
+  revokedAt             DateTime?
+  expiresAt             DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  account               Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  @@index([accountId])
 }
 
 enum SkillLevels {
