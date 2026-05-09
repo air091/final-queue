@@ -101,8 +101,8 @@ export default function PlayerCard({
       }}
       className={`
       relative flex items-center justify-between
-      gap-3 rounded-2xl border bg-white
-      px-3 py-2 shadow-sm transition-all duration-200
+      gap-1 rounded-2xl border bg-white w-full
+      px-1 py-2 shadow-sm transition-all duration-200
 
       ${statusClasses}
 
@@ -120,7 +120,7 @@ export default function PlayerCard({
         ref={canDrag ? setActivatorNodeRef : undefined}
         {...attributes}
         {...listeners}
-        className={`flex min-w-0 flex-1 items-center gap-3 ${
+        className={`flex min-w-0 flex-1 items-center gap-1 ${
           canDrag ? "touch-none" : ""
         }`}
         style={{
@@ -139,15 +139,9 @@ export default function PlayerCard({
         {/* TEXT */}
         <div className="min-w-0 flex flex-col">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="truncate text-sm font-semibold text-text">
+            <span className="truncate text-[12px] font-semibold text-text">
               {player.player.username}
             </span>
-
-            {player.player.isStatic && (
-              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                Static
-              </span>
-            )}
           </div>
 
           <span className="mt-0.5 text-xs text-gray-500">{formattedTimer}</span>
@@ -164,7 +158,7 @@ export default function PlayerCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
             className="
-            flex h-9 w-9 items-center justify-center
+            flex h-9 w-9 items-center justify-center cursor-pointer
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "
@@ -187,7 +181,7 @@ export default function PlayerCard({
             title="Settings"
             onClick={() => onToggleDropdown(player.id)}
             className="
-            flex h-9 w-9 items-center justify-center
+            flex h-9 w-9 items-center justify-center cursor-pointer
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "

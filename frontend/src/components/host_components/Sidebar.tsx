@@ -25,7 +25,7 @@ export default function Sidebar() {
       {/* NAVIGATION */}
       <ul className="flex w-full md:grid md:gap-2">
         {/* BACK */}
-        <li className="hidden lg:block">
+        <li className="hidden md:block">
           <NavLink
             to={`/community/${communityId}`}
             className="
@@ -39,7 +39,7 @@ export default function Sidebar() {
               <FaArrowLeft size={14} />
             </div>
 
-            <span>Back</span>
+            <span className="hidden lg:block">Back</span>
           </NavLink>
         </li>
 
