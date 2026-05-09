@@ -6,6 +6,7 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../lib/jwt.js";
+import { setRefreshTokenCookie } from "../lib/cookies.js";
 
 export const register = async (request: Request, response: Response) => {
   try {
@@ -88,12 +89,7 @@ export const login = async (request: Request, response: Response) => {
       },
     });
 
-    response.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7days
-    });
+    setRefreshTokenCookie(response, refreshToken);
 
     return response.json({
       success: true,
@@ -215,13 +211,7 @@ export const refresh = async (request: Request, response: Response) => {
       email: account.email,
     });
 
-    response.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7days
-    });
-
+    setRefreshTokenCookie(response, refreshToken);
     return response.json({
       success: true,
       accessToken,
