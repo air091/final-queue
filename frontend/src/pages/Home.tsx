@@ -127,8 +127,8 @@ export default function Home() {
     host.currentUserStatus !== null;
 
   return (
-    <div className="w-full px-3 py-4 sm:px-4 sm:py-6">
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-5 pb-24 md:pb-6">
+    <div className="w-full px-2 py-4 sm:px-4">
+      <main className="mx-auto flex max-w-3xl flex-col gap-4 pb-24 md:pb-6">
         {availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
 
@@ -136,105 +136,77 @@ export default function Home() {
             <div
               key={availableHost.id}
               className="
-              group relative overflow-hidden
-              rounded-3xl border border-orange-100
-              bg-white p-4 shadow-sm
-              transition-all duration-300
-              hover:shadow-2xl
+              rounded-3xl border border-gray-200
+              bg-white p-5 transition
+              hover:border-primary/30
             "
             >
-              {/* Background Accent */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 via-transparent to-[var(--color-accent)]/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-              {/* TOP */}
-              <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                {/* LEFT */}
+              {/* Top */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                {/* Left */}
                 <div className="flex items-start gap-4">
-                  {/* IMAGE */}
-                  <div className="relative shrink-0">
-                    <div className="absolute inset-0 rounded-full bg-[var(--color-primary)] blur-md opacity-30" />
-
-                    <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[var(--color-secondary)] bg-stone-100 shadow-md">
-                      <img
-                        src={
-                          availableHost.community.profileUrl ??
-                          fallbackProfileUrl
-                        }
-                        alt={availableHost.community.communityName}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                  {/* Image */}
+                  <div className="h-14 w-14 overflow-hidden rounded-full border border-gray-200">
+                    <img
+                      src={
+                        availableHost.community.profileUrl ?? fallbackProfileUrl
+                      }
+                      alt={availableHost.community.communityName}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
 
-                  {/* INFO */}
-                  <div className="min-w-0">
+                  {/* Info */}
+                  <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-base font-bold text-[var(--color-text)]">
+                      <h2 className="text-base font-semibold text-text">
                         {availableHost.community.communityName}
                       </h2>
 
-                      <span className="rounded-full bg-[var(--color-secondary)]/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
                         🏸 {availableHost.sport}
                       </span>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-5 w-5 overflow-hidden rounded-full border border-orange-200">
-                          <img
-                            src={availableHost.community.master.profileUrl}
-                            alt={availableHost.community.master.username}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-
-                        <span className="font-medium text-stone-700">
-                          {availableHost.community.master.username}
-                        </span>
-                      </div>
-
-                      <span className="text-orange-300">•</span>
-
-                      <span className="font-medium text-emerald-600">
-                        Available now
+                    <p className="mt-1 text-sm text-gray-500">
+                      Hosted by{" "}
+                      <span className="font-medium text-text">
+                        {availableHost.community.master.username}
                       </span>
-                    </div>
+                    </p>
                   </div>
                 </div>
 
-                {/* STATUS */}
-                <div className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm">
+                {/* Status */}
+                <div className="w-fit rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-600">
                   OPEN
                 </div>
               </div>
 
-              {/* MATCH TITLE */}
-              <div className="relative z-10 mt-5">
-                <h3 className="text-lg font-bold tracking-tight text-[var(--color-text)] sm:text-xl">
+              {/* Title */}
+              <div className="mt-5">
+                <h3 className="text-xl font-bold text-text">
                   {availableHost.hostName}
                 </h3>
 
-                <p className="mt-1 text-sm text-stone-500">
-                  Join the queue and start playing badminton with nearby
-                  players.
+                <p className="mt-1 text-sm text-gray-500">
+                  Join the queue and start playing with nearby players.
                 </p>
               </div>
 
-              {/* FOOTER */}
-              <div className="relative z-10 mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                {/* PLAYERS */}
-                <div className="flex items-center overflow-x-auto pb-1">
+              {/* Footer */}
+              <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* Players */}
+                <div className="flex items-center">
                   {availableHost.acceptedPlayers
-                    .slice(0, 6)
+                    .slice(0, 5)
                     .map(({ id, player }, index) => (
                       <div
                         key={id}
-                        title={player.username}
                         className={`
-                        relative h-10 w-10 shrink-0
-                        overflow-hidden rounded-full
-                        border-2 border-white shadow-md
-                        ${index !== 0 ? "-ml-3" : ""}
+                        h-9 w-9 overflow-hidden rounded-full
+                        border-2 border-white
+                        ${index !== 0 ? "-ml-2" : ""}
                       `}
                       >
                         <img
@@ -245,28 +217,28 @@ export default function Home() {
                       </div>
                     ))}
 
-                  {availableHost.acceptedPlayers.length > 6 && (
-                    <div className="-ml-3 flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-white bg-[var(--color-primary)] text-xs font-bold text-white shadow-md">
-                      +{availableHost.acceptedPlayers.length - 6}
+                  {availableHost.acceptedPlayers.length > 5 && (
+                    <div className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                      +{availableHost.acceptedPlayers.length - 5}
                     </div>
                   )}
                 </div>
 
-                {/* BUTTON */}
+                {/* Button */}
                 <button
                   type="button"
                   disabled={isButtonDisabled(availableHost, isRequesting)}
                   onClick={() => handleRequestToJoinHost(availableHost)}
                   className={`
-                  w-full rounded-2xl px-5 py-3
-                  text-sm font-semibold transition-all duration-200
+                  w-full rounded-xl px-5 py-3
+                  text-sm font-semibold transition
 
                   sm:w-auto
 
                   ${
                     isButtonDisabled(availableHost, isRequesting)
-                      ? "cursor-not-allowed border border-stone-200 bg-stone-100 text-stone-400"
-                      : "bg-[var(--color-primary)] text-white shadow-lg shadow-orange-200 hover:scale-[1.03] hover:bg-[var(--color-accent)] active:scale-[0.98]"
+                      ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                      : "bg-primary text-white hover:bg-accent"
                   }
                 `}
                 >
