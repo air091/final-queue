@@ -1,9 +1,8 @@
 // import axios from "axios";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 // import { api } from "../../lib/api";
 import { RiHome9Fill } from "react-icons/ri";
 import { RiUserCommunityLine } from "react-icons/ri";
-import { useAuth } from "../../hooks/useAuth";
 import ProfileBar from "../ProfileBar";
 
 const navLinks = [
