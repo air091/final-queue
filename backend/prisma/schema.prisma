@@ -25,7 +25,7 @@ enum UserRoles {
 
 model Account {
   id                    String @id @default(uuid())
-  profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
+  profileUrl            String @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
   username              String
   email                 String @unique
   password              String
@@ -74,7 +74,7 @@ model UserSport {
 
 model Community {
   id                    String @id @default(uuid())
-  profileUrl            String @default("https://image.pngaaa.com/189/734189-middle.png")
+  profileUrl            String @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
   masterId              String
   communityName         String
   description           String?
