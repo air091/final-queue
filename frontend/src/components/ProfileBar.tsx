@@ -28,7 +28,7 @@ export default function ProfileBar() {
         onClick={() => setOpenProfile((prev) => !prev)}
         className="
         flex w-full items-center gap-3
-        rounded-2xl px-3 py-2.5
+        rounded-2xl px-3 py-2.5 cursor-pointer
         text-left text-[#0c090c]
         transition-all duration-200
         hover:bg-[#fff4df]
@@ -98,7 +98,7 @@ export function ProfileDropdown({ open }: ProfileDropdownProps) {
         onClick={handleLogout}
         className="
         flex w-full items-center gap-3
-        rounded-xl px-3 py-2.5
+        rounded-xl px-3 py-2.5 cursor-pointer
         text-sm font-medium text-[#0c090c]
 
         transition-all duration-200
