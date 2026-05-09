@@ -14,11 +14,15 @@ type User = {
   username: string;
   email: string;
   profileUrl: string;
-  exp: number;
-  iat: number;
 };
 
 type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+type RegisterPayload = {
+  username: string;
   email: string;
   password: string;
 };
@@ -27,6 +31,7 @@ type AuthContextType = {
   user: User | null;
   accessToken: string | null;
   isLoading: boolean;
+  register: (payload: RegisterPayload) => Promise<void>;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<string>;
@@ -117,6 +122,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // =========================
+  // LOGIN
+  // =========================
+
+  const register = useCallback(
+    async ({ username, email, password }: RegisterPayload) => {
+      const response = await api.post("/api/auth/register", {
+        username,
+        email,
+        password,
+      });
+      const token = response.data.accessToken;
+      setAccessToken(token);
+      setAuthToken(token);
+      setUser(response.data.user);
+    },
+    [],
+  );
+
+  // =========================
   // LOGOUT
   // =========================
 
@@ -141,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       accessToken,
       isLoading,
+      register,
       login,
       logout,
       refreshAccessToken,

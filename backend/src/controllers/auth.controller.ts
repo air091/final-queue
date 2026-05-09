@@ -29,7 +29,7 @@ export const register = async (request: Request, response: Response) => {
         .json({ success: false, message: "Email already exists." });
     }
     const hashPassword: string = await bcrypt.hash(password, 10);
-    await prisma.account.create({
+    const account = await prisma.account.create({
       data: {
         username: cleanedUsername,
         email: cleanedEmail,
@@ -37,9 +37,37 @@ export const register = async (request: Request, response: Response) => {
       },
     });
 
-    return response
-      .status(201)
-      .json({ success: true, message: "Account created successfully." });
+    const accessToken = signAccessToken({
+      sub: account.id,
+      username: account.username,
+      email: account.email,
+      profileUrl: account.profileUrl,
+    });
+
+    const refreshToken = signRefreshToken({ sub: account.id });
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+
+    await prisma.refreshToken.create({
+      data: {
+        accountId: account.id,
+        hashedToken: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      },
+    });
+
+    setRefreshTokenCookie(response, refreshToken);
+
+    return response.status(201).json({
+      success: true,
+      message: "Account created successfully.",
+      accessToken,
+      user: {
+        id: account.id,
+        username: account.username,
+        email: account.email,
+        profileUrl: account.profileUrl,
+      },
+    });
   } catch (error) {
     console.error("Error during registration:", error);
     return response.status(500).json({

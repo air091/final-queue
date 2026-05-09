@@ -195,7 +195,7 @@ export default function Community() {
                   : "bg-[#fd9a00] text-white hover:bg-[#ff6900]"
               }`}
             >
-              {isCreatingHost ? "Creating..." : "Create host"}
+              {isCreatingHost ? "Hosting..." : "Host"}
             </button>
           </div>
 

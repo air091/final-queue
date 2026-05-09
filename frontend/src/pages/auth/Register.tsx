@@ -1,7 +1,7 @@
-import axios from "axios";
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { api } from "../../lib/api";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import axios from "axios";
 
 type RegisterCredentialsType = {
   username: string;
@@ -11,6 +11,8 @@ type RegisterCredentialsType = {
 };
 
 export default function Register() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
   const [registerCredentials, setRegisterCredentials] =
     useState<RegisterCredentialsType>({
       username: "",
@@ -18,27 +20,6 @@ export default function Register() {
       password: "",
       confirmPassword: "",
     });
-
-  const register = async () => {
-    try {
-      const response = await api.post("/api/auth/register", {
-        username: registerCredentials.username,
-        email: registerCredentials.email,
-        password: registerCredentials.password,
-      });
-
-      console.log(response);
-      setRegisterCredentials({
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-      });
-    } catch (error) {
-      if (axios.isAxiosError(error)) console.error(error);
-      else console.error(error);
-    }
-  };
 
   const handleOnChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -50,17 +31,36 @@ export default function Register() {
   const handleOnSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (registerCredentials.password !== registerCredentials.confirmPassword) {
-      console.error("Password not match");
-      setRegisterCredentials((prev) => ({
-        ...prev,
+    try {
+      if (
+        registerCredentials.password !== registerCredentials.confirmPassword
+      ) {
+        console.error("Passwords do not match");
+        setRegisterCredentials((prev) => ({
+          ...prev,
+          password: "",
+          confirmPassword: "",
+        }));
+        return;
+      }
+      await register({
+        username: registerCredentials.username,
+        email: registerCredentials.email,
+        password: registerCredentials.password,
+      });
+
+      setRegisterCredentials({
+        username: "",
+        email: "",
         password: "",
         confirmPassword: "",
-      }));
-      return;
-    }
+      });
 
-    await register();
+      navigate("/home");
+    } catch (error) {
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error(error);
+    }
   };
 
   return (

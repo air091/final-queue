@@ -1,9 +1,8 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { api } from "../../lib/api";
 import { FaArrowLeft } from "react-icons/fa6";
 import ProfileBar from "../ProfileBar";
+import { useCommunities } from "../../contexts/CommunitiesContext";
 
 type CommunitiesType = {
   id: string;
@@ -13,22 +12,7 @@ type CommunitiesType = {
 };
 
 export default function Sidebar() {
-  const [communities, setCommunities] = useState<CommunitiesType[]>([]);
-
-  const getCommunities = async () => {
-    try {
-      const response = await api.get("/api/community");
-      setCommunities(response.data.communities);
-    } catch (error) {
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data?.message);
-      else console.error("Login api failed:", error);
-    }
-  };
-
-  useEffect(() => {
-    getCommunities();
-  }, []);
+  const { communities, isLoading } = useCommunities();
 
   return (
     <nav className="flex w-[240px] flex-col justify-between w-[260px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
