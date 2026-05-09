@@ -33,6 +33,7 @@ type JwtAccessPayload = JwtPayload & {
   sub: string;
   username: string;
   email: string;
+  profileUrl: string;
 };
 
 type JwtRefreshPayload = JwtPayload & {

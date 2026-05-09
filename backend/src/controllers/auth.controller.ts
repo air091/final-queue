@@ -76,6 +76,7 @@ export const login = async (request: Request, response: Response) => {
       sub: account.id,
       username: account.username,
       email: account.email,
+      profileUrl: account.profileUrl,
     });
 
     const refreshToken = signRefreshToken({ sub: account.id });
@@ -99,6 +100,7 @@ export const login = async (request: Request, response: Response) => {
         id: account.id,
         username: account.username,
         email: account.email,
+        profileUrl: account.profileUrl,
       },
     });
   } catch (error) {
@@ -209,6 +211,7 @@ export const refresh = async (request: Request, response: Response) => {
       sub: account.id,
       username: account.username,
       email: account.email,
+      profileUrl: account.profileUrl,
     });
 
     setRefreshTokenCookie(response, newRefreshToken);

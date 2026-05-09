@@ -13,6 +13,7 @@ type User = {
   id: string;
   username: string;
   email: string;
+  profileUrl: string;
   exp: number;
   iat: number;
 };
