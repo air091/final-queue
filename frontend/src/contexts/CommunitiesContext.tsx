@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { api } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 
 type CommunitiesType = {
   id: string;
@@ -31,10 +32,12 @@ type CommunitiesProviderProps = {
 };
 
 export function CommunitiesProvider({ children }: CommunitiesProviderProps) {
+  const { accessToken, isLoading: authLoading } = useAuth();
   const [communities, setCommunities] = useState<CommunitiesType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const getCommunities = useCallback(async () => {
+    setIsLoading(true);
     try {
       const response = await api.get("/api/community");
       setCommunities(response.data.communities);
@@ -51,8 +54,10 @@ export function CommunitiesProvider({ children }: CommunitiesProviderProps) {
   }, [getCommunities]);
 
   useEffect(() => {
-    getCommunities();
-  }, [getCommunities]);
+    if (!authLoading && accessToken) {
+      getCommunities();
+    }
+  }, [getCommunities, authLoading, accessToken]);
 
   const value = {
     communities,

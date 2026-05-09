@@ -110,6 +110,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // =========================
 
   const login = useCallback(async ({ email, password }: LoginPayload) => {
+    if (!email || !password) {
+      throw new Error("Email and password are required.");
+    }
+
     const response = await api.post("/api/auth/login", {
       email,
       password,

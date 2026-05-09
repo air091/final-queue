@@ -13,19 +13,41 @@ export default function Login() {
     email: "",
     password: "",
   });
-  const { login } = useAuth();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { login, refreshAccessToken } = useAuth();
   const navigate = useNavigate();
 
-  const handleOnSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
+  const handleOnSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setErrorMessage(null);
+
     try {
-      await login({ email: credentials.email, password: credentials.password });
+      if (!credentials.email && !credentials.password) {
+        await refreshAccessToken();
+      } else if (credentials.email && credentials.password) {
+        await login({
+          email: credentials.email,
+          password: credentials.password,
+        });
+      } else {
+        setErrorMessage(
+          "Please enter both email and password, or leave both fields blank to reuse your saved session.",
+        );
+        return;
+      }
+
       setCredentials({ email: "", password: "" });
       navigate("/home");
     } catch (error) {
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data.message);
-      else console.error(error);
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(
+          error.response?.data?.message ?? "Login failed. Please try again.",
+        );
+        console.error(error.response?.data?.message);
+      } else {
+        setErrorMessage("Login failed. Please try again.");
+        console.error(error);
+      }
     }
   };
 
@@ -167,10 +189,13 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-[#fd9a00] hover:bg-[#ff6900] cursor-pointer text-white font-semibold py-3 rounded-xl transition duration-200 shadow-lg hover:shadow-orange-300"
+              className="w-full bg-[#fd9a00] text-white font-semibold py-3 rounded-xl transition duration-200 shadow-lg hover:bg-[#ff6900] hover:shadow-orange-300"
             >
               Login
             </button>
+            {errorMessage ? (
+              <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
+            ) : null}
           </form>
 
           <p className="text-sm text-center text-gray-600 mt-6">
