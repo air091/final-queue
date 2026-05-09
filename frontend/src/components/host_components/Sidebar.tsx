@@ -4,11 +4,12 @@ import { MdSpaceDashboard } from "react-icons/md";
 import { HiUsers } from "react-icons/hi2";
 import { GiMatchHead } from "react-icons/gi";
 import { MdOutlinePayment } from "react-icons/md";
+import ProfileBar from "../ProfileBar";
 
 export default function Sidebar() {
   const { communityId, hostId } = useParams();
   return (
-    <nav className="w-[240px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm my-2">
+    <nav className="flex w-[240px] flex-col justify-between w-[240px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm my-2">
       <ul className="grid gap-2">
         {/* BACK */}
         <li className="mb-1">
@@ -147,6 +148,7 @@ export default function Sidebar() {
           </NavLink>
         </li>
       </ul>
+      <ProfileBar />
     </nav>
   );
 }

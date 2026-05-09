@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { api } from "../../lib/api";
 import { FaArrowLeft } from "react-icons/fa6";
+import ProfileBar from "../ProfileBar";
 
 type CommunitiesType = {
   id: string;
@@ -30,7 +31,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <nav className="w-[260px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
+    <nav className="flex w-[240px] flex-col justify-between w-[260px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
       <ul className="grid gap-2">
         {/* BACK BUTTON */}
         <li className="mb-1">
@@ -133,6 +134,7 @@ export default function Sidebar() {
           </div>
         )}
       </ul>
+      <ProfileBar />
     </nav>
   );
 }
