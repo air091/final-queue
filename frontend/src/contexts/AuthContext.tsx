@@ -1,5 +1,11 @@
 import axios from "axios";
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 type User = {
   id: string;
@@ -17,7 +23,7 @@ type LoginPayload = {
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  //   login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<void>;
   //   logout: () => void;
 };
 
@@ -49,8 +55,27 @@ export function AuthProvider({ children }: AuthProvideProps) {
     checkAuth();
   }, []);
 
+  const login = useCallback(async ({ email, password }: LoginPayload) => {
+    try {
+      setIsLoading(true);
+      await axios.post(
+        "/api/auth/login",
+        { email, password },
+        { withCredentials: true },
+      );
+
+      const response = await axios.get("/api/auth/me", {
+        withCredentials: true,
+      });
+
+      setUser(response.data.user);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, isLoading }}>
+    <AuthContext.Provider value={{ user, login, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
