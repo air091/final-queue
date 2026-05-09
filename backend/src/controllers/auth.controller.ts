@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
-import { signToken } from "../lib/jwt.js";
+import { signAccessToken, signRefreshToken } from "../lib/jwt.js";
 
 export const register = async (request: Request, response: Response) => {
   try {
@@ -67,20 +67,40 @@ export const login = async (request: Request, response: Response) => {
         .json({ success: false, message: "Invalid email or password." });
     }
 
-    const token = signToken({
+    const accessToken = signAccessToken({
       sub: account.id,
       username: account.username,
       email: account.email,
     });
 
-    response.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 1000 * 60 * 15, // 15 minutes
+    const refreshToken = signRefreshToken({ sub: account.id });
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+
+    await prisma.refreshToken.create({
+      data: {
+        accountId: account.id,
+        hashedToken: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 100 * 60 * 60 * 24 * 7),
+      },
     });
 
-    return response.json({ success: true, message: "Login successful." });
+    response.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7days
+    });
+
+    return response.json({
+      success: true,
+      message: "Login successful.",
+      accessToken,
+      user: {
+        id: account.id,
+        username: account.username,
+        email: account.email,
+      },
+    });
   } catch (error) {
     console.error("Error during login:", error);
     return response.status(500).json({

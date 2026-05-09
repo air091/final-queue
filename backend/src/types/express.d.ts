@@ -1,13 +1,9 @@
-import type { JwtPayload } from "jsonwebtoken";
+import type { JwtAccessPayload } from "../lib/jwt.ts";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload & {
-        sub: string;
-        username: string;
-        email: string;
-      };
+      user?: JwtAccessPayload;
     }
   }
 }
