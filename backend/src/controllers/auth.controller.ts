@@ -1,7 +1,11 @@
-import type { Request, Response } from "express";
+import { request, type Request, type Response } from "express";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
-import { signAccessToken, signRefreshToken } from "../lib/jwt.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../lib/jwt.js";
 
 export const register = async (request: Request, response: Response) => {
   try {
@@ -80,7 +84,7 @@ export const login = async (request: Request, response: Response) => {
       data: {
         accountId: account.id,
         hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 100 * 60 * 60 * 24 * 7),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
       },
     });
 
@@ -122,6 +126,108 @@ export const logout = async (request: Request, response: Response) => {
     return response.json({ success: true, message: "Logout successful." });
   } catch (error) {
     console.error("Error during logout:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const refresh = async (request: Request, response: Response) => {
+  try {
+    // get refresh token from cookie
+    const refreshToken = request.cookies?.refreshToken;
+    if (!refreshToken)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    // verify jwt
+    const decoded = verifyRefreshToken(refreshToken);
+
+    // find account
+    const account = await prisma.account.findUnique({
+      where: { id: decoded.sub },
+    });
+
+    if (!account)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    // get valid refresh token
+    const storedTokens = await prisma.refreshToken.findMany({
+      where: {
+        accountId: account.id,
+        revokedAt: null,
+      },
+    });
+
+    let matchedToken = null;
+    for (const token of storedTokens) {
+      const isMatch = await bcrypt.compare(refreshToken, token.hashedToken);
+      if (isMatch) {
+        matchedToken = token;
+        break;
+      }
+    }
+
+    if (!matchedToken)
+      return response.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+
+    if (matchedToken.expiresAt < new Date())
+      return response.status(401).json({
+        success: false,
+        message: "Refresh token expired",
+      });
+
+    // token rotation
+
+    // revoke old token
+    await prisma.refreshToken.update({
+      where: {
+        id: matchedToken.id,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    // create new refresh token
+    const newRefreshToken = signRefreshToken({ sub: account.id });
+    const hashedRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+
+    // store new refresh token
+    await prisma.refreshToken.create({
+      data: {
+        accountId: account.id,
+        hashedToken: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      },
+    });
+
+    const accessToken = signAccessToken({
+      sub: account.id,
+      username: account.username,
+      email: account.email,
+    });
+
+    response.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7days
+    });
+
+    return response.json({
+      success: true,
+      accessToken,
+    });
+  } catch (error) {
+    console.error("Error during refresh:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
