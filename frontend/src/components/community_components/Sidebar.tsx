@@ -1,18 +1,10 @@
-import axios from "axios";
 import { NavLink } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa6";
 import ProfileBar from "../ProfileBar";
 import { useCommunities } from "../../contexts/CommunitiesContext";
 
-type CommunitiesType = {
-  id: string;
-  profileUrl: string;
-  communityName: string;
-  description: string;
-};
-
 export default function Sidebar() {
-  const { communities, isLoading } = useCommunities();
+  const { communities } = useCommunities();
 
   return (
     <nav className="flex w-[240px] flex-col justify-between w-[260px] rounded-3xl border border-orange-100 bg-white p-3 shadow-sm">
