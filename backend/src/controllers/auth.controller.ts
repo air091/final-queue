@@ -116,7 +116,7 @@ export const login = async (request: Request, response: Response) => {
 
 export const logout = async (request: Request, response: Response) => {
   try {
-    response.clearCookie("token", {
+    response.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
