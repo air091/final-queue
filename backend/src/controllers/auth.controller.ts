@@ -211,7 +211,8 @@ export const refresh = async (request: Request, response: Response) => {
       email: account.email,
     });
 
-    setRefreshTokenCookie(response, refreshToken);
+    setRefreshTokenCookie(response, newRefreshToken);
+
     return response.json({
       success: true,
       accessToken,

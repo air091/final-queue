@@ -1,7 +1,5 @@
-import axios from "axios";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { api } from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 
 type LoginCredentialsType = {

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 
 type JoinStatus = "requested" | "accepted" | "rejected" | "banned" | null;
 
@@ -39,10 +40,17 @@ export default function Home() {
   const [availableHosts, setAvailableHost] = useState<AvailableHostType[]>([]);
   const [requestingHostIds, setRequestingHostIds] = useState<string[]>([]);
   const fallbackProfileUrl = "https://image.pngaaa.com/189/734189-middle.png";
+  const { accessToken, isLoading } = useAuth();
 
   const getAvailableHosts = async () => {
+    if (!accessToken) return;
+
     try {
-      const response = await api.get("/api/public/actions/hosts/available");
+      const response = await api.get("/api/public/actions/hosts/available", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
       setAvailableHost(response.data.hosts);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -51,8 +59,10 @@ export default function Home() {
   };
 
   useEffect(() => {
-    getAvailableHosts();
-  }, []);
+    if (!isLoading && accessToken) {
+      getAvailableHosts();
+    }
+  }, [accessToken, isLoading]);
 
   const handleRequestToJoinHost = async (host: AvailableHostType) => {
     if (host.currentUserStatus || host.isOwnedByCurrentUser) return;
@@ -70,6 +80,11 @@ export default function Home() {
       await api.post(
         `/api/public/actions/request/community/${host.community.id}/hosts/${host.id}`,
         {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
       );
     } catch (error) {
       setAvailableHost((currentHosts) =>
