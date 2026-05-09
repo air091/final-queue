@@ -74,6 +74,11 @@ export function AuthProvider({ children }: AuthProvideProps) {
     }
   }, []);
 
+  const logout = useCallback(async () => {
+    await axios.post("/api/auth/logout", {}, { withCredentials: true });
+    setUser(null);
+  }, []);
+
   return (
     <AuthContext.Provider value={{ user, login, isLoading }}>
       {children}
