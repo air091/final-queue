@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -24,7 +25,7 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
-  //   logout: () => void;
+  logout: () => void;
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -79,9 +80,15 @@ export function AuthProvider({ children }: AuthProvideProps) {
     setUser(null);
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, login, isLoading }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      logout,
+      isLoading,
+    }),
+    [user, login, logout, isLoading],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
