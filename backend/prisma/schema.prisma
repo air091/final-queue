@@ -98,6 +98,10 @@ model Host {
   communityId           String
   hostName              String
   sport                 String
+  location              String?
+  startTime             DateTime?
+  endtime               DateTime?
+  maxPlayers            Int @default(0)
   status                HostStatus @default(available)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
