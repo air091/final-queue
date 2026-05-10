@@ -119,6 +119,17 @@ export const host = async (request: Request<Params>, response: Response) => {
         endTime,
         maxPlayers,
       },
+      select: {
+        id: true,
+        hostName: true,
+        sport: true,
+        location: true,
+        startTime: true,
+        endTime: true,
+        maxPlayers: true,
+        status: true,
+        _count: { select: { players: true } },
+      },
     });
 
     return response.status(201).json({
@@ -177,6 +188,7 @@ export const getHosts = async (
         endTime: true,
         maxPlayers: true,
         status: true,
+        _count: { select: { players: true } },
       },
     });
 

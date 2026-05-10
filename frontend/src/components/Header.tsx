@@ -75,7 +75,11 @@ export default function Header({ setOpenSidebar }: HeaderProps) {
 }
 
 function ProfileDropdown() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <div className="absolute top-8 -left-64 z-50 w-[280px] rounded-md border bg-white">
@@ -113,7 +117,11 @@ function ProfileDropdown() {
       <nav className="border-t py-1.5">
         <ul>
           <li>
-            <button className="flex w-full cursor-pointer items-center gap-x-[16px] px-[16px] py-1 text-[14px] font-medium hover:bg-stone-200">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full cursor-pointer items-center gap-x-[16px] px-[16px] py-1 text-[14px] font-medium hover:bg-stone-200"
+            >
               <div>
                 <RiLogoutBoxLine size={18} />
               </div>

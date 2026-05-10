@@ -197,6 +197,22 @@ export const playerRequestToJoinHost = async (
       });
     }
 
+    if (host.maxPlayers > 0) {
+      const acceptedPlayersCount = await prisma.player.count({
+        where: {
+          hostId: host.id,
+          hostStatus: PlayerHostStatuses.accepted,
+        },
+      });
+
+      if (acceptedPlayersCount >= host.maxPlayers) {
+        return response.status(400).json({
+          success: false,
+          message: "This host is already full",
+        });
+      }
+    }
+
     const player = await prisma.player.create({
       data: {
         hostId: host.id,

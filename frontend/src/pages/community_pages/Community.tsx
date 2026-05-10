@@ -27,6 +27,9 @@ type HostsType = {
   endTime: string | null;
   maxPlayers: number;
   status: string;
+  _count: {
+    players: number;
+  };
 };
 
 type HostFormState = {
@@ -371,6 +374,9 @@ export default function Community() {
                     Schedule
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                    Players
+                  </th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                     Capacity
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
@@ -412,6 +418,10 @@ export default function Community() {
                           Ends {formatHostDateTime(communityHost.endTime)}
                         </p>
                       </div>
+                    </td>
+
+                    <td className="px-5 py-4 text-gray-600">
+                      {communityHost._count.players}
                     </td>
 
                     <td className="px-5 py-4 text-gray-600">
@@ -494,6 +504,7 @@ export default function Community() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                  <span>{communityHost._count.players} players joined</span>
                   <span>
                     {communityHost.maxPlayers > 0
                       ? `${communityHost.maxPlayers} players`

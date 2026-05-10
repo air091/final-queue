@@ -52,6 +52,12 @@ const formatHostDateTime = (value?: string | null) => {
   }).format(date);
 };
 
+const isHostFull = (
+  host: Pick<AvailableHostType, "acceptedPlayers" | "maxPlayers">,
+) =>
+  Boolean(host.maxPlayers && host.maxPlayers > 0) &&
+  host.acceptedPlayers.length >= (host.maxPlayers ?? 0);
+
 export default function Home() {
   const [availableHosts, setAvailableHost] = useState<AvailableHostType[]>([]);
   const [requestingHostIds, setRequestingHostIds] = useState<string[]>([]);
@@ -76,12 +82,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && accessToken) {
-      getAvailableHosts();
+      void getAvailableHosts();
     }
   }, [accessToken, isLoading]);
 
   const handleRequestToJoinHost = async (host: AvailableHostType) => {
-    if (host.currentUserStatus || host.isOwnedByCurrentUser) return;
+    if (host.currentUserStatus || host.isOwnedByCurrentUser || isHostFull(host)) {
+      return;
+    }
 
     setRequestingHostIds((currentHostIds) => [...currentHostIds, host.id]);
     setAvailableHost((currentHosts) =>
@@ -122,11 +130,15 @@ export default function Home() {
   };
 
   const getButtonLabel = (
-    host: Pick<AvailableHostType, "currentUserStatus" | "isOwnedByCurrentUser">,
+    host: Pick<
+      AvailableHostType,
+      "acceptedPlayers" | "currentUserStatus" | "isOwnedByCurrentUser" | "maxPlayers"
+    >,
     isRequesting: boolean,
   ) => {
     if (isRequesting) return "Requesting...";
     if (host.isOwnedByCurrentUser) return "Host";
+    if (isHostFull(host)) return "Full";
     if (host.currentUserStatus === "accepted") return "Joined";
     if (host.currentUserStatus === "requested") return "Requested";
     if (host.currentUserStatus === "rejected") return "Rejected";
@@ -135,33 +147,35 @@ export default function Home() {
   };
 
   const isButtonDisabled = (
-    host: Pick<AvailableHostType, "currentUserStatus" | "isOwnedByCurrentUser">,
+    host: Pick<
+      AvailableHostType,
+      "acceptedPlayers" | "currentUserStatus" | "isOwnedByCurrentUser" | "maxPlayers"
+    >,
     isRequesting: boolean,
   ) =>
     isRequesting ||
     host.isOwnedByCurrentUser ||
-    host.currentUserStatus !== null;
+    host.currentUserStatus !== null ||
+    isHostFull(host);
 
   return (
     <div className="w-full px-2 py-2 sm:px-4">
       <main className="mx-auto flex max-w-3xl flex-col gap-4 pb-24 md:pb-6">
         {availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
+          const hostIsFull = isHostFull(availableHost);
 
           return (
             <div
               key={availableHost.id}
               className="
-              rounded-3xl border border-gray-200
-              bg-white p-5 transition
-              hover:border-primary/30
-            "
+                rounded-3xl border border-gray-200
+                bg-white p-5 transition
+                hover:border-primary/30
+              "
             >
-              {/* Top */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                {/* Left */}
                 <div className="flex items-start gap-4">
-                  {/* Image */}
                   <div className="h-14 w-14 overflow-hidden rounded-full border border-gray-200">
                     <img
                       src={
@@ -172,7 +186,6 @@ export default function Home() {
                     />
                   </div>
 
-                  {/* Info */}
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-semibold text-text">
@@ -180,7 +193,7 @@ export default function Home() {
                       </h2>
 
                       <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                        🏸 {availableHost.sport}
+                        {availableHost.sport}
                       </span>
                     </div>
 
@@ -193,13 +206,17 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Status */}
-                <div className="w-fit rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-600">
-                  OPEN
+                <div
+                  className={`w-fit rounded-full px-3 py-1 text-xs font-medium ${
+                    hostIsFull
+                      ? "bg-red-50 text-red-600"
+                      : "bg-green-50 text-green-600"
+                  }`}
+                >
+                  {hostIsFull ? "FULL" : "OPEN"}
                 </div>
               </div>
 
-              {/* Title */}
               <div className="mt-5">
                 <h3 className="text-xl font-bold text-text">
                   {availableHost.hostName}
@@ -230,15 +247,17 @@ export default function Home() {
 
                   {availableHost.maxPlayers && availableHost.maxPlayers > 0 ? (
                     <span className="rounded-full bg-gray-100 px-3 py-1">
-                      Max {availableHost.maxPlayers} players
+                      {availableHost.acceptedPlayers.length}/{availableHost.maxPlayers} players
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="rounded-full bg-gray-100 px-3 py-1">
+                      {availableHost.acceptedPlayers.length} players joined
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                {/* Players */}
                 <div className="flex items-center">
                   {availableHost.acceptedPlayers
                     .slice(0, 5)
@@ -246,10 +265,10 @@ export default function Home() {
                       <div
                         key={id}
                         className={`
-                        h-9 w-9 overflow-hidden rounded-full
-                        border-2 border-white
-                        ${index !== 0 ? "-ml-2" : ""}
-                      `}
+                          h-9 w-9 overflow-hidden rounded-full
+                          border-2 border-white
+                          ${index !== 0 ? "-ml-2" : ""}
+                        `}
                       >
                         <img
                           src={player.profileUrl}
@@ -266,23 +285,20 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Button */}
                 <button
                   type="button"
                   disabled={isButtonDisabled(availableHost, isRequesting)}
-                  onClick={() => handleRequestToJoinHost(availableHost)}
+                  onClick={() => void handleRequestToJoinHost(availableHost)}
                   className={`
-                  w-full rounded-xl px-5 py-3
-                  text-sm font-semibold transition
-
-                  sm:w-auto
-
-                  ${
-                    isButtonDisabled(availableHost, isRequesting)
-                      ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                      : "bg-primary text-white hover:bg-accent"
-                  }
-                `}
+                    w-full rounded-xl px-5 py-3
+                    text-sm font-semibold transition
+                    sm:w-auto
+                    ${
+                      isButtonDisabled(availableHost, isRequesting)
+                        ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                        : "bg-primary text-white hover:bg-accent"
+                    }
+                  `}
                 >
                   {getButtonLabel(availableHost, isRequesting)}
                 </button>
