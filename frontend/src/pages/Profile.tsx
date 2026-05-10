@@ -194,10 +194,6 @@ export default function Profile() {
               Account
             </p>
             <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Profile</h1>
-            <p className="mt-3 max-w-2xl text-sm text-white/75 sm:text-base">
-              Update your username and profile photo so other players can
-              recognize you across hosts and communities.
-            </p>
           </div>
 
           <div className="px-6 py-8 sm:px-10">
