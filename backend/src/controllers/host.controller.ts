@@ -72,7 +72,9 @@ const mapHostPlayerRecord = (player: {
 export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
-    const { sportName } = request.body;
+    let { hostName } = request.body;
+    const { sportName, location, startTime, endTime, maxPlayers } =
+      request.body;
 
     const user = request.user;
     if (!user)
@@ -103,11 +105,19 @@ export const host = async (request: Request<Params>, response: Response) => {
       where: { communityId: community.id },
     });
 
+    if (!hostName) {
+      hostName = `Host ${count + 1}`;
+    }
+
     const newHost = await prisma.host.create({
       data: {
-        hostName: `Host ${count + 1}`,
+        hostName,
         communityId: community.id,
         sport: sportName,
+        location,
+        startTime,
+        endTime,
+        maxPlayers,
       },
     });
 

@@ -100,7 +100,7 @@ model Host {
   sport                 String
   location              String?
   startTime             DateTime?
-  endtime               DateTime?
+  endtTime               DateTime?
   maxPlayers            Int @default(0)
   status                HostStatus @default(available)
   createdAt             DateTime @default(now())
