@@ -30,6 +30,10 @@ export type HostMeta = {
   id: string;
   hostName: string;
   sport: string;
+  location: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  maxPlayers: number;
   status: string;
   createdAt: string;
   community: {

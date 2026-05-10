@@ -59,6 +59,10 @@ export const getAvailableHosts = async (
           id: true,
           hostName: true,
           sport: true,
+          location: true,
+          startTime: true,
+          endTime: true,
+          maxPlayers: true,
           status: true,
           community: {
             select: {

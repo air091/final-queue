@@ -172,6 +172,10 @@ export const getHosts = async (
         id: true,
         hostName: true,
         sport: true,
+        location: true,
+        startTime: true,
+        endTime: true,
+        maxPlayers: true,
         status: true,
       },
     });
@@ -235,6 +239,10 @@ export const getHostById = async (
           id: true,
           hostName: true,
           sport: true,
+          location: true,
+          startTime: true,
+          endTime: true,
+          maxPlayers: true,
           status: true,
           createdAt: true,
           community: {
@@ -413,6 +421,10 @@ export const getHostWithPlayers = async (
           id: true,
           hostName: true,
           sport: true,
+          location: true,
+          startTime: true,
+          endTime: true,
+          maxPlayers: true,
           status: true,
           createdAt: true,
           community: {

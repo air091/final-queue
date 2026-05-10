@@ -29,11 +29,27 @@ type AvailableHostType = {
   id: string;
   hostName: string;
   sport: string;
+  location?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  maxPlayers?: number;
   status: string;
   community: CommunityType;
   currentUserStatus: JoinStatus;
   isOwnedByCurrentUser: boolean;
   acceptedPlayers: AcceptedPlayerType[];
+};
+
+const formatHostDateTime = (value?: string | null) => {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 };
 
 export default function Home() {
@@ -192,6 +208,32 @@ export default function Home() {
                 <p className="mt-1 text-sm text-gray-500">
                   Join the queue and start playing with nearby players.
                 </p>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                  {availableHost.location ? (
+                    <span className="rounded-full bg-gray-100 px-3 py-1">
+                      {availableHost.location}
+                    </span>
+                  ) : null}
+
+                  {availableHost.startTime ? (
+                    <span className="rounded-full bg-gray-100 px-3 py-1">
+                      Starts {formatHostDateTime(availableHost.startTime)}
+                    </span>
+                  ) : null}
+
+                  {availableHost.endTime ? (
+                    <span className="rounded-full bg-gray-100 px-3 py-1">
+                      Ends {formatHostDateTime(availableHost.endTime)}
+                    </span>
+                  ) : null}
+
+                  {availableHost.maxPlayers && availableHost.maxPlayers > 0 ? (
+                    <span className="rounded-full bg-gray-100 px-3 py-1">
+                      Max {availableHost.maxPlayers} players
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               {/* Footer */}
