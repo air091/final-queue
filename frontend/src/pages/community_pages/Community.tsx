@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
+import { Trash } from "lucide-react";
 
 type MasterType = {
   id: string;
@@ -66,6 +67,7 @@ export default function Community() {
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
+  const [deletingHostId, setDeletingHostId] = useState<string | null>(null);
   const [hostError, setHostError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -153,6 +155,39 @@ export default function Community() {
       else console.error("Create host api failed", error);
     } finally {
       setIsCreatingHost(false);
+    }
+  };
+
+  const handleDeleteHost = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    host: HostsType,
+  ) => {
+    event.stopPropagation();
+
+    if (!id || deletingHostId) return;
+
+    const confirmed = window.confirm(
+      `Delete "${host.hostName}"? This will remove the host and its related queue data.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingHostId(host.id);
+    setHostError(null);
+
+    try {
+      await api.delete(`/api/community/${id}/host/${host.id}`);
+      setCommunityHosts((currentHosts) =>
+        currentHosts.filter((currentHost) => currentHost.id !== host.id),
+      );
+    } catch (error) {
+      setHostError("Unable to delete host.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Delete host api failed", error);
+    } finally {
+      setDeletingHostId(null);
     }
   };
 
@@ -341,6 +376,9 @@ export default function Community() {
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                     Status
                   </th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
@@ -392,6 +430,20 @@ export default function Community() {
                       >
                         {communityHost.status}
                       </span>
+                    </td>
+
+                    <td className="px-5 py-4 text-gray-600">
+                      <button
+                        type="button"
+                        onClick={(event) =>
+                          void handleDeleteHost(event, communityHost)
+                        }
+                        disabled={deletingHostId === communityHost.id}
+                        className="w-fit rounded-full p-1 text-gray-500 transition hover:bg-red-400 hover:text-stone-200 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                        aria-label={`Delete ${communityHost.hostName}`}
+                      >
+                        <Trash size={20} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -462,6 +514,23 @@ export default function Community() {
                       {formatHostDateTime(communityHost.endTime)}
                     </span>
                   </p>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={(event) =>
+                      void handleDeleteHost(event, communityHost)
+                    }
+                    disabled={deletingHostId === communityHost.id}
+                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`Delete ${communityHost.hostName}`}
+                  >
+                    <Trash size={16} />
+                    {deletingHostId === communityHost.id
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
                 </div>
               </div>
             ))}
