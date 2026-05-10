@@ -22,6 +22,7 @@ import {
   type PlayerMatchHistoryItem,
   type QueueType,
 } from "../lib/host";
+import Header from "../components/Header";
 
 export default function HostLayout() {
   const { communityId, hostId } = useParams();
@@ -46,6 +47,7 @@ export default function HostLayout() {
   const [playerHistoryById, setPlayerHistoryById] = useState<
     Record<string, PlayerMatchHistoryItem[]>
   >({});
+  const [openSidebar, setOpenSidebar] = useState<boolean>(true);
 
   const loadHostData = useCallback(async () => {
     if (!communityId || !hostId) return;
@@ -60,7 +62,11 @@ export default function HostLayout() {
         hostStatus: string;
         paymentStatus: string;
         gamesPlayed: number;
-        player?: { username?: string; profileUrl?: string; isStatic?: boolean } | null;
+        player?: {
+          username?: string;
+          profileUrl?: string;
+          isStatic?: boolean;
+        } | null;
         payment?: { id: string; amountPaid: number } | null;
       }>,
     ): HostPaymentsData => {
@@ -235,46 +241,46 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen max-w-[1920px] gap-3 p-2 md:p-4">
-        <Sidebar />
+    <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden bg-background">
+      <Header setOpenSidebar={setOpenSidebar} />
 
-        <main className="flex-1 overflow-hidden pb-24 md:pb-0">
-          {isHostLoading ? (
-            <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
-              <p className="text-sm text-stone-500">Loading host data...</p>
-            </div>
-          ) : hostLoadError ? (
-            <div className="grid gap-3 rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
-              <p className="text-sm text-red-600">{hostLoadError}</p>
+      <main className="flex flex-1 overflow-hidden">
+        {openSidebar && <Sidebar />}
 
-              <button
-                type="button"
-                onClick={() => void loadHostData()}
-                className="w-fit rounded-2xl bg-text px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
-              >
-                Retry
-              </button>
-            </div>
-          ) : (
-            <>
-              <Outlet context={outletContext} />
+        {isHostLoading ? (
+          <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
+            <p className="text-sm text-stone-500">Loading host data...</p>
+          </div>
+        ) : hostLoadError ? (
+          <div className="grid gap-3 rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
+            <p className="text-sm text-red-600">{hostLoadError}</p>
 
-              <PlayerHistoryModal
-                player={selectedHistoryPlayer}
-                summary={selectedHistorySummary}
-                history={selectedHistoryEntries}
-                isLoading={
-                  selectedHistoryPlayer !== null &&
-                  historyLoadingPlayerId === selectedHistoryPlayer.id
-                }
-                error={selectedHistoryError}
-                onClose={closePlayerHistory}
-              />
-            </>
-          )}
-        </main>
-      </div>
+            <button
+              type="button"
+              onClick={() => void loadHostData()}
+              className="w-fit rounded-2xl bg-text px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto">
+            <Outlet context={outletContext} />
+
+            <PlayerHistoryModal
+              player={selectedHistoryPlayer}
+              summary={selectedHistorySummary}
+              history={selectedHistoryEntries}
+              isLoading={
+                selectedHistoryPlayer !== null &&
+                historyLoadingPlayerId === selectedHistoryPlayer.id
+              }
+              error={selectedHistoryError}
+              onClose={closePlayerHistory}
+            />
+          </div>
+        )}
+      </main>
     </div>
   );
 }
