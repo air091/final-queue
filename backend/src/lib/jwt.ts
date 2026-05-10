@@ -34,6 +34,7 @@ export type JwtAccessPayload = JwtPayload & {
   username: string;
   email: string;
   profileUrl: string;
+  role: string;
 };
 
 type JwtRefreshPayload = JwtPayload & {

@@ -14,6 +14,7 @@ type User = {
   username: string;
   email: string;
   profileUrl: string;
+  role: string;
 };
 
 type LoginPayload = {

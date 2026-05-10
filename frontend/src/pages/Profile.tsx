@@ -28,11 +28,17 @@ const readFileAsDataUrl = (file: File) =>
 export default function Profile() {
   const { user, updateCurrentUser } = useAuth();
   const [openEditImage, setOpenEditImage] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setUsername(user?.username ?? "");
+  }, [user?.username]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,12 +58,12 @@ export default function Profile() {
   }, []);
 
   const handleToggleEditImage = () => {
-    if (isSubmitting) return;
+    if (isSavingImage) return;
     setOpenEditImage((prev) => !prev);
   };
 
   const handleSelectPhoto = () => {
-    if (isSubmitting) return;
+    if (isSavingImage) return;
     setErrorMessage(null);
     setSuccessMessage(null);
     fileInputRef.current?.click();
@@ -75,7 +81,7 @@ export default function Profile() {
     }
 
     try {
-      setIsSubmitting(true);
+      setIsSavingImage(true);
       setErrorMessage(null);
       setSuccessMessage(null);
 
@@ -96,7 +102,7 @@ export default function Profile() {
         setErrorMessage("Unable to update profile photo.");
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSavingImage(false);
     }
   };
 
@@ -113,7 +119,7 @@ export default function Profile() {
 
   const handleRemovePhoto = async () => {
     try {
-      setIsSubmitting(true);
+      setIsSavingImage(true);
       setErrorMessage(null);
       setSuccessMessage(null);
 
@@ -133,7 +139,49 @@ export default function Profile() {
         setErrorMessage("Unable to remove profile photo.");
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSavingImage(false);
+    }
+  };
+
+  const handleUpdateUsername = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    const cleanedUsername = username.trim();
+
+    if (!cleanedUsername) {
+      setErrorMessage("Username is required.");
+      return;
+    }
+
+    if (cleanedUsername === user?.username) {
+      setSuccessMessage("Username is already up to date.");
+      setErrorMessage(null);
+      return;
+    }
+
+    try {
+      setIsSavingUsername(true);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+
+      const response = await api.patch("/api/auth/profile", {
+        username: cleanedUsername,
+      });
+
+      updateCurrentUser(response.data.user, response.data.accessToken);
+      setSuccessMessage("Username updated.");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(
+          error.response?.data?.message ?? "Unable to update username.",
+        );
+      } else {
+        setErrorMessage("Unable to update username.");
+      }
+    } finally {
+      setIsSavingUsername(false);
     }
   };
 
@@ -145,11 +193,9 @@ export default function Profile() {
             <p className="text-sm uppercase tracking-[0.3em] text-white/60">
               Account
             </p>
-            <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
-              Profile
-            </h1>
+            <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Profile</h1>
             <p className="mt-3 max-w-2xl text-sm text-white/75 sm:text-base">
-              Update your profile photo to make it easier for other players to
+              Update your username and profile photo so other players can
               recognize you across hosts and communities.
             </p>
           </div>
@@ -172,7 +218,9 @@ export default function Profile() {
                   <div className="text-2xl font-semibold text-text sm:text-3xl">
                     {user?.username}
                   </div>
-                  <div className="mt-2 text-sm text-gray-500">{user?.email}</div>
+                  <div className="mt-2 text-sm text-gray-500">
+                    {user?.email}
+                  </div>
                 </div>
               </div>
 
@@ -180,18 +228,68 @@ export default function Profile() {
                 <button
                   type="button"
                   onClick={handleToggleEditImage}
-                  disabled={isSubmitting}
+                  disabled={isSavingImage}
                   className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmitting ? "Saving..." : "Change photo"}
+                  {isSavingImage ? "Saving..." : "Change photo"}
                 </button>
 
                 <EditImageDropdown
                   open={openEditImage}
-                  isSubmitting={isSubmitting}
+                  isSubmitting={isSavingImage}
                   onRemove={handleRemovePhoto}
                   onUpload={handleSelectPhoto}
                 />
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+              <form
+                onSubmit={handleUpdateUsername}
+                className="rounded-3xl border border-orange-100 bg-[#fffaf4] p-5"
+              >
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-text">Username</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      This is the name shown to communities and players.
+                    </p>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-text">
+                      Display name
+                    </span>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      disabled={isSavingUsername}
+                      maxLength={30}
+                      className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </label>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-xs text-gray-500">
+                      3 to 30 characters recommended.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={isSavingUsername}
+                      className="rounded-2xl border border-[#ff6900] px-4 py-2 text-sm font-semibold text-[#ff6900] transition hover:bg-[#ff6900] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSavingUsername ? "Saving..." : "Save username"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="rounded-3xl border border-orange-100 bg-white p-5">
+                <p className="text-sm font-semibold text-text">Account type</p>
+                <div className="mt-3 inline-flex rounded-full bg-[#fff4df] px-3 py-1 text-sm font-medium capitalize text-[#ff6900]">
+                  {user?.role}
+                </div>
               </div>
             </div>
 

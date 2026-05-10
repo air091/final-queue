@@ -17,6 +17,7 @@ const accountSelect = {
   username: true,
   email: true,
   profileUrl: true,
+  role: true,
 } as const;
 
 const getPublicUserById = async (accountId: string) =>
@@ -30,17 +31,23 @@ const buildAccessToken = (account: {
   username: string;
   email: string;
   profileUrl: string;
+  role: string;
 }) =>
   signAccessToken({
     sub: account.id,
     username: account.username,
     email: account.email,
     profileUrl: account.profileUrl,
+    role: account.role,
   });
 
 type UpdateProfileImageBody = {
   imageData?: string;
   removeImage?: boolean;
+};
+
+type UpdateProfileBody = {
+  username?: string;
 };
 
 export const register = async (request: Request, response: Response) => {
@@ -96,6 +103,7 @@ export const register = async (request: Request, response: Response) => {
         username: account.username,
         email: account.email,
         profileUrl: account.profileUrl,
+        role: account.role,
       },
     });
   } catch (error) {
@@ -154,6 +162,7 @@ export const login = async (request: Request, response: Response) => {
         username: account.username,
         email: account.email,
         profileUrl: account.profileUrl,
+        role: account.role,
       },
     });
   } catch (error) {
@@ -296,6 +305,63 @@ export const getCurrentUser = async (request: Request, response: Response) => {
     return response.json({ success: true, user: account });
   } catch (error) {
     console.error("Error during get current user:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const updateProfile = async (
+  request: Request<unknown, unknown, UpdateProfileBody>,
+  response: Response,
+) => {
+  try {
+    if (!request.user) {
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+    }
+
+    const cleanedUsername = request.body.username?.trim();
+
+    if (!cleanedUsername) {
+      return response.status(400).json({
+        success: false,
+        message: "Username is required.",
+      });
+    }
+
+    if (cleanedUsername.length < 3) {
+      return response.status(400).json({
+        success: false,
+        message: "Username must be at least 3 characters.",
+      });
+    }
+
+    if (cleanedUsername.length > 30) {
+      return response.status(400).json({
+        success: false,
+        message: "Username must be 30 characters or fewer.",
+      });
+    }
+
+    const account = await prisma.account.update({
+      where: { id: request.user.sub },
+      data: { username: cleanedUsername },
+      select: accountSelect,
+    });
+
+    const accessToken = buildAccessToken(account);
+
+    return response.json({
+      success: true,
+      message: "Profile updated successfully.",
+      accessToken,
+      user: account,
+    });
+  } catch (error) {
+    console.error("Error during profile update:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
