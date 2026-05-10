@@ -245,16 +245,9 @@ export default function Profile() {
                 className="rounded-3xl border border-orange-100 bg-[#fffaf4] p-5"
               >
                 <div className="flex flex-col gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-text">Username</p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      This is the name shown to communities and players.
-                    </p>
-                  </div>
-
                   <label className="block">
                     <span className="mb-2 block text-sm font-medium text-text">
-                      Display name
+                      Username
                     </span>
                     <input
                       type="text"
@@ -267,9 +260,6 @@ export default function Profile() {
                   </label>
 
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-xs text-gray-500">
-                      3 to 30 characters recommended.
-                    </p>
                     <button
                       type="submit"
                       disabled={isSavingUsername}
