@@ -4,7 +4,7 @@ import Header from "../components/Header";
 import { useState } from "react";
 
 export default function HomeLayout() {
-  const [openSidebar, setOpenSidebar] = useState<boolean>(false);
+  const [openSidebar, setOpenSidebar] = useState<boolean>(true);
 
   return (
     <div className="w-full max-w-[1920px] h-screen bg-background mx-auto overflow-hidden flex flex-col ">
