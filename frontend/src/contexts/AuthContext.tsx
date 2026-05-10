@@ -35,6 +35,7 @@ type AuthContextType = {
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<string>;
+  updateCurrentUser: (user: User, token?: string) => void;
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -125,6 +126,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(response.data.user);
   }, []);
 
+  const updateCurrentUser = useCallback((nextUser: User, token?: string) => {
+    setUser(nextUser);
+
+    if (token) {
+      setAccessToken(token);
+      setAuthToken(token);
+    }
+  }, []);
+
   // =========================
   // LOGIN
   // =========================
@@ -173,8 +183,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       login,
       logout,
       refreshAccessToken,
+      updateCurrentUser,
     }),
-    [user, accessToken, isLoading, login, logout, refreshAccessToken],
+    [
+      user,
+      accessToken,
+      isLoading,
+      login,
+      logout,
+      refreshAccessToken,
+      updateCurrentUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

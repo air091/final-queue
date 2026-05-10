@@ -1,4 +1,4 @@
-import { request, type Request, type Response } from "express";
+import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
 import {
@@ -7,6 +7,41 @@ import {
   verifyRefreshToken,
 } from "../lib/jwt.js";
 import { setRefreshTokenCookie } from "../lib/cookies.js";
+import { uploadImageToCloudinary } from "../lib/cloudinary.js";
+
+const DEFAULT_PROFILE_URL =
+  "https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg";
+
+const accountSelect = {
+  id: true,
+  username: true,
+  email: true,
+  profileUrl: true,
+} as const;
+
+const getPublicUserById = async (accountId: string) =>
+  prisma.account.findUnique({
+    where: { id: accountId },
+    select: accountSelect,
+  });
+
+const buildAccessToken = (account: {
+  id: string;
+  username: string;
+  email: string;
+  profileUrl: string;
+}) =>
+  signAccessToken({
+    sub: account.id,
+    username: account.username,
+    email: account.email,
+    profileUrl: account.profileUrl,
+  });
+
+type UpdateProfileImageBody = {
+  imageData?: string;
+  removeImage?: boolean;
+};
 
 export const register = async (request: Request, response: Response) => {
   try {
@@ -37,12 +72,7 @@ export const register = async (request: Request, response: Response) => {
       },
     });
 
-    const accessToken = signAccessToken({
-      sub: account.id,
-      username: account.username,
-      email: account.email,
-      profileUrl: account.profileUrl,
-    });
+    const accessToken = buildAccessToken(account);
 
     const refreshToken = signRefreshToken({ sub: account.id });
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
@@ -100,12 +130,7 @@ export const login = async (request: Request, response: Response) => {
         .json({ success: false, message: "Invalid email or password." });
     }
 
-    const accessToken = signAccessToken({
-      sub: account.id,
-      username: account.username,
-      email: account.email,
-      profileUrl: account.profileUrl,
-    });
+    const accessToken = buildAccessToken(account);
 
     const refreshToken = signRefreshToken({ sub: account.id });
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
@@ -235,12 +260,7 @@ export const refresh = async (request: Request, response: Response) => {
       },
     });
 
-    const accessToken = signAccessToken({
-      sub: account.id,
-      username: account.username,
-      email: account.email,
-      profileUrl: account.profileUrl,
-    });
+    const accessToken = buildAccessToken(account);
 
     setRefreshTokenCookie(response, newRefreshToken);
 
@@ -265,9 +285,89 @@ export const getCurrentUser = async (request: Request, response: Response) => {
         .json({ success: false, message: "Unauthorized" });
     }
 
-    return response.json({ success: true, user: request.user });
+    const account = await getPublicUserById(request.user.sub);
+
+    if (!account) {
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+    }
+
+    return response.json({ success: true, user: account });
   } catch (error) {
     console.error("Error during get current user:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const updateProfileImage = async (
+  request: Request<unknown, unknown, UpdateProfileImageBody>,
+  response: Response,
+) => {
+  try {
+    if (!request.user) {
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+    }
+
+    const { imageData, removeImage } = request.body;
+    const cleanedImageData = imageData?.trim();
+
+    if (removeImage && cleanedImageData) {
+      return response.status(400).json({
+        success: false,
+        message: "Choose either image upload or remove action",
+      });
+    }
+
+    if (!removeImage && !cleanedImageData) {
+      return response.status(400).json({
+        success: false,
+        message: "Image data is required",
+      });
+    }
+
+    if (
+      cleanedImageData &&
+      !/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i.test(
+        cleanedImageData,
+      )
+    ) {
+      return response.status(400).json({
+        success: false,
+        message: "Only PNG, JPG, WEBP, GIF, and AVIF images are supported",
+      });
+    }
+
+    const profileUrl = removeImage
+      ? DEFAULT_PROFILE_URL
+      : await uploadImageToCloudinary({
+          dataUri: cleanedImageData as string,
+          publicId: `queue-system/profile-images/${request.user.sub}`,
+        });
+
+    const account = await prisma.account.update({
+      where: { id: request.user.sub },
+      data: { profileUrl },
+      select: accountSelect,
+    });
+
+    const accessToken = buildAccessToken(account);
+
+    return response.json({
+      success: true,
+      message: removeImage
+        ? "Profile image removed successfully."
+        : "Profile image updated successfully.",
+      accessToken,
+      user: account,
+    });
+  } catch (error) {
+    console.error("Error during profile image update:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",

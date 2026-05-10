@@ -29,7 +29,7 @@ if (!ACCESS_EXPIRES_IN) {
   );
 }
 
-type JwtAccessPayload = JwtPayload & {
+export type JwtAccessPayload = JwtPayload & {
   sub: string;
   username: string;
   email: string;
