@@ -1,19 +1,21 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/home_components/Sidebar";
 import Header from "../components/Header";
+import { useState } from "react";
 
 export default function HomeLayout() {
+  const [openSidebar, setOpenSidebar] = useState<boolean>(false);
+
   return (
-    <div className="w-full max-w-[1920px] min-h-screen bg-background mx-auto">
-      <Header />
-      <div className="mx-auto flex max-w-[1440px] gap-4 px-4 py-4">
-        {/* Sidebar */}
-        {/* <Sidebar /> */}
-        {/* Main Content */}
-        <main className="flex-1 pb-24 md:pb-0">
+    <div className="w-full max-w-[1920px] h-screen bg-background mx-auto overflow-hidden flex flex-col ">
+      <Header setOpenSidebar={setOpenSidebar} />
+      <main className="flex flex-1 overflow-hidden">
+        {openSidebar && <Sidebar />}
+
+        <div className="flex-1 overflow-y-auto">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
