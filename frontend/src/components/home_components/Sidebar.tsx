@@ -4,12 +4,12 @@ import { RiUserCommunityLine } from "react-icons/ri";
 
 const navLinks = [
   {
-    icon: <RiHome9Fill size={16} />,
+    icon: <RiHome9Fill size={24} />,
     path: "/home",
     name: "Home",
   },
   {
-    icon: <RiUserCommunityLine size={16} />,
+    icon: <RiUserCommunityLine size={24} />,
     path: "/community",
     name: "Community",
   },
@@ -17,7 +17,7 @@ const navLinks = [
 
 export default function Sidebar() {
   return (
-    <nav className="border px-2 w-[274px] h-full">
+    <nav className="w-[274px] h-full py-2">
       {/* Navigation */}
       <ul className="flex w-full md:grid md:gap-2">
         {navLinks.map((link) => (
@@ -27,10 +27,9 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `
               w-full
-              flex items-center justify-center gap-3
-              rounded-2xl px-3 py-3
+              flex items-center justify-center
+              rounded-2xl px-6 py-1 gap-x-2
               text-sm font-medium transition
-
               
               md:justify-start
 
@@ -42,26 +41,10 @@ export default function Sidebar() {
             `
               }
             >
-              {({ isActive }) => (
-                <>
-                  {/* Icon */}
-                  <div
-                    className={`
-                    flex h-9 w-9 items-center justify-center rounded-xl transition
-                    ${
-                      isActive
-                        ? "bg-primary text-white"
-                        : "bg-gray-100 text-primary"
-                    }
-                  `}
-                  >
-                    {link.icon}
-                  </div>
-
-                  {/* Label */}
-                  <span className="hidden lg:block">{link.name}</span>
-                </>
-              )}
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl transition">
+                {link.icon}
+              </div>
+              <span className="hidden lg:block">{link.name}</span>
             </NavLink>
           </li>
         ))}

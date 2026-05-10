@@ -127,7 +127,7 @@ export default function Home() {
     host.currentUserStatus !== null;
 
   return (
-    <div className="w-full px-2 py-4 sm:px-4">
+    <div className="w-full px-2 py-2 sm:px-4">
       <main className="mx-auto flex max-w-3xl flex-col gap-4 pb-24 md:pb-6">
         {availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
