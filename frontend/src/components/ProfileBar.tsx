@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { CgProfile } from "react-icons/cg";
 
 export default function ProfileBar() {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function ProfileBar() {
 }
 
 import { RiLogoutBoxLine } from "react-icons/ri";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 type ProfileDropdownProps = {
   open: boolean;
@@ -93,6 +94,29 @@ export function ProfileDropdown({ open }: ProfileDropdownProps) {
       }
     `}
     >
+      <NavLink
+        to="/profile"
+        type="button"
+        className="
+        flex w-full items-center gap-3
+        rounded-xl px-3 py-2.5 cursor-pointer
+        text-sm font-medium text-[#0c090c]
+
+        transition-all duration-200
+
+        hover:bg-[#fff4df]
+        hover:text-[#ff6900]
+      "
+      >
+        {/* ICON */}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#fff4df] text-[#ff6900]">
+          <CgProfile size={16} />
+        </div>
+
+        {/* LABEL */}
+        <span className="truncate">Profile</span>
+      </NavLink>
+
       <button
         type="button"
         onClick={handleLogout}
