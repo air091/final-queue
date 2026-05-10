@@ -880,7 +880,7 @@ export default function Players() {
   };
 
   return (
-    <>
+    <div className="p-2">
       <header className="mb-4 flex flex-col gap-2 rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-2xl">
@@ -994,6 +994,6 @@ export default function Players() {
           }
         />
       </div>
-    </>
+    </div>
   );
 }

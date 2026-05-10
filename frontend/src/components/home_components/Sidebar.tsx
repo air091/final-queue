@@ -16,9 +16,19 @@ const navLinks = [
 
 export default function Sidebar() {
   return (
-    <nav className="w-[274px] h-full py-2">
+    <nav
+      className="
+    h-full w-[274px] bg-white py-2
+
+    xl:relative
+    max-xl:absolute
+    max-xl:left-0
+    max-xl:top-0
+    max-xl:z-50
+  "
+    >
       {/* Navigation */}
-      <ul className="flex w-full md:grid md:gap-2">
+      <ul className="flex flex-col w-full gap-2">
         {navLinks.map((link) => (
           <li key={link.name}>
             <NavLink
@@ -26,11 +36,9 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `
               w-full
-              flex items-center justify-center
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition
-              
-              md:justify-start
 
               ${
                 isActive
@@ -40,10 +48,10 @@ export default function Sidebar() {
             `
               }
             >
-              <div className="flex p-1 items-center justify-center rounded-xl transition">
+              <div className="flex p-1 items-center rounded-xl transition">
                 {link.icon}
               </div>
-              <span className="hidden lg:block">{link.name}</span>
+              <span className="block">{link.name}</span>
             </NavLink>
           </li>
         ))}

@@ -9,7 +9,7 @@ export default function HomeLayout() {
   return (
     <div className="w-full max-w-[1920px] h-screen bg-background mx-auto overflow-hidden flex flex-col">
       <Header setOpenSidebar={setOpenSidebar} />
-      <main className="flex flex-1 overflow-hidden">
+      <main className="relative flex flex-1 overflow-hidden">
         {openSidebar && <Sidebar />}
 
         <div className="flex-1 overflow-y-auto">

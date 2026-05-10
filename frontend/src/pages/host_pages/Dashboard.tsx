@@ -22,9 +22,9 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="w-full py-2">
+    <div className="w-full py-2 px-2">
       {/* HEADER */}
-      <header className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
+      <header className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm mb-4">
         <div className="flex flex-col gap-2">
           <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-accent">
             🏸 Host Dashboard

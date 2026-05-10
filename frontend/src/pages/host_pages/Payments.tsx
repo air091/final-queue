@@ -231,7 +231,7 @@ export default function Payments() {
   };
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-5 p-2">
       {/* HEADER */}
       <header className="rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
         <div className="flex items-center gap-3">

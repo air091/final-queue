@@ -7,35 +7,35 @@ export default function Sidebar() {
   const { communities } = useCommunities();
 
   return (
-    <nav className="w-[274px] h-full py-2">
+    <nav
+      className="
+    h-full w-[274px] bg-white py-2
+
+    xl:relative
+    max-xl:absolute
+    max-xl:left-0
+    max-xl:top-0
+    max-xl:z-50
+  "
+    >
       {/* Navigation */}
-      <ul className="flex w-full md:grid md:gap-2">
+      <ul className="flex flex-col w-full gap-2">
         {/* Back */}
         <li>
           <NavLink
             to="/home"
-            className={({ isActive }) =>
-              `
-            w-full
-              flex items-center justify-center
+            className="
+              w-full
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
-              text-sm font-medium transition
-
-            md:justify-start
-
-            ${
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-text hover:bg-gray-100"
-            }
-          `
-            }
+              text-sm font-medium transition hover:bg-gray-100
+              "
           >
-            <div className="flex p-1 items-center justify-center rounded-xl transition">
+            <div className="flex p-1 items-center rounded-xl transition">
               <ArrowLeft size={24} />
             </div>
 
-            <span className="hidden lg:block">Home</span>
+            <span className="block">Home</span>
           </NavLink>
         </li>
 
@@ -46,11 +46,9 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `
              w-full
-              flex items-center justify-center
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition
-
-            md:justify-start
 
             ${
               isActive
@@ -60,10 +58,10 @@ export default function Sidebar() {
           `
             }
           >
-            <div className="flex p-1 items-center justify-center rounded-xl transition  text-primary">
+            <div className="flex p-1 items-center rounded-xl transition  text-primary">
               <Plus size={24} />
             </div>
-            <span className="hidden lg:block">Create Community</span>
+            <span className="block">Create Community</span>
           </NavLink>
         </li>
 
@@ -75,11 +73,9 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `
                w-full
-              flex items-center justify-center
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition
-
-              md:justify-start
 
               ${
                 isActive
@@ -89,7 +85,7 @@ export default function Sidebar() {
             `
               }
             >
-              <div className="flex p-1 items-center justify-center rounded-xl transition">
+              <div className="flex p-1 items-center rounded-xl transition">
                 <div className="h-[24px] w-[24px] overflow-hidden rounded-xl border">
                   <img
                     src={community.profileUrl}
@@ -99,9 +95,7 @@ export default function Sidebar() {
                 </div>
               </div>
 
-              <span className="hidden truncate lg:block">
-                {community.communityName}
-              </span>
+              <span className="block">{community.communityName}</span>
             </NavLink>
           </li>
         ))}

@@ -1,38 +1,38 @@
 import { NavLink, useParams } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa6";
-import { MdSpaceDashboard } from "react-icons/md";
 import { HiUsers } from "react-icons/hi2";
-import { GiMatchHead } from "react-icons/gi";
-import { MdOutlinePayment } from "react-icons/md";
-import {
-  ArrowLeft,
-  CreditCard,
-  Gamepad2,
-  LayoutDashboard,
-  Plus,
-} from "lucide-react";
+import { ArrowLeft, CreditCard, Gamepad2, LayoutDashboard } from "lucide-react";
 
 export default function Sidebar() {
   const { communityId, hostId } = useParams();
   return (
-    <nav className="w-[274px] h-full py-2 pr-2">
+    <nav
+      className="
+    h-full w-[274px] bg-white py-2
+
+    xl:relative
+    max-xl:absolute
+    max-xl:left-0
+    max-xl:top-0
+    max-xl:z-50
+  "
+    >
       {/* NAVIGATION */}
-      <ul className="flex w-full md:grid md:gap-2">
+      <ul className="flex flex-col w-full gap-2">
         {/* BACK */}
         <li>
           <NavLink
             to={`/community/${communityId}`}
             className="
               w-full
-              flex items-center justify-center
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition hover:bg-gray-100
-              md:justify-start"
+              "
           >
-            <div className="flex p-1 items-center justify-center rounded-xl transition">
+            <div className="flex p-1 items-center rounded-xl transition">
               <ArrowLeft size={24} />
             </div>
-            <span className="hidden lg:block">Back to Community</span>
+            <span className="block">Back to Community</span>
           </NavLink>
         </li>
 
@@ -63,13 +63,10 @@ export default function Sidebar() {
               to={item.path}
               className={({ isActive }) =>
                 `
-             w-full
-              flex items-center justify-center
+              w-full
+              flex items-center
               rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition
-
-            md:justify-start
-
             ${
               isActive
                 ? "bg-primary/10 text-primary"
@@ -78,10 +75,10 @@ export default function Sidebar() {
           `
               }
             >
-              <div className="flex p-1 items-center justify-center rounded-xl transition  text-primary">
+              <div className="flex p-1 items-center rounded-xl transition  text-primary">
                 {item.icon}
               </div>
-              <span className="hidden lg:block">{item.label}</span>
+              <span className="block">{item.label}</span>
             </NavLink>
           </li>
         ))}
