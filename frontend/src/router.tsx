@@ -14,6 +14,7 @@ import Payments from "./pages/host_pages/Payments";
 import Players from "./pages/host_pages/Players";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./pages/Profile";
+import ProfileLayout from "./layouts/ProfileLayout";
 const router = createBrowserRouter([
   // =========================
   // PUBLIC ROUTES
@@ -46,19 +47,25 @@ const router = createBrowserRouter([
       },
       {
         path: "/profile",
-        element: <Profile />,
+        element: <ProfileLayout />,
+        children: [
+          {
+            index: true,
+            element: <Profile />,
+          },
+        ],
       },
       {
         path: "/community",
         element: <CommunityLayout />,
         children: [
           {
-            path: ":id",
-            element: <Community />,
-          },
-          {
             path: "create",
             element: <CreateCommunity />,
+          },
+          {
+            path: ":id",
+            element: <Community />,
           },
         ],
       },

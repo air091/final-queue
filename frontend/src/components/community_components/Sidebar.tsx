@@ -31,7 +31,7 @@ export default function Sidebar() {
           `
             }
           >
-            <div className="flex p-1 items-center justify-center rounded-xl transition  text-primary">
+            <div className="flex p-1 items-center justify-center rounded-xl transition">
               <ArrowLeft size={24} />
             </div>
 

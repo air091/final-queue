@@ -186,7 +186,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-10">
+    <div className="w-full px-2 py-2 sm:px-4">
       <div className="mx-auto max-w-4xl">
         <div className="overflow-hidden rounded-[32px] border border-orange-100 bg-white shadow-[0_20px_80px_rgba(12,9,12,0.08)]">
           <div className="bg-[linear-gradient(135deg,#0c090c_0%,#2f1f12_100%)] px-6 py-10 text-white sm:px-10">
