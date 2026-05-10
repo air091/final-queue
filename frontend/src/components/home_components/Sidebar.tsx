@@ -1,15 +1,14 @@
 import { NavLink } from "react-router-dom";
-import { RiHome9Fill } from "react-icons/ri";
-import { RiUserCommunityLine } from "react-icons/ri";
+import { House, UsersRound } from "lucide-react";
 
 const navLinks = [
   {
-    icon: <RiHome9Fill size={24} />,
+    icon: <House size={24} />,
     path: "/home",
     name: "Home",
   },
   {
-    icon: <RiUserCommunityLine size={24} />,
+    icon: <UsersRound size={24} />,
     path: "/community",
     name: "Community",
   },
@@ -28,7 +27,7 @@ export default function Sidebar() {
                 `
               w-full
               flex items-center justify-center
-              rounded-2xl px-6 py-1 gap-x-2
+              rounded-r-lg px-6 py-1 gap-x-2
               text-sm font-medium transition
               
               md:justify-start
@@ -41,7 +40,7 @@ export default function Sidebar() {
             `
               }
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl transition">
+              <div className="flex p-1 items-center justify-center rounded-xl transition">
                 {link.icon}
               </div>
               <span className="hidden lg:block">{link.name}</span>

@@ -1,18 +1,20 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/community_components/Sidebar";
+import Header from "../components/Header";
+import { useState } from "react";
 
 export default function CommunityLayout() {
+  const [openSidebar, setOpenSidebar] = useState<boolean>(true);
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto flex max-w-[1440px] gap-4 px-4 py-4">
-        {/* Sidebar */}
-        <Sidebar />
+    <div className="w-full max-w-[1920px] h-screen bg-background mx-auto overflow-hidden flex flex-col">
+      <Header setOpenSidebar={setOpenSidebar} />
+      <main className="flex flex-1 overflow-hidden">
+        {openSidebar && <Sidebar />}
 
-        {/* Main */}
-        <main className="flex-1 pb-24 md:pb-0">
+        <div className="flex-1 overflow-y-auto">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
