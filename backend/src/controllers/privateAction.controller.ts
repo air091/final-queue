@@ -6,6 +6,7 @@ import {
   Sports,
   UserRoles,
 } from "../generated/prisma/enums.js";
+import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 
 // HOST ADMIN ACTION
 
@@ -163,6 +164,7 @@ type UpdateStaticPlayerSkillLevelBody = {
 
 type UpdateStaticPlayerProfileUrlBody = {
   profileUrl?: string | null;
+  imageData?: string;
 };
 
 export const banPlayer = async (
@@ -465,7 +467,7 @@ export const updateStaticPlayerProfileUrl = async (
 ) => {
   try {
     const { communityId, hostId, hostedPlayerId } = request.params;
-    const { profileUrl } = request.body;
+    const { profileUrl, imageData } = request.body;
 
     if (!communityId || !hostId || !hostedPlayerId) {
       return response
@@ -474,6 +476,14 @@ export const updateStaticPlayerProfileUrl = async (
     }
 
     const cleanedProfileUrl = profileUrl?.trim() ?? "";
+    const cleanedImageData = imageData?.trim() ?? "";
+
+    if (cleanedProfileUrl && cleanedImageData) {
+      return response.status(400).json({
+        success: false,
+        message: "Choose either image upload or profile URL",
+      });
+    }
 
     if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
       try {
@@ -546,10 +556,19 @@ export const updateStaticPlayerProfileUrl = async (
       },
     };
 
-    const account = cleanedProfileUrl.length
+    const uploadedProfileUrl = cleanedImageData
+      ? await uploadImageToCloudinary({
+          dataUri: cleanedImageData,
+          publicId: `queue-system/static-player-images/${playerAccountId}`,
+        })
+      : null;
+
+    const nextProfileUrl = uploadedProfileUrl ?? cleanedProfileUrl;
+
+    const account = nextProfileUrl.length
       ? await prisma.account.update({
           where: { id: playerAccountId },
-          data: { profileUrl: cleanedProfileUrl },
+          data: { profileUrl: nextProfileUrl },
           select: selectAccount,
         })
       : await prisma.account.findUnique({

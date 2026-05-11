@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import axios from "axios";
 
@@ -16,6 +16,8 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login, refreshAccessToken } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("session") === "expired";
 
   const handleOnSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -157,6 +159,12 @@ export default function Login() {
 
               {errorMessage ? (
                 <p className="text-sm text-red-500">{errorMessage}</p>
+              ) : null}
+
+              {sessionExpired && !errorMessage ? (
+                <p className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                  Your session expired. Please log in again.
+                </p>
               ) : null}
 
               <button

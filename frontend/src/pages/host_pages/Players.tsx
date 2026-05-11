@@ -12,6 +12,28 @@ import {
   type SkillLevelType,
 } from "../../lib/host";
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image file."));
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Failed to read image file."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+
 const formatSkillLevel = (skillLevel: string) =>
   skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
@@ -45,6 +67,7 @@ type PlayerSectionProps = {
     hostedPlayerId: string,
     profileUrl: string,
   ) => void;
+  onStaticProfileImageChange?: (hostedPlayerId: string, file: File) => void;
   onUpdateStaticPlayerProfileUrl?: (hostedPlayerId: string) => void;
   emptyMessage: string;
   extraContent?: ReactNode;
@@ -61,6 +84,8 @@ function PlayerSection({
   onBanPlayer,
   onUnbanPlayer,
   onViewHistory,
+  savingStaticProfileUrlId,
+  onStaticProfileImageChange,
   emptyMessage,
   extraContent,
 }: PlayerSectionProps) {
@@ -92,6 +117,10 @@ function PlayerSection({
             );
 
             const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
+            const canUpdateStaticProfile =
+              playerRecord.player.isStatic && onStaticProfileImageChange;
+            const isSavingProfile =
+              savingStaticProfileUrlId === playerRecord.id;
 
             return (
               <div
@@ -100,13 +129,44 @@ function PlayerSection({
               >
                 {/* Player */}
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+                  <label
+                    className={`group relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-50 ${
+                      canUpdateStaticProfile
+                        ? "cursor-pointer"
+                        : ""
+                    }`}
+                    title={
+                      canUpdateStaticProfile
+                        ? "Change static player photo"
+                        : undefined
+                    }
+                  >
                     <img
                       src={playerRecord.player.profileUrl}
                       alt={playerRecord.player.username}
                       className="h-full w-full object-cover"
                     />
-                  </div>
+                    {canUpdateStaticProfile ? (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
+                        {isSavingProfile ? "Saving" : "Change"}
+                      </span>
+                    ) : null}
+                    {canUpdateStaticProfile ? (
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isSavingProfile}
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) {
+                            onStaticProfileImageChange(playerRecord.id, file);
+                          }
+                        }}
+                      />
+                    ) : null}
+                  </label>
 
                   <div className="flex flex-col">
                     <span className="font-medium text-text">
@@ -259,18 +319,57 @@ function PlayerSection({
                 );
 
                 const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
+                const canUpdateStaticProfile =
+                  playerRecord.player.isStatic && onStaticProfileImageChange;
+                const isSavingProfile =
+                  savingStaticProfileUrlId === playerRecord.id;
 
                 return (
                   <tr key={playerRecord.id} className="hover:bg-gray-50">
                     {/* PLAYER */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 overflow-hidden rounded-full border border-gray-200">
+                        <label
+                          className={`group relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 ${
+                            canUpdateStaticProfile
+                              ? "cursor-pointer"
+                              : ""
+                          }`}
+                          title={
+                            canUpdateStaticProfile
+                              ? "Change static player photo"
+                              : undefined
+                          }
+                        >
                           <img
                             src={playerRecord.player.profileUrl}
+                            alt={playerRecord.player.username}
                             className="h-full w-full object-cover"
                           />
-                        </div>
+                          {canUpdateStaticProfile ? (
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
+                              {isSavingProfile ? "Saving" : "Change"}
+                            </span>
+                          ) : null}
+                          {canUpdateStaticProfile ? (
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isSavingProfile}
+                              className="sr-only"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = "";
+                                if (file) {
+                                  onStaticProfileImageChange(
+                                    playerRecord.id,
+                                    file,
+                                  );
+                                }
+                              }}
+                            />
+                          ) : null}
+                        </label>
 
                         <span className="font-medium text-text">
                           {playerRecord.player.username}
@@ -396,6 +495,9 @@ export default function Players() {
     string | null
   >(null);
   const [savingStaticProfileUrlId, setSavingStaticProfileUrlId] = useState<
+    string | null
+  >(null);
+  const [staticProfileImageError, setStaticProfileImageError] = useState<
     string | null
   >(null);
   const accountPlayers = players.filter((player) => !player.player.isStatic);
@@ -945,6 +1047,94 @@ export default function Players() {
     }
   };
 
+  const handleUpdateStaticPlayerProfileImage = async (
+    hostedPlayerId: string,
+    file: File,
+  ) => {
+    if (!communityId || !hostId) return;
+
+    if (!file.type.startsWith("image/")) {
+      setStaticProfileImageError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setStaticProfileImageError("Please choose an image smaller than 5 MB.");
+      return;
+    }
+
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const previousPaymentsData = paymentsData;
+
+    try {
+      setSavingStaticProfileUrlId(hostedPlayerId);
+      setStaticProfileImageError(null);
+
+      const imageData = await readFileAsDataUrl(file);
+      const response = await api.patch(
+        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/profile-url`,
+        { imageData },
+      );
+      const updatedPlayer = response.data.data as AcceptedPlayers;
+
+      setPlayersInHost((currentPlayers) =>
+        currentPlayers.map((currentPlayer) =>
+          currentPlayer.id === hostedPlayerId
+            ? {
+                ...currentPlayer,
+                player: updatedPlayer.player,
+              }
+            : currentPlayer,
+        ),
+      );
+      setAcceptedPlayers((currentPlayers) =>
+        currentPlayers.map((currentPlayer) =>
+          currentPlayer.id === hostedPlayerId
+            ? {
+                ...currentPlayer,
+                player: updatedPlayer.player,
+              }
+            : currentPlayer,
+        ),
+      );
+      setPaymentsData((currentPaymentsData) => {
+        const nextPlayers = currentPaymentsData.players.map((paymentPlayer) =>
+          paymentPlayer.id === hostedPlayerId
+            ? {
+                ...paymentPlayer,
+                player: {
+                  ...paymentPlayer.player,
+                  profileUrl: updatedPlayer.player.profileUrl,
+                },
+              }
+            : paymentPlayer,
+        );
+
+        return {
+          ...currentPaymentsData,
+          players: nextPlayers,
+          summary: buildPaymentsSummary(nextPlayers),
+        };
+      });
+      setStaticProfileUrlDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [hostedPlayerId]: updatedPlayer.player.profileUrl,
+      }));
+    } catch (error) {
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+      setPaymentsData(previousPaymentsData);
+      setStaticProfileImageError("Unable to update static player photo.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setSavingStaticProfileUrlId(null);
+    }
+  };
+
   return (
     <div className="p-2">
       <header className="mb-4 flex flex-col gap-2 rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
@@ -968,6 +1158,11 @@ export default function Players() {
           Manage player requests, queue participation, and walk-in badminton
           players.
         </p>
+        {staticProfileImageError ? (
+          <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            {staticProfileImageError}
+          </p>
+        ) : null}
       </header>
 
       <div className="grid gap-5">
@@ -1006,6 +1201,9 @@ export default function Players() {
               ...currentDrafts,
               [hostedPlayerId]: profileUrl,
             }))
+          }
+          onStaticProfileImageChange={(hostedPlayerId, file) =>
+            void handleUpdateStaticPlayerProfileImage(hostedPlayerId, file)
           }
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           emptyMessage="No static players yet."

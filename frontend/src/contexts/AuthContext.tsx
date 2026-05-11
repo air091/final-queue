@@ -7,7 +7,12 @@ import {
   type ReactNode,
 } from "react";
 
-import { api, setAuthToken } from "../lib/api";
+import {
+  api,
+  onAccessTokenRefreshed,
+  onSessionExpired,
+  setAuthToken,
+} from "../lib/api";
 
 type User = {
   id: string;
@@ -51,6 +56,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const removeSessionExpiredListener = onSessionExpired(() => {
+      setUser(null);
+      setAccessToken(null);
+      setAuthToken(null);
+    });
+
+    const removeAccessTokenRefreshedListener = onAccessTokenRefreshed(
+      (token) => {
+        setAccessToken(token);
+      },
+    );
+
+    return () => {
+      removeSessionExpiredListener();
+      removeAccessTokenRefreshedListener();
+    };
+  }, []);
 
   // =========================
   // REFRESH ACCESS TOKEN
