@@ -87,7 +87,11 @@ export default function Home() {
   }, [accessToken, isLoading]);
 
   const handleRequestToJoinHost = async (host: AvailableHostType) => {
-    if (host.currentUserStatus || host.isOwnedByCurrentUser || isHostFull(host)) {
+    if (
+      host.currentUserStatus ||
+      host.isOwnedByCurrentUser ||
+      isHostFull(host)
+    ) {
       return;
     }
 
@@ -132,7 +136,10 @@ export default function Home() {
   const getButtonLabel = (
     host: Pick<
       AvailableHostType,
-      "acceptedPlayers" | "currentUserStatus" | "isOwnedByCurrentUser" | "maxPlayers"
+      | "acceptedPlayers"
+      | "currentUserStatus"
+      | "isOwnedByCurrentUser"
+      | "maxPlayers"
     >,
     isRequesting: boolean,
   ) => {
@@ -149,7 +156,10 @@ export default function Home() {
   const isButtonDisabled = (
     host: Pick<
       AvailableHostType,
-      "acceptedPlayers" | "currentUserStatus" | "isOwnedByCurrentUser" | "maxPlayers"
+      | "acceptedPlayers"
+      | "currentUserStatus"
+      | "isOwnedByCurrentUser"
+      | "maxPlayers"
     >,
     isRequesting: boolean,
   ) =>
@@ -197,11 +207,20 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500 flex items-center gap-x-[8px]">
                       Hosted by{" "}
-                      <span className="font-medium text-text">
-                        {availableHost.community.master.username}
-                      </span>
+                      <div className="flex items-center gap-x-[4px]">
+                        <div className="w-[18px] h-[18px] rounded-full">
+                          <img
+                            src={availableHost.community.master.profileUrl}
+                            alt={availableHost.community.master.username}
+                            className="block w-full h-full object-center object-cover rounded-full"
+                          />
+                        </div>
+                        <span className="font-medium text-text">
+                          {availableHost.community.master.username}
+                        </span>
+                      </div>
                     </p>
                   </div>
                 </div>
@@ -247,7 +266,8 @@ export default function Home() {
 
                   {availableHost.maxPlayers && availableHost.maxPlayers > 0 ? (
                     <span className="rounded-full bg-gray-100 px-3 py-1">
-                      {availableHost.acceptedPlayers.length}/{availableHost.maxPlayers} players
+                      {availableHost.acceptedPlayers.length}/
+                      {availableHost.maxPlayers} players
                     </span>
                   ) : (
                     <span className="rounded-full bg-gray-100 px-3 py-1">
