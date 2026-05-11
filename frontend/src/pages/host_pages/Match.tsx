@@ -379,6 +379,10 @@ export default function Match() {
   const [activeDraggedPlayerId, setActiveDraggedPlayerId] = useState<
     string | null
   >(null);
+  const [busyCourtActions, setBusyCourtActions] = useState<
+    Record<string, "starting" | "ending">
+  >({});
+  const [busyQueueIds, setBusyQueueIds] = useState<string[]>([]);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
@@ -448,6 +452,46 @@ export default function Match() {
     return nextOperation;
   };
 
+  const waitForPendingPlayerOperations = async (hostedPlayerIds: string[]) => {
+    const pendingOperations = hostedPlayerIds.flatMap((hostedPlayerId) => {
+      const courtOperation =
+        pendingCourtPlayerOperationsRef.current.get(hostedPlayerId);
+      const queueOperation =
+        pendingQueuePlayerOperationsRef.current.get(hostedPlayerId);
+
+      return [courtOperation, queueOperation].filter(
+        (operation): operation is Promise<void> => Boolean(operation),
+      );
+    });
+
+    if (pendingOperations.length > 0) {
+      await Promise.allSettled(pendingOperations);
+    }
+  };
+
+  const setCourtBusy = (
+    courtId: string,
+    isBusy: boolean,
+    action: "starting" | "ending" = "starting",
+  ) => {
+    setBusyCourtActions((currentActions) => {
+      if (isBusy) return { ...currentActions, [courtId]: action };
+
+      const { [courtId]: _removedAction, ...nextActions } = currentActions;
+      return nextActions;
+    });
+  };
+
+  const setQueueBusy = (queueId: string, isBusy: boolean) => {
+    setBusyQueueIds((currentQueueIds) =>
+      isBusy
+        ? currentQueueIds.includes(queueId)
+          ? currentQueueIds
+          : [...currentQueueIds, queueId]
+        : currentQueueIds.filter((currentQueueId) => currentQueueId !== queueId),
+    );
+  };
+
   const assignPlayerToCourtAPI = async (
     hostedPlayerId: string,
     courtId: string,
@@ -482,7 +526,7 @@ export default function Match() {
       {},
     );
 
-    return response.data as { hostedPlayerIds: string[] };
+    return response.data as { hostedPlayerIds?: string[]; playerIds?: string[] };
   };
 
   const deleteCourtAPI = async (courtId: string) => {
@@ -579,6 +623,22 @@ export default function Match() {
         id: string;
         name: string;
       };
+    };
+  };
+
+  const transferQueueToCourtAndStartAPI = async (
+    queueId: string,
+    courtId: string,
+  ) => {
+    const response = await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/queues/${queueId}/transfer-to-court`,
+      { courtId },
+    );
+
+    return response.data as {
+      court: CourtType;
+      queueId: string;
+      hostedPlayerIds: string[];
     };
   };
 
@@ -786,6 +846,8 @@ export default function Match() {
   };
 
   const handleTransferQueueToCourt = async (queueId: string) => {
+    if (busyQueueIds.includes(queueId)) return;
+
     const queue = queues.find((queueItem) => queueItem.id === queueId);
     const targetCourt = getFirstAvailableEmptyCourt(courts);
     if (!queue || !queue.entries.length || !targetCourt) return;
@@ -831,20 +893,24 @@ export default function Match() {
       queueId,
     );
 
+    setQueueBusy(queueId, true);
+    setCourtBusy(targetCourt.id, true, "starting");
     setCourts(nextCourts);
     setPlayers(nextPlayers);
     setQueues(nextQueues);
 
     try {
-      for (const assignment of assignments) {
-        await assignPlayerToCourtAPI(
-          assignment.playerId,
-          assignment.courtId,
-          assignment.position,
-        );
-        await removePlayerFromQueueAPI(assignment.playerId, queueId);
-      }
-      await startCourtGameAPI(targetCourt.id);
+      await waitForPendingPlayerOperations(transferredPlayerIds);
+      const response = await transferQueueToCourtAndStartAPI(
+        queueId,
+        targetCourt.id,
+      );
+
+      setCourts((currentCourts) =>
+        currentCourts.map((court) =>
+          court.id === response.court.id ? response.court : court,
+        ),
+      );
     } catch (error) {
       setCourts(previousCourts);
       setPlayers(previousPlayers);
@@ -855,6 +921,9 @@ export default function Match() {
       else console.error(error);
 
       await refreshHostData();
+    } finally {
+      setQueueBusy(queueId, false);
+      setCourtBusy(targetCourt.id, false);
     }
   };
 
@@ -982,16 +1051,20 @@ export default function Match() {
   };
 
   const handleStartCourtGame = async (courtId: string) => {
+    if (busyCourtActions[courtId]) return;
+
     const previousCourts = courts;
     const startedCourt = previousCourts.find((court) => court.id === courtId);
     const playerIds =
       startedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
     const previousPlayers = players;
 
+    setCourtBusy(courtId, true, "starting");
     setCourts(getStartedCourt(previousCourts, courtId));
     setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "playing"));
 
     try {
+      await waitForPendingPlayerOperations(playerIds);
       await startCourtGameAPI(courtId);
     } catch (error) {
       setCourts(previousCourts);
@@ -1000,10 +1073,14 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      setCourtBusy(courtId, false);
     }
   };
 
   const handleEndCourtGame = async (courtId: string) => {
+    if (busyCourtActions[courtId]) return;
+
     const previousCourts = courts;
     const previousPlayers = players;
     const previousPaymentsData = paymentsData;
@@ -1011,6 +1088,7 @@ export default function Match() {
     const playerIds =
       endedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
 
+    setCourtBusy(courtId, true, "ending");
     setCourts(getEndedCourt(previousCourts, courtId));
     setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "waiting"));
     setPaymentsData((currentPaymentsData) => {
@@ -1046,13 +1124,12 @@ export default function Match() {
     });
 
     try {
+      await waitForPendingPlayerOperations(playerIds);
       const response = await endCourtGameAPI(courtId);
+      const endedPlayerIds = response.hostedPlayerIds ?? response.playerIds ?? [];
+
       setPlayers((currentPlayers) =>
-        getPlayersWithResetTimer(
-          currentPlayers,
-          response.hostedPlayerIds,
-          "waiting",
-        ),
+        getPlayersWithResetTimer(currentPlayers, endedPlayerIds, "waiting"),
       );
     } catch (error) {
       setCourts(previousCourts);
@@ -1062,6 +1139,8 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      setCourtBusy(courtId, false);
     }
   };
 
@@ -1276,6 +1355,7 @@ export default function Match() {
                         activePlayerDropdown={playerActiveDropdown}
                         onToggleDropdown={handleCourtDropdown}
                         onOpenPlayerDropdown={handleCourtPlayerDropdown}
+                        busyAction={busyCourtActions[court.id]}
                       />
                     ))}
 
@@ -1320,6 +1400,7 @@ export default function Match() {
                         onDeleteQueue={handleDeleteQueue}
                         onTransferToCourt={handleTransferQueueToCourt}
                         canTransferToCourt={isEmptyCourtAvailable}
+                        isTransferring={busyQueueIds.includes(queue.id)}
                         activeDropdown={queueActiveDropdown}
                         activePlayerDropdown={playerActiveDropdown}
                         onToggleDropdown={handleQueueDropdown}

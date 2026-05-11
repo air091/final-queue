@@ -17,6 +17,7 @@ type CourtCardProps = {
   activePlayerDropdown: string | null;
   onToggleDropdown: (courtId: string) => void;
   onOpenPlayerDropdown: () => void;
+  busyAction?: "starting" | "ending";
 };
 
 const COURT_SLOTS = [
@@ -136,6 +137,7 @@ export default function CourtCard({
   activePlayerDropdown,
   onToggleDropdown,
   onOpenPlayerDropdown,
+  busyAction,
 }: CourtCardProps) {
   const getAssignedPlayer = (position: number) => {
     const assignment = court.assignments.find(
@@ -156,9 +158,17 @@ export default function CourtCard({
   const hasTeamBPlayer = court.assignments.some(
     (assignment) => assignment.position === 2 || assignment.position === 4,
   );
-  const canStartGame = !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
+  const isBusy = Boolean(busyAction);
+  const canStartGame =
+    !isBusy && !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
   const isGameStarted = Boolean(court.startedAt);
-  const isInteractionDisabled = isGameStarted;
+  const isInteractionDisabled = isBusy || isGameStarted;
+  const endButtonLabel =
+    busyAction === "starting"
+      ? "Starting..."
+      : busyAction === "ending"
+        ? "Ending..."
+        : "End game";
 
   return (
     <div className="relative w-[520px] rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition hover:shadow-md">
@@ -237,7 +247,8 @@ export default function CourtCard({
             <button
               type="button"
               onClick={() => onStartCourtGame(court.id)}
-              className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700"
+              disabled={isBusy}
+              className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700 disabled:cursor-wait disabled:opacity-70"
             >
               Start game
             </button>
@@ -246,9 +257,10 @@ export default function CourtCard({
             <button
               type="button"
               onClick={() => onEndCourtGame(court.id)}
-              className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500"
+              disabled={isBusy}
+              className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-70"
             >
-              End game
+              {endButtonLabel}
             </button>
           )}
           <div

@@ -13,6 +13,7 @@ type QueueCardProps = {
   onDeleteQueue: (queueId: string) => void;
   onTransferToCourt: (queueId: string) => void;
   canTransferToCourt: boolean;
+  isTransferring?: boolean;
   activeDropdown: string | null;
   activePlayerDropdown: string | null;
   onToggleDropdown: (queueId: string) => void;
@@ -129,6 +130,7 @@ export default function QueueCard({
   onDeleteQueue,
   onTransferToCourt,
   canTransferToCourt,
+  isTransferring = false,
   activeDropdown,
   activePlayerDropdown,
   onToggleDropdown,
@@ -148,6 +150,7 @@ export default function QueueCard({
     (entry) => entry.position === 2 || entry.position === 4,
   );
   const canShowTransferButton = Boolean(hasTeamAPlayer && hasTeamBPlayer);
+  const isTransferDisabled = !canTransferToCourt || isTransferring;
 
   const queueSlots = QUEUE_SLOTS;
 
@@ -224,11 +227,11 @@ export default function QueueCard({
           {canShowTransferButton && (
             <button
               type="button"
-              disabled={!canTransferToCourt}
+              disabled={isTransferDisabled}
               onClick={() => onTransferToCourt(queue.id)}
               className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-stone-400"
             >
-              Transfer to court
+              {isTransferring ? "Starting..." : "Transfer to court"}
             </button>
           )}
           <div

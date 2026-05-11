@@ -335,6 +335,7 @@ export const endMatchCourt = async (
       message: "Game ended",
       court: endedCourt,
       playerIds,
+      hostedPlayerIds: playerIds,
       match,
     });
   } catch (error) {
@@ -815,6 +816,165 @@ export const renameQueueCourt = async (
     });
   } catch (error) {
     console.error("Error renaming queue court host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+type TransferQueueToCourtParams = Params & {
+  queueId: string;
+};
+
+type TransferQueueToCourtBody = {
+  courtId?: string;
+};
+
+export const transferQueueToCourtAndStart = async (
+  request: Request<TransferQueueToCourtParams, unknown, TransferQueueToCourtBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, queueId } = request.params;
+    const { courtId } = request.body;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId || !queueId || !courtId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const [queue, court] = await Promise.all([
+      prisma.queue.findFirst({
+        where: { id: queueId, hostId: host.id },
+        include: {
+          entries: {
+            orderBy: { position: "asc" },
+          },
+        },
+      }),
+      prisma.court.findFirst({
+        where: { id: courtId, hostId: host.id },
+        include: { assignments: true },
+      }),
+    ]);
+
+    if (!queue)
+      return response
+        .status(404)
+        .json({ success: false, message: "Queue not found" });
+
+    if (!court)
+      return response
+        .status(404)
+        .json({ success: false, message: "Court not found" });
+
+    if (court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot transfer to a game in progress",
+      });
+
+    if (court.assignments.length > 0)
+      return response.status(400).json({
+        success: false,
+        message: "Target court must be empty",
+      });
+
+    if (queue.entries.length === 0)
+      return response.status(400).json({
+        success: false,
+        message: "Queue is empty",
+      });
+
+    const hasTeamAPlayer = queue.entries.some(
+      (entry) => entry.position === 1 || entry.position === 3,
+    );
+    const hasTeamBPlayer = queue.entries.some(
+      (entry) => entry.position === 2 || entry.position === 4,
+    );
+
+    if (!hasTeamAPlayer || !hasTeamBPlayer)
+      return response.status(400).json({
+        success: false,
+        message: "Queue needs at least one player on Team A and Team B",
+      });
+
+    const now = new Date();
+    const playerIds = queue.entries.map((entry) => entry.playerId);
+
+    const [, , , startedCourt] = await prisma.$transaction([
+      prisma.courtAssignment.createMany({
+        data: queue.entries.map((entry) => ({
+          playerId: entry.playerId,
+          courtId: court.id,
+          position: entry.position,
+        })),
+      }),
+      prisma.queueAssignment.deleteMany({
+        where: { queueId: queue.id, playerId: { in: playerIds } },
+      }),
+      prisma.player.updateMany({
+        where: { id: { in: playerIds }, hostId: host.id },
+        data: { timerStartedAt: now },
+      }),
+      prisma.court.update({
+        where: { id: court.id },
+        data: {
+          startedAt: now,
+          endedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          startedAt: true,
+          endedAt: true,
+          assignments: {
+            select: {
+              id: true,
+              playerId: true,
+              position: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Queue transferred and game started",
+      court: startedCourt,
+      queueId: queue.id,
+      hostedPlayerIds: playerIds,
+    });
+  } catch (error) {
+    console.error("Error transferring queue to court:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

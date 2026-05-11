@@ -27,6 +27,7 @@ import {
   renameMatchCourt,
   renameQueueCourt,
   startMatchCourt,
+  transferQueueToCourtAndStart,
 } from "../controllers/court.controller.js";
 import {
   getHostPayments,
@@ -113,6 +114,11 @@ router.patch(
   "/:communityId/hosts/:hostId/queues/:queueId",
   authenticate,
   renameQueueCourt,
+);
+router.post(
+  "/:communityId/hosts/:hostId/queues/:queueId/transfer-to-court",
+  authenticate,
+  transferQueueToCourtAndStart,
 );
 
 // PAYMENTS
