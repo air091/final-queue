@@ -207,8 +207,8 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <p className="mt-1 text-sm text-gray-500 flex items-center gap-x-[8px]">
-                      Hosted by{" "}
+                    <div className="mt-1 flex items-center gap-x-[8px] text-sm text-gray-500">
+                      <span>Hosted by</span>
                       <div className="flex items-center gap-x-[4px]">
                         <div className="w-[18px] h-[18px] rounded-full">
                           <img
@@ -221,7 +221,7 @@ export default function Home() {
                           {availableHost.community.master.username}
                         </span>
                       </div>
-                    </p>
+                    </div>
                   </div>
                 </div>
 
