@@ -62,7 +62,7 @@ export const createCommunity = async (request: Request, response: Response) => {
     const newCommunity = await prisma.community.create({
       data: {
         id: communityId,
-        profileUrl: resolvedProfileUrl || undefined,
+        ...(resolvedProfileUrl ? { profileUrl: resolvedProfileUrl } : {}),
         communityName: cleanCommunityName,
         description,
         masterId: user.sub,
