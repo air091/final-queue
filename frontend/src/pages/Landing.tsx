@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import badmintonImg from "../assets/badminton.png";
 import img2 from "../assets/300b83676693906ceea86a960b3425c8.jpg";
 import img3 from "../assets/b002681a02d8555674159b7c4480d938.jpg";
+import { useAuth } from "../hooks/useAuth";
 
 const images = [badmintonImg, img2, img3];
 
 export default function Landing() {
   const [index, setIndex] = useState(0);
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -17,6 +20,12 @@ export default function Landing() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleGetStarted = () => {
+    if (isLoading) return;
+
+    navigate(user ? "/home" : "/login");
+  };
 
   return (
     <div className="flex h-screen w-full max-w-[1920px] flex-col overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">
@@ -50,12 +59,14 @@ export default function Landing() {
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:items-start">
-              <NavLink
-                to="/login"
-                className="w-full cursor-pointer rounded-2xl bg-primary px-8 py-4 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:scale-[1.02] hover:bg-secondary sm:w-fit"
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                disabled={isLoading}
+                className="w-full cursor-pointer rounded-2xl bg-primary px-8 py-4 text-center text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:scale-[1.02] hover:bg-secondary disabled:cursor-wait disabled:opacity-70 sm:w-fit"
               >
-                Get Started
-              </NavLink>
+                {isLoading ? "Checking..." : "Get Started"}
+              </button>
             </div>
           </section>
 
