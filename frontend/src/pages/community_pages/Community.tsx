@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { EllipsisVertical, SquarePen, Trash } from "lucide-react";
+import { useCommunities } from "../../contexts/CommunitiesContext";
 
 type MasterType = {
   id: string;
@@ -66,11 +67,14 @@ const formatHostDateTime = (value: string | null) => {
 
 export default function Community() {
   const { id } = useParams();
+  const { refetchCommunities } = useCommunities();
   const [community, setCommunity] = useState<CommunityType | null>(null);
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
+  const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
   const [deletingHostId, setDeletingHostId] = useState<string | null>(null);
+  const [communityError, setCommunityError] = useState<string | null>(null);
   const [hostError, setHostError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -194,6 +198,34 @@ export default function Community() {
     }
   };
 
+  const handleDeleteCommunity = async () => {
+    if (!id || !community || isDeletingCommunity) return;
+
+    const confirmed = window.confirm(
+      `Delete "${community.communityName}"? This will remove the community, its hosts, and related queue data.`,
+    );
+
+    if (!confirmed) return;
+
+    setIsDeletingCommunity(true);
+    setCommunityError(null);
+    setOpenDropdownCommunity(false);
+
+    try {
+      await api.delete(`/api/community/${id}`);
+      await refetchCommunities();
+      navigate("/community", { replace: true });
+    } catch (error) {
+      setCommunityError("Unable to delete community.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Delete community api failed", error);
+    } finally {
+      setIsDeletingCommunity(false);
+    }
+  };
+
   const [openDropdownCommunity, setOpenDropdownCommunity] =
     useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -259,8 +291,14 @@ export default function Community() {
                 <button className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]">
                   <SquarePen size={18} /> Edit
                 </button>
-                <button className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-red-400 hover:text-white w-full text-start py-1 text-[14px]">
-                  <Trash size={18} /> Delete
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteCommunity()}
+                  disabled={isDeletingCommunity}
+                  className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Trash size={18} />
+                  {isDeletingCommunity ? "Deleting..." : "Delete"}
                 </button>
               </div>
             )}
@@ -269,6 +307,12 @@ export default function Community() {
       </header>
 
       <section className="flex flex-1 flex-col gap-5 p-4 sm:p-6">
+        {communityError ? (
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {communityError}
+          </p>
+        ) : null}
+
         <form
           onSubmit={handleCreateHost}
           className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
