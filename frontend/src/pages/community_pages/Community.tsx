@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import { EllipsisVertical, SquarePen, Trash } from "lucide-react";
 import { useCommunities } from "../../contexts/CommunitiesContext";
+import EditCommunityModal from "../../components/community_components/EditCommunityModal";
 
 type MasterType = {
   id: string;
@@ -73,8 +74,13 @@ export default function Community() {
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
   const [deletingHostId, setDeletingHostId] = useState<string | null>(null);
   const [communityError, setCommunityError] = useState<string | null>(null);
+  const [editCommunityError, setEditCommunityError] = useState<string | null>(
+    null,
+  );
   const [hostError, setHostError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -226,6 +232,51 @@ export default function Community() {
     }
   };
 
+  const handleEditCommunity = async (form: {
+    communityName: string;
+    description: string;
+  }) => {
+    if (!id || !community || isUpdatingCommunity) return;
+
+    if (!form.communityName) {
+      setEditCommunityError("Community name is required.");
+      return;
+    }
+
+    setIsUpdatingCommunity(true);
+    setEditCommunityError(null);
+
+    try {
+      const response = await api.patch(`/api/community/${id}`, {
+        profileUrl: community.profileUrl,
+        communityName: form.communityName,
+        description: form.description,
+      });
+
+      const updatedCommunity = response.data.updatedCommunity as CommunityType;
+
+      setCommunity((currentCommunity) =>
+        currentCommunity
+          ? {
+              ...currentCommunity,
+              ...updatedCommunity,
+              master: currentCommunity.master,
+            }
+          : currentCommunity,
+      );
+      await refetchCommunities();
+      setIsEditModalOpen(false);
+    } catch (error) {
+      setEditCommunityError("Unable to update community.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Update community api failed", error);
+    } finally {
+      setIsUpdatingCommunity(false);
+    }
+  };
+
   const [openDropdownCommunity, setOpenDropdownCommunity] =
     useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -247,6 +298,21 @@ export default function Community() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {isEditModalOpen && community ? (
+        <EditCommunityModal
+          profileUrl={community.profileUrl}
+          communityName={community.communityName}
+          description={community.description ?? ""}
+          isSaving={isUpdatingCommunity}
+          error={editCommunityError}
+          onClose={() => {
+            if (isUpdatingCommunity) return;
+            setEditCommunityError(null);
+            setIsEditModalOpen(false);
+          }}
+          onSave={handleEditCommunity}
+        />
+      ) : null}
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -288,7 +354,15 @@ export default function Community() {
 
             {openDropdownCommunity && (
               <div className="absolute border border-primary py-2 w-[240px] top-8 -left-53 rounded-lg bg-white">
-                <button className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenDropdownCommunity(false);
+                    setEditCommunityError(null);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]"
+                >
                   <SquarePen size={18} /> Edit
                 </button>
                 <button
