@@ -82,7 +82,7 @@ function ProfileDropdown() {
   };
 
   return (
-    <div className="absolute top-8 -left-64 z-50 w-[280px] rounded-md border bg-white">
+    <div className="absolute top-8 -left-64 z-50 w-[280px] bg-white rounded-md border">
       <div className="flex gap-x-[16px] p-[16px]">
         <div className="h-[64px] w-[64px] rounded-full">
           <img

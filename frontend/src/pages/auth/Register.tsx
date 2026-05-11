@@ -64,7 +64,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-orange-50 to-white flex items-center justify-center px-4 py-6">
       <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl grid lg:grid-cols-2">
         {/* Left Side */}
         <div className="hidden lg:flex flex-col justify-center bg-text px-12 py-16 text-white">

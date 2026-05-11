@@ -15,10 +15,15 @@ import Players from "./pages/host_pages/Players";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./pages/Profile";
 import ProfileLayout from "./layouts/ProfileLayout";
+import Landing from "./pages/Landing";
 const router = createBrowserRouter([
   // =========================
   // PUBLIC ROUTES
   // =========================
+  {
+    path: "/",
+    element: <Landing />,
+  },
   {
     path: "/login",
     element: <Login />,

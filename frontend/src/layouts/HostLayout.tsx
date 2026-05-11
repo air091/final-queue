@@ -241,10 +241,10 @@ export default function HostLayout() {
   };
 
   return (
-    <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden bg-background">
+    <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden">
       <Header setOpenSidebar={setOpenSidebar} />
 
-      <main className="relative flex flex-1 overflow-hidden">
+      <main className="relative flex flex-1 overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">
         {openSidebar && <Sidebar />}
 
         {isHostLoading ? (

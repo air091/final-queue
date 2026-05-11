@@ -57,7 +57,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-orange-50 to-white flex items-center justify-center px-4 py-6">
       <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl grid lg:grid-cols-2">
         {/* Left Side */}
         <div className="hidden lg:flex flex-col justify-center bg-text px-12 py-16 text-white">
@@ -76,8 +76,7 @@ export default function Login() {
 
           <div className="mt-14">
             <h2 className="text-5xl font-bold leading-tight">
-              Play smarter.
-              <span className="block text-primary">Queue faster.</span>
+              Your Next Match Starts Here
             </h2>
 
             <p className="mt-6 text-gray-300 leading-relaxed">
