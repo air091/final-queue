@@ -8,6 +8,7 @@ import {
   getPaymentBalance,
   type HostPaymentsData,
   type PaymentCurrency,
+  type PaymentStatus,
   type PaymentPlayer,
 } from "../../lib/host";
 
@@ -15,10 +16,6 @@ type PricingDraft = {
   entranceFee: string;
   perMatchFee: string;
   currency: PaymentCurrency;
-};
-
-type PlayerPaymentDraft = {
-  amountPaid: string;
 };
 
 const CURRENCY_OPTIONS: PaymentCurrency[] = ["PHP", "USD", "EUR"];
@@ -44,9 +41,6 @@ export default function Payments() {
     perMatchFee: "0",
     currency: "PHP",
   });
-  const [playerDrafts, setPlayerDrafts] = useState<
-    Record<string, PlayerPaymentDraft>
-  >({});
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,16 +51,6 @@ export default function Payments() {
       perMatchFee: String(paymentsData.pricing.perMatchFee),
       currency: paymentsData.pricing.currency,
     });
-    setPlayerDrafts(
-      Object.fromEntries(
-        paymentsData.players.map((player) => [
-          player.id,
-          {
-            amountPaid: String(player.payment.amountPaid),
-          },
-        ]),
-      ),
-    );
   }, [paymentsData]);
 
   const updatePaymentsData = (
@@ -74,9 +58,6 @@ export default function Payments() {
   ) => {
     setPaymentsData((current) => updater(current));
   };
-
-  const getNextPaymentStatus = (amountPaid: number) =>
-    amountPaid > 0 ? "paid" : "unpaid";
 
   const withUpdatedPlayer = (
     current: HostPaymentsData,
@@ -168,17 +149,22 @@ export default function Payments() {
     }
   };
 
-  const handleSavePlayerPayment = async (hostedPlayerId: string) => {
+  const handleUpdatePlayerPaymentStatus = async (
+    hostedPlayerId: string,
+    nextStatus: PaymentStatus,
+  ) => {
     if (!communityId || !hostId) return;
 
-    const draft = playerDrafts[hostedPlayerId];
-    if (!draft) return;
+    const currentPlayer = paymentsData.players.find(
+      (player) => player.id === hostedPlayerId,
+    );
+    if (!currentPlayer) return;
 
     setSavingPlayerId(hostedPlayerId);
     setError(null);
     const previousPaymentsData = paymentsData;
-    const nextAmountPaid = toAmount(draft.amountPaid);
-    const nextStatus = getNextPaymentStatus(nextAmountPaid);
+    const nextAmountPaid =
+      nextStatus === "paid" ? currentPlayer.payment.amountExpected : 0;
 
     updatePaymentsData((current) =>
       withUpdatedPlayer(current, hostedPlayerId, (player) => ({
@@ -212,6 +198,9 @@ export default function Payments() {
             payment: {
               ...player.payment,
               id: savedPaymentId,
+              amountPaid: Number(
+                response.data.payment?.amountPaid ?? player.payment.amountPaid,
+              ),
             },
           })),
         );
@@ -336,7 +325,7 @@ export default function Payments() {
             type="button"
             onClick={() => void handleSavePricing()}
             disabled={isSavingPricing}
-            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
               isSavingPricing
                 ? "cursor-not-allowed bg-stone-200 text-stone-400"
                 : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
@@ -442,11 +431,7 @@ export default function Payments() {
                 </th>
 
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Paid
-                </th>
-
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  Balance
+                  Status
                 </th>
 
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">
@@ -458,17 +443,8 @@ export default function Payments() {
             <tbody>
               {paymentsData.players.length > 0 ? (
                 paymentsData.players.map((player) => {
-                  const draft = playerDrafts[player.id];
-
-                  const expectedAmount =
-                    paymentsData.pricing.entranceFee +
-                    paymentsData.pricing.perMatchFee * player.gamesPlayed;
-
-                  const paidAmount = toAmount(
-                    draft?.amountPaid ?? String(player.payment.amountPaid),
-                  );
-
-                  const balance = Math.max(0, expectedAmount - paidAmount);
+                  const nextStatus =
+                    player.paymentStatus === "paid" ? "unpaid" : "paid";
 
                   return (
                     <tr
@@ -517,41 +493,34 @@ export default function Payments() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <input
-                          type="number"
-                          value={
-                            draft?.amountPaid ??
-                            String(player.payment.amountPaid)
-                          }
-                          onChange={(event) =>
-                            setPlayerDrafts((current) => ({
-                              ...current,
-                              [player.id]: {
-                                ...(current[player.id] ?? {
-                                  amountPaid: String(player.payment.amountPaid),
-                                }),
-                                amountPaid: event.target.value,
-                              },
-                            }))
-                          }
-                          className="w-28 rounded-xl border border-orange-100 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
-                        />
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-semibold text-red-500">
-                        {formatMoney(balance, paymentsData.pricing.currency)}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            player.paymentStatus === "paid"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-red-50 text-red-600"
+                          }`}
+                        >
+                          {player.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+                        </span>
                       </td>
 
                       <td className="px-4 py-4">
                         <button
                           type="button"
                           onClick={() =>
-                            void handleSavePlayerPayment(player.id)
+                            void handleUpdatePlayerPaymentStatus(
+                              player.id,
+                              nextStatus,
+                            )
                           }
                           disabled={savingPlayerId === player.id}
-                          className="rounded-xl px-4 py-2 text-sm font-semibold bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
+                          className="rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
                         >
-                          {savingPlayerId === player.id ? "Saving..." : "Save"}
+                          {savingPlayerId === player.id
+                            ? "Saving..."
+                            : nextStatus === "paid"
+                              ? "Mark as Paid"
+                              : "Mark as Unpaid"}
                         </button>
                       </td>
                     </tr>
@@ -560,7 +529,7 @@ export default function Payments() {
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm text-stone-500"
                   >
                     No players available for payments.
@@ -575,17 +544,11 @@ export default function Payments() {
         <div className="grid gap-3 p-4 md:hidden">
           {paymentsData.players.length > 0 ? (
             paymentsData.players.map((player) => {
-              const draft = playerDrafts[player.id];
-
               const expectedAmount =
                 paymentsData.pricing.entranceFee +
                 paymentsData.pricing.perMatchFee * player.gamesPlayed;
-
-              const paidAmount = toAmount(
-                draft?.amountPaid ?? String(player.payment.amountPaid),
-              );
-
-              const balance = Math.max(0, expectedAmount - paidAmount);
+              const nextStatus =
+                player.paymentStatus === "paid" ? "unpaid" : "paid";
 
               return (
                 <div
@@ -636,40 +599,36 @@ export default function Payments() {
                     </div>
 
                     <div>
-                      <p className="text-stone-500 text-xs">Balance</p>
-                      <p className="font-semibold text-red-500">
-                        {formatMoney(balance, paymentsData.pricing.currency)}
+                      <p className="text-stone-500 text-xs">Status</p>
+                      <p
+                        className={`font-semibold ${
+                          player.paymentStatus === "paid"
+                            ? "text-emerald-600"
+                            : "text-red-500"
+                        }`}
+                      >
+                        {player.paymentStatus === "paid" ? "Paid" : "Unpaid"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={
-                        draft?.amountPaid ?? String(player.payment.amountPaid)
-                      }
-                      onChange={(event) =>
-                        setPlayerDrafts((current) => ({
-                          ...current,
-                          [player.id]: {
-                            ...(current[player.id] ?? {
-                              amountPaid: String(player.payment.amountPaid),
-                            }),
-                            amountPaid: event.target.value,
-                          },
-                        }))
-                      }
-                      className="flex-1 rounded-xl border border-orange-100 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
-                    />
-
+                  <div className="mt-3 flex justify-end">
                     <button
                       type="button"
-                      onClick={() => void handleSavePlayerPayment(player.id)}
+                      onClick={() =>
+                        void handleUpdatePlayerPaymentStatus(
+                          player.id,
+                          nextStatus,
+                        )
+                      }
                       disabled={savingPlayerId === player.id}
-                      className="rounded-xl px-4 py-2 text-sm font-semibold bg-[var(--color-primary)] text-white"
+                      className="rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer bg-[var(--color-primary)] text-white"
                     >
-                      Save
+                      {savingPlayerId === player.id
+                        ? "Saving..."
+                        : nextStatus === "paid"
+                          ? "Mark as Paid"
+                          : "Mark as Unpaid"}
                     </button>
                   </div>
                 </div>
