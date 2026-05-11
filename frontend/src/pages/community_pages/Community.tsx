@@ -1,8 +1,8 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { Trash } from "lucide-react";
+import { EllipsisVertical, SquarePen, Trash } from "lucide-react";
 
 type MasterType = {
   id: string;
@@ -194,6 +194,25 @@ export default function Community() {
     }
   };
 
+  const [openDropdownCommunity, setOpenDropdownCommunity] =
+    useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpenDropdownCommunity(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
@@ -227,8 +246,24 @@ export default function Community() {
             </div>
           </div>
 
-          <div className="w-fit rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-600">
-            Active
+          <div ref={dropdownRef} className="relative">
+            <div
+              onClick={() => setOpenDropdownCommunity((prev) => !prev)}
+              className="p-1 rounded-full  cursor-pointer hover:bg-primary/10"
+            >
+              <EllipsisVertical size={20} />
+            </div>
+
+            {openDropdownCommunity && (
+              <div className="absolute border border-primary py-2 w-[240px] top-8 -left-53 rounded-lg bg-white">
+                <button className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]">
+                  <SquarePen size={18} /> Edit
+                </button>
+                <button className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-red-400 hover:text-white w-full text-start py-1 text-[14px]">
+                  <Trash size={18} /> Delete
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -326,7 +361,7 @@ export default function Community() {
             type="submit"
             disabled={isCreatingHost}
             className={`
-              h-[46px] w-full rounded-xl px-5 py-3 text-sm font-semibold transition
+              h-[46px] w-full rounded-xl px-5 py-3 text-sm font-semibold transition cursor-pointer
               ${
                 isCreatingHost
                   ? "cursor-not-allowed bg-gray-100 text-gray-400"
