@@ -1,10 +1,38 @@
+import crypto from "node:crypto";
 import prisma from "../lib/prisma.js";
 import type { Request, Response } from "express";
+import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 
 export type Params = {
   communityId: string;
   hostId?: string;
   playerId?: string;
+};
+
+const IMAGE_DATA_URI_PATTERN =
+  /^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i;
+
+const resolveCommunityProfileUrl = async ({
+  profileUrl,
+  communityId,
+}: {
+  profileUrl?: string;
+  communityId: string;
+}) => {
+  const cleanedProfileUrl = profileUrl?.trim() ?? "";
+
+  if (!cleanedProfileUrl) {
+    return cleanedProfileUrl;
+  }
+
+  if (!IMAGE_DATA_URI_PATTERN.test(cleanedProfileUrl)) {
+    return cleanedProfileUrl;
+  }
+
+  return uploadImageToCloudinary({
+    dataUri: cleanedProfileUrl,
+    publicId: `queue-system/community-images/${communityId}`,
+  });
 };
 
 export const createCommunity = async (request: Request, response: Response) => {
@@ -25,9 +53,16 @@ export const createCommunity = async (request: Request, response: Response) => {
         .json({ success: false, message: "Community name is required" });
     }
 
+    const communityId = crypto.randomUUID();
+    const resolvedProfileUrl = await resolveCommunityProfileUrl({
+      profileUrl,
+      communityId,
+    });
+
     const newCommunity = await prisma.community.create({
       data: {
-        profileUrl,
+        id: communityId,
+        profileUrl: resolvedProfileUrl || undefined,
         communityName: cleanCommunityName,
         description,
         masterId: user.sub,
@@ -172,10 +207,15 @@ export const updateCommunity = async (
         .json({ success: false, message: "Community not found" });
     }
 
+    const resolvedProfileUrl = await resolveCommunityProfileUrl({
+      profileUrl,
+      communityId: community.id,
+    });
+
     const updatedCommunity = await prisma.community.update({
       where: { id: community.id },
       data: {
-        profileUrl,
+        profileUrl: resolvedProfileUrl,
         communityName: cleanCommunityName,
         description,
       },

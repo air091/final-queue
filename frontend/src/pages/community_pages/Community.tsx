@@ -233,6 +233,7 @@ export default function Community() {
   };
 
   const handleEditCommunity = async (form: {
+    profileUrl: string;
     communityName: string;
     description: string;
   }) => {
@@ -248,7 +249,7 @@ export default function Community() {
 
     try {
       const response = await api.patch(`/api/community/${id}`, {
-        profileUrl: community.profileUrl,
+        profileUrl: form.profileUrl,
         communityName: form.communityName,
         description: form.description,
       });
