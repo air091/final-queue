@@ -48,7 +48,7 @@ export default function Landing() {
       {/* HEADER */}
       <header className="mx-auto flex w-full items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
         <h1 className="text-2xl font-extrabold tracking-tight text-text sm:text-3xl">
-          SportQ
+          Queue<span className="text-primary">Tato</span> Sports Management
         </h1>
       </header>
 

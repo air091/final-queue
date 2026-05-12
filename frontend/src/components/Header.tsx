@@ -51,9 +51,9 @@ export default function Header({ setOpenSidebar }: HeaderProps) {
           <TextAlignJustify size={24} />
         </div>
 
-        <div>
-          <h1 className="text-[18px] font-bold">SportQ</h1>
-        </div>
+        <h1 className="text-[18px] font-extrabold tracking-tight text-text">
+          Queue<span className="text-primary">Tato</span> Sports Management
+        </h1>
       </div>
 
       <div ref={dropdownRef} className="relative">
