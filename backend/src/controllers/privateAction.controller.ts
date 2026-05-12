@@ -374,13 +374,13 @@ export const updateStaticPlayerSkillLevel = async (
       where: {
         id: hostedPlayerId,
         hostId: host.id,
-        hostStatus: PlayerHostStatuses.accepted,
         player: {
           role: UserRoles.static,
         },
       },
       select: {
         id: true,
+        hostStatus: true,
         timerStartedAt: true,
         player: {
           select: {
@@ -443,8 +443,8 @@ export const updateStaticPlayerSkillLevel = async (
       message: "Static player skill updated",
       data: {
         id: existing.id,
-        status: PlayerHostStatuses.accepted,
-        hostStatus: PlayerHostStatuses.accepted,
+        status: existing.hostStatus,
+        hostStatus: existing.hostStatus,
         timerStartedAt: existing.timerStartedAt,
         matchStatus: "waiting",
         player: buildStaticPlayerProfile(account),

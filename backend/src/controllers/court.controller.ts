@@ -323,6 +323,21 @@ export const endMatchCourt = async (
           teamWinner: true,
           startedAt: true,
           endedAt: true,
+          court: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          participants: {
+            select: {
+              id: true,
+              playerId: true,
+              team: true,
+              result: true,
+              joinedAt: true,
+            },
+          },
         },
       }),
       prisma.courtAssignment.deleteMany({

@@ -17,9 +17,15 @@ export default function Dashboard() {
   const { host, playersInHost, acceptedPlayers, courts, queues, paymentsData } =
     useHostData();
 
-  const requestCount = useMemo(
+  const waitingCount = useMemo(
     () =>
-      playersInHost.filter((player) => player.status === "requested").length,
+      acceptedPlayers.filter((player) => player.matchStatus === "waiting")
+        .length,
+    [acceptedPlayers],
+  );
+
+  const requestCount = useMemo(
+    () => playersInHost.filter((player) => player.status === "requested").length,
     [playersInHost],
   );
 
@@ -94,8 +100,13 @@ export default function Dashboard() {
           },
           {
             title: "Waiting",
-            value: requestCount,
+            value: waitingCount,
             icon: "W",
+          },
+          {
+            title: "Requests",
+            value: requestCount,
+            icon: "Rq",
           },
           {
             title: "Rejected",

@@ -21,6 +21,7 @@ import {
   getPaymentBalance,
   type AcceptedPlayers,
   type CourtType,
+  type MatchHistorySummary,
   type MatchPlayerStatus,
   type QueueType,
 } from "../../lib/host";
@@ -163,6 +164,61 @@ const getPlayersWithResetTimer = (
         }
       : player,
   );
+};
+
+const getUpdatedPlayerMatchSummaries = (
+  currentPlayers: AcceptedPlayers[],
+  match: FinishedMatchPayload,
+) =>
+  currentPlayers.map((player) => {
+    const participant = match.participants.find(
+      (matchParticipant) => matchParticipant.playerId === player.id,
+    );
+
+    if (!participant) return player;
+
+    const previousSummary: MatchHistorySummary = player.matchHistory ?? {
+      matchCount: 0,
+      winCount: 0,
+      lossCount: 0,
+      lastMatch: null,
+    };
+    const result = participant.result;
+
+    return {
+      ...player,
+      matchHistory: {
+        matchCount: previousSummary.matchCount + 1,
+        winCount: previousSummary.winCount + (result === "win" ? 1 : 0),
+        lossCount: previousSummary.lossCount + (result === "loss" ? 1 : 0),
+        lastMatch: {
+          team: participant.team,
+          result,
+          startedAt: match.startedAt,
+          endedAt: match.endedAt,
+          teamWinner: match.teamWinner,
+          courtName: match.court?.name ?? null,
+        },
+      },
+    };
+  });
+
+type FinishedMatchPayload = {
+  id: string;
+  teamWinner: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  court: {
+    id: string;
+    name: string;
+  } | null;
+  participants: Array<{
+    id: string;
+    playerId: string;
+    team: string | null;
+    result: string | null;
+    joinedAt: string;
+  }>;
 };
 
 const getPlayersWithoutCourtAssignment = (
@@ -488,7 +544,9 @@ export default function Match() {
         ? currentQueueIds.includes(queueId)
           ? currentQueueIds
           : [...currentQueueIds, queueId]
-        : currentQueueIds.filter((currentQueueId) => currentQueueId !== queueId),
+        : currentQueueIds.filter(
+            (currentQueueId) => currentQueueId !== queueId,
+          ),
     );
   };
 
@@ -526,7 +584,11 @@ export default function Match() {
       {},
     );
 
-    return response.data as { hostedPlayerIds?: string[]; playerIds?: string[] };
+    return response.data as {
+      hostedPlayerIds?: string[];
+      playerIds?: string[];
+      match?: FinishedMatchPayload;
+    };
   };
 
   const deleteCourtAPI = async (courtId: string) => {
@@ -1126,10 +1188,20 @@ export default function Match() {
     try {
       await waitForPendingPlayerOperations(playerIds);
       const response = await endCourtGameAPI(courtId);
-      const endedPlayerIds = response.hostedPlayerIds ?? response.playerIds ?? [];
+      const endedPlayerIds =
+        response.hostedPlayerIds ?? response.playerIds ?? [];
 
       setPlayers((currentPlayers) =>
-        getPlayersWithResetTimer(currentPlayers, endedPlayerIds, "waiting"),
+        response.match
+          ? getUpdatedPlayerMatchSummaries(
+              getPlayersWithResetTimer(
+                currentPlayers,
+                endedPlayerIds,
+                "waiting",
+              ),
+              response.match,
+            )
+          : getPlayersWithResetTimer(currentPlayers, endedPlayerIds, "waiting"),
       );
     } catch (error) {
       setCourts(previousCourts);
@@ -1328,18 +1400,29 @@ export default function Match() {
 
           {/* COURTS & QUEUES */}
           <div className="order-2 min-[1280px]:order-none flex-1 min-w-0 lg:min-w-[700px]">
-            <main className="flex h-full flex-col gap-4">
-              {/* COURTS */}
-              <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--color-text)]">
-                      Match Courts
-                    </h3>
-                  </div>
+            <main className="flex h-full flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+              <header className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--color-text)]">
+                    Courts & queues
+                  </h3>
+                  <p className="mt-1 text-sm text-stone-500">
+                    Set up games, stage players, and transfer queues into open
+                    courts.
+                  </p>
                 </div>
+              </header>
 
-                <div className="flex-1 overflow-auto p-4">
+              <div className="flex-1 overflow-auto p-4">
+                <section>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-[var(--color-text)]">
+                        Match Courts
+                      </h4>
+                    </div>
+                  </div>
+
                   <div className="flex flex-wrap gap-3">
                     {courts.map((court) => (
                       <CourtCard
@@ -1375,20 +1458,17 @@ export default function Match() {
                       + Add court
                     </button>
                   </div>
-                </div>
-              </div>
+                </section>
 
-              {/* QUEUES */}
-              <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-[var(--color-text)]">
-                      Queue Courts
-                    </h3>
+                <section className="mt-6 border-t border-orange-100 pt-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-[var(--color-text)]">
+                        Queue Courts
+                      </h4>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex-1 overflow-auto p-4">
                   <div className="flex flex-wrap gap-3">
                     {queues.map((queue) => (
                       <QueueCard
@@ -1424,7 +1504,7 @@ export default function Match() {
                       + Add queue
                     </button>
                   </div>
-                </div>
+                </section>
               </div>
             </main>
           </div>

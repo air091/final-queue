@@ -503,6 +503,8 @@ export default function Players() {
   const [editingStaticPlayer, setEditingStaticPlayer] =
     useState<HostPlayerRecord | null>(null);
   const [editingStaticPlayerName, setEditingStaticPlayerName] = useState("");
+  const [editingStaticPlayerSkillLevel, setEditingStaticPlayerSkillLevel] =
+    useState<SkillLevelType>("beginner");
   const [editingStaticPlayerImage, setEditingStaticPlayerImage] =
     useState<File | null>(null);
   const [editingStaticPlayerImagePreview, setEditingStaticPlayerImagePreview] =
@@ -1011,10 +1013,11 @@ export default function Players() {
     );
 
     try {
-      await api.patch(
-        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/skill-level`,
-        { skillLevel },
+      const updatedPlayer = await updateStaticPlayerSkillLevelAPI(
+        hostedPlayerId,
+        skillLevel,
       );
+      updateStaticPlayerInState(updatedPlayer);
     } catch (error) {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
@@ -1120,6 +1123,18 @@ export default function Players() {
     return response.data.data as AcceptedPlayers;
   };
 
+  const updateStaticPlayerSkillLevelAPI = async (
+    hostedPlayerId: string,
+    skillLevel: SkillLevelType,
+  ) => {
+    const response = await api.patch(
+      `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/skill-level`,
+      { skillLevel },
+    );
+
+    return response.data.data as AcceptedPlayers;
+  };
+
   const handleUpdateStaticPlayerProfileImage = async (
     hostedPlayerId: string,
     file: File,
@@ -1209,6 +1224,7 @@ export default function Players() {
   const openEditStaticPlayerModal = (player: HostPlayerRecord) => {
     setEditingStaticPlayer(player);
     setEditingStaticPlayerName(player.player.username);
+    setEditingStaticPlayerSkillLevel(player.player.skillLevel);
     setEditingStaticPlayerImage(null);
     setEditingStaticPlayerImagePreview(null);
     setStaticPlayerEditError(null);
@@ -1219,6 +1235,7 @@ export default function Players() {
 
     setEditingStaticPlayer(null);
     setEditingStaticPlayerName("");
+    setEditingStaticPlayerSkillLevel("beginner");
     setEditingStaticPlayerImage(null);
     setEditingStaticPlayerImagePreview(null);
     setStaticPlayerEditError(null);
@@ -1273,6 +1290,16 @@ export default function Players() {
 
       updateStaticPlayerInState(nameResponse.data.data as AcceptedPlayers);
 
+      if (
+        editingStaticPlayerSkillLevel !== editingStaticPlayer.player.skillLevel
+      ) {
+        const skillResponse = await updateStaticPlayerSkillLevelAPI(
+          editingStaticPlayer.id,
+          editingStaticPlayerSkillLevel,
+        );
+        updateStaticPlayerInState(skillResponse);
+      }
+
       if (editingStaticPlayerImage) {
         setSavingStaticProfileUrlId(editingStaticPlayer.id);
         const imageUpdatedPlayer = await updateStaticPlayerProfileImageAPI(
@@ -1284,6 +1311,7 @@ export default function Players() {
 
       setEditingStaticPlayer(null);
       setEditingStaticPlayerName("");
+      setEditingStaticPlayerSkillLevel("beginner");
       setEditingStaticPlayerImage(null);
       setEditingStaticPlayerImagePreview(null);
     } catch (error) {
@@ -1506,6 +1534,25 @@ export default function Players() {
                   disabled={isSavingStaticPlayerEdit}
                   className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
                 />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Skill level</span>
+                <select
+                  value={editingStaticPlayerSkillLevel}
+                  onChange={(event) =>
+                    setEditingStaticPlayerSkillLevel(
+                      event.target.value as SkillLevelType,
+                    )
+                  }
+                  disabled={isSavingStaticPlayerEdit}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="elite">Elite</option>
+                </select>
               </label>
 
               {staticPlayerEditError ? (
