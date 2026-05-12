@@ -167,6 +167,10 @@ type UpdateStaticPlayerProfileUrlBody = {
   imageData?: string;
 };
 
+type UpdateStaticPlayerNameBody = {
+  username?: string;
+};
+
 export const banPlayer = async (
   request: Request<BanPlayerParams>,
   response: Response,
@@ -518,13 +522,13 @@ export const updateStaticPlayerProfileUrl = async (
       where: {
         id: hostedPlayerId,
         hostId: host.id,
-        hostStatus: PlayerHostStatuses.accepted,
         player: {
           role: UserRoles.static,
         },
       },
       select: {
         id: true,
+        hostStatus: true,
         timerStartedAt: true,
         player: {
           select: {
@@ -581,8 +585,8 @@ export const updateStaticPlayerProfileUrl = async (
       message: "Static player profile updated",
       data: {
         id: existing.id,
-        status: PlayerHostStatuses.accepted,
-        hostStatus: PlayerHostStatuses.accepted,
+        status: existing.hostStatus,
+        hostStatus: existing.hostStatus,
         timerStartedAt: existing.timerStartedAt,
         matchStatus: "waiting",
         player: buildStaticPlayerProfile(account),
@@ -592,6 +596,105 @@ export const updateStaticPlayerProfileUrl = async (
     });
   } catch (error) {
     console.error("Error updating static player profile URL:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const updateStaticPlayerName = async (
+  request: Request<StaticPlayerParams, unknown, UpdateStaticPlayerNameBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, hostedPlayerId } = request.params;
+    const cleanUsername = request.body.username?.trim() ?? "";
+
+    if (!communityId || !hostId || !hostedPlayerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    if (!cleanUsername) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Player name is required" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const host = await getAuthorizedHost(communityId, hostId, user.sub);
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const existing = await prisma.player.findFirst({
+      where: {
+        id: hostedPlayerId,
+        hostId: host.id,
+        player: {
+          role: UserRoles.static,
+        },
+      },
+      select: {
+        id: true,
+        hostStatus: true,
+        timerStartedAt: true,
+        player: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!existing || !existing.player?.id)
+      return response.status(404).json({
+        success: false,
+        message: "Static player not found",
+      });
+
+    const account = await prisma.account.update({
+      where: { id: existing.player.id },
+      data: { username: cleanUsername },
+      select: {
+        id: true,
+        username: true,
+        profileUrl: true,
+        role: true,
+        sports: {
+          where: { sport: host.sport as Sports },
+          select: {
+            sport: true,
+            skillLevel: true,
+          },
+        },
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Static player name updated",
+      data: {
+        id: existing.id,
+        status: existing.hostStatus,
+        hostStatus: existing.hostStatus,
+        timerStartedAt: existing.timerStartedAt,
+        matchStatus: "waiting",
+        player: buildStaticPlayerProfile(account),
+        queueEntry: null,
+        courtAssignment: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating static player name:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

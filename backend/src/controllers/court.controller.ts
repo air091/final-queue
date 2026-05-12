@@ -387,7 +387,9 @@ export const createMatchCourt = async (
     const court = await prisma.court.create({
       data: {
         hostId: host.id,
-        name: `Court ${(await prisma.court.count()) + 1}`,
+        name: `Court ${
+          (await prisma.court.count({ where: { hostId: host.id } })) + 1
+        }`,
       },
     });
 
@@ -660,7 +662,9 @@ export const createQueueCourt = async (
     const queue = await prisma.queue.create({
       data: {
         hostId: host.id,
-        name: `Queue ${(await prisma.queue.count()) + 1}`,
+        name: `Queue ${
+          (await prisma.queue.count({ where: { hostId: host.id } })) + 1
+        }`,
       },
     });
 

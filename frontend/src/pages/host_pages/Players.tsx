@@ -69,6 +69,7 @@ type PlayerSectionProps = {
   ) => void;
   onStaticProfileImageChange?: (hostedPlayerId: string, file: File) => void;
   onUpdateStaticPlayerProfileUrl?: (hostedPlayerId: string) => void;
+  onEditStaticPlayer?: (player: HostPlayerRecord) => void;
   emptyMessage: string;
   extraContent?: ReactNode;
 };
@@ -86,6 +87,7 @@ function PlayerSection({
   onViewHistory,
   savingStaticProfileUrlId,
   onStaticProfileImageChange,
+  onEditStaticPlayer,
   emptyMessage,
   extraContent,
 }: PlayerSectionProps) {
@@ -269,6 +271,16 @@ function PlayerSection({
                       Unban
                     </button>
                   )}
+
+                  {playerRecord.player.isStatic && onEditStaticPlayer ? (
+                    <button
+                      type="button"
+                      onClick={() => onEditStaticPlayer(playerRecord)}
+                      className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-medium text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );
@@ -396,6 +408,17 @@ function PlayerSection({
                           History
                         </button>
 
+                        {playerRecord.player.isStatic &&
+                        onEditStaticPlayer ? (
+                          <button
+                            type="button"
+                            onClick={() => onEditStaticPlayer(playerRecord)}
+                            className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+
                         {playerRecord.status !== "accepted" && (
                           <button
                             onClick={() => onAcceptPlayer(playerRecord.id)}
@@ -477,8 +500,68 @@ export default function Players() {
   const [staticProfileImageError, setStaticProfileImageError] = useState<
     string | null
   >(null);
+  const [editingStaticPlayer, setEditingStaticPlayer] =
+    useState<HostPlayerRecord | null>(null);
+  const [editingStaticPlayerName, setEditingStaticPlayerName] = useState("");
+  const [editingStaticPlayerImage, setEditingStaticPlayerImage] =
+    useState<File | null>(null);
+  const [editingStaticPlayerImagePreview, setEditingStaticPlayerImagePreview] =
+    useState<string | null>(null);
+  const [isSavingStaticPlayerEdit, setIsSavingStaticPlayerEdit] =
+    useState(false);
+  const [staticPlayerEditError, setStaticPlayerEditError] = useState<
+    string | null
+  >(null);
   const accountPlayers = players.filter((player) => !player.player.isStatic);
   const staticPlayers = players.filter((player) => player.player.isStatic);
+
+  const updateStaticPlayerInState = (updatedPlayer: AcceptedPlayers) => {
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === updatedPlayer.id
+          ? {
+              ...currentPlayer,
+              status: updatedPlayer.hostStatus,
+              player: updatedPlayer.player,
+            }
+          : currentPlayer,
+      ),
+    );
+    setAcceptedPlayers((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === updatedPlayer.id
+          ? {
+              ...currentPlayer,
+              player: updatedPlayer.player,
+            }
+          : currentPlayer,
+      ),
+    );
+    setPaymentsData((currentPaymentsData) => {
+      const nextPlayers = currentPaymentsData.players.map((paymentPlayer) =>
+        paymentPlayer.id === updatedPlayer.id
+          ? {
+              ...paymentPlayer,
+              player: {
+                ...paymentPlayer.player,
+                username: updatedPlayer.player.username,
+                profileUrl: updatedPlayer.player.profileUrl,
+              },
+            }
+          : paymentPlayer,
+      );
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
+    setStaticProfileUrlDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [updatedPlayer.id]: updatedPlayer.player.profileUrl,
+    }));
+  };
 
   const createStaticPlayerAPI = async (
     username: string,
@@ -1024,6 +1107,19 @@ export default function Players() {
     }
   };
 
+  const updateStaticPlayerProfileImageAPI = async (
+    hostedPlayerId: string,
+    file: File,
+  ) => {
+    const imageData = await readFileAsDataUrl(file);
+    const response = await api.patch(
+      `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/profile-url`,
+      { imageData },
+    );
+
+    return response.data.data as AcceptedPlayers;
+  };
+
   const handleUpdateStaticPlayerProfileImage = async (
     hostedPlayerId: string,
     file: File,
@@ -1048,12 +1144,10 @@ export default function Players() {
       setSavingStaticProfileUrlId(hostedPlayerId);
       setStaticProfileImageError(null);
 
-      const imageData = await readFileAsDataUrl(file);
-      const response = await api.patch(
-        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${hostedPlayerId}/profile-url`,
-        { imageData },
+      const updatedPlayer = await updateStaticPlayerProfileImageAPI(
+        hostedPlayerId,
+        file,
       );
-      const updatedPlayer = response.data.data as AcceptedPlayers;
 
       setPlayersInHost((currentPlayers) =>
         currentPlayers.map((currentPlayer) =>
@@ -1109,6 +1203,101 @@ export default function Players() {
       else console.error(error);
     } finally {
       setSavingStaticProfileUrlId(null);
+    }
+  };
+
+  const openEditStaticPlayerModal = (player: HostPlayerRecord) => {
+    setEditingStaticPlayer(player);
+    setEditingStaticPlayerName(player.player.username);
+    setEditingStaticPlayerImage(null);
+    setEditingStaticPlayerImagePreview(null);
+    setStaticPlayerEditError(null);
+  };
+
+  const closeEditStaticPlayerModal = () => {
+    if (isSavingStaticPlayerEdit) return;
+
+    setEditingStaticPlayer(null);
+    setEditingStaticPlayerName("");
+    setEditingStaticPlayerImage(null);
+    setEditingStaticPlayerImagePreview(null);
+    setStaticPlayerEditError(null);
+  };
+
+  const handleEditStaticPlayerImageChange = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setStaticPlayerEditError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setStaticPlayerEditError("Please choose an image smaller than 5 MB.");
+      return;
+    }
+
+    try {
+      const preview = await readFileAsDataUrl(file);
+      setEditingStaticPlayerImage(file);
+      setEditingStaticPlayerImagePreview(preview);
+      setStaticPlayerEditError(null);
+    } catch {
+      setStaticPlayerEditError("Unable to preview that image.");
+    }
+  };
+
+  const handleSaveStaticPlayerEdit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!communityId || !hostId || !editingStaticPlayer) return;
+
+    const cleanName = editingStaticPlayerName.trim();
+    if (!cleanName) {
+      setStaticPlayerEditError("Player name is required.");
+      return;
+    }
+
+    setIsSavingStaticPlayerEdit(true);
+    setStaticPlayerEditError(null);
+
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const previousPaymentsData = paymentsData;
+
+    try {
+      const nameResponse = await api.patch(
+        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${editingStaticPlayer.id}/name`,
+        { username: cleanName },
+      );
+
+      updateStaticPlayerInState(nameResponse.data.data as AcceptedPlayers);
+
+      if (editingStaticPlayerImage) {
+        setSavingStaticProfileUrlId(editingStaticPlayer.id);
+        const imageUpdatedPlayer = await updateStaticPlayerProfileImageAPI(
+          editingStaticPlayer.id,
+          editingStaticPlayerImage,
+        );
+        updateStaticPlayerInState(imageUpdatedPlayer);
+      }
+
+      setEditingStaticPlayer(null);
+      setEditingStaticPlayerName("");
+      setEditingStaticPlayerImage(null);
+      setEditingStaticPlayerImagePreview(null);
+    } catch (error) {
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+      setPaymentsData(previousPaymentsData);
+      setStaticPlayerEditError("Unable to update static player.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setSavingStaticProfileUrlId(null);
+      setIsSavingStaticPlayerEdit(false);
     }
   };
 
@@ -1183,6 +1372,7 @@ export default function Players() {
             void handleUpdateStaticPlayerProfileImage(hostedPlayerId, file)
           }
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
+          onEditStaticPlayer={openEditStaticPlayerModal}
           emptyMessage="No static players yet."
           extraContent={
             <form
@@ -1246,6 +1436,110 @@ export default function Players() {
           }
         />
       </div>
+
+      {editingStaticPlayer ? (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl">
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-lg font-semibold text-text">
+                  Edit static player
+                </h4>
+                <p className="mt-1 text-sm text-stone-500">
+                  Update this walk-in player's name and photo.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditStaticPlayerModal}
+                disabled={isSavingStaticPlayerEdit}
+                className="rounded-full px-3 py-1 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close modal"
+              >
+                X
+              </button>
+            </header>
+
+            <form
+              onSubmit={(event) => void handleSaveStaticPlayerEdit(event)}
+              className="mt-5 grid gap-5"
+            >
+              <div className="flex justify-center">
+                <label
+                  className="group relative h-24 w-24 cursor-pointer overflow-hidden rounded-full border border-orange-100 bg-orange-50"
+                  title="Change static player photo"
+                >
+                  <img
+                    src={
+                      editingStaticPlayerImagePreview ??
+                      editingStaticPlayer.player.profileUrl
+                    }
+                    alt={editingStaticPlayer.player.username}
+                    className="h-full w-full object-cover"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-xs font-semibold text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
+                    Change
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isSavingStaticPlayerEdit}
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void handleEditStaticPlayerImageChange(file);
+                    }}
+                  />
+                </label>
+              </div>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Player name</span>
+                <input
+                  type="text"
+                  value={editingStaticPlayerName}
+                  onChange={(event) =>
+                    setEditingStaticPlayerName(event.target.value)
+                  }
+                  disabled={isSavingStaticPlayerEdit}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
+                />
+              </label>
+
+              {staticPlayerEditError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {staticPlayerEditError}
+                </p>
+              ) : null}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditStaticPlayerModal}
+                  disabled={isSavingStaticPlayerEdit}
+                  className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingStaticPlayerEdit}
+                  className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                    isSavingStaticPlayerEdit
+                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                      : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
+                  }`}
+                >
+                  {isSavingStaticPlayerEdit ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {isBulkStaticPlayerModalOpen ? (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4">

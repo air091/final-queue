@@ -7,6 +7,7 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
+  updateStaticPlayerName,
   updateStaticPlayerProfileUrl,
   updateStaticPlayerSkillLevel,
   assignPlayerToQueue,
@@ -52,6 +53,12 @@ router.patch(
   "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/profile-url",
   authenticate,
   updateStaticPlayerProfileUrl,
+);
+
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId/name",
+  authenticate,
+  updateStaticPlayerName,
 );
 
 router.post(
