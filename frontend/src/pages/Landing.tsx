@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import badmintonImg from "../assets/badminton.png";
 import img2 from "../assets/300b83676693906ceea86a960b3425c8.jpg";
 import img3 from "../assets/b002681a02d8555674159b7c4480d938.jpg";
 
@@ -12,7 +11,7 @@ import usImg4 from "../assets/image_03.jpg";
 
 import { useAuth } from "../hooks/useAuth";
 
-const images = [badmintonImg, img2, img3];
+const images = [img2, img3];
 const aboutImages = [usImg1, usImg2, usImg3, usImg4];
 
 export default function Landing() {
