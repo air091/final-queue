@@ -1,36 +1,45 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import Home from "./pages/Home";
-import HomeLayout from "./layouts/HomeLayout";
-import Community from "./pages/community_pages/Community";
-import CommunityLayout from "./layouts/CommunityLayout";
-import CreateCommunity from "./pages/community_pages/CreateCommunity";
-import HostLayout from "./layouts/HostLayout";
-import Dashboard from "./pages/host_pages/Dashboard";
-import Match from "./pages/host_pages/Match";
-import Payments from "./pages/host_pages/Payments";
-import Players from "./pages/host_pages/Players";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Profile from "./pages/Profile";
-import ProfileLayout from "./layouts/ProfileLayout";
-import Landing from "./pages/Landing";
+
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const Home = lazy(() => import("./pages/Home"));
+const HomeLayout = lazy(() => import("./layouts/HomeLayout"));
+const Community = lazy(() => import("./pages/community_pages/Community"));
+const CommunityLayout = lazy(() => import("./layouts/CommunityLayout"));
+const CreateCommunity = lazy(
+  () => import("./pages/community_pages/CreateCommunity")
+);
+const HostLayout = lazy(() => import("./layouts/HostLayout"));
+const Dashboard = lazy(() => import("./pages/host_pages/Dashboard"));
+const Match = lazy(() => import("./pages/host_pages/Match"));
+const Payments = lazy(() => import("./pages/host_pages/Payments"));
+const Players = lazy(() => import("./pages/host_pages/Players"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ProfileLayout = lazy(() => import("./layouts/ProfileLayout"));
+const Landing = lazy(() => import("./pages/Landing"));
+
+const withSuspense = (children: ReactNode) => (
+  <Suspense fallback={null}>{children}</Suspense>
+);
+
 const router = createBrowserRouter([
   // =========================
   // PUBLIC ROUTES
   // =========================
   {
     path: "/",
-    element: <Landing />,
+    element: withSuspense(<Landing />),
   },
   {
     path: "/login",
-    element: <Login />,
+    element: withSuspense(<Login />),
   },
   {
     path: "/register",
-    element: <Register />,
+    element: withSuspense(<Register />),
   },
 
   // =========================
@@ -42,41 +51,41 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/home",
-        element: <HomeLayout />,
+        element: withSuspense(<HomeLayout />),
         children: [
           {
             index: true,
-            element: <Home />,
+            element: withSuspense(<Home />),
           },
         ],
       },
       {
         path: "/profile",
-        element: <ProfileLayout />,
+        element: withSuspense(<ProfileLayout />),
         children: [
           {
             index: true,
-            element: <Profile />,
+            element: withSuspense(<Profile />),
           },
         ],
       },
       {
         path: "/community",
-        element: <CommunityLayout />,
+        element: withSuspense(<CommunityLayout />),
         children: [
           {
             path: "create",
-            element: <CreateCommunity />,
+            element: withSuspense(<CreateCommunity />),
           },
           {
             path: ":id",
-            element: <Community />,
+            element: withSuspense(<Community />),
           },
         ],
       },
       {
         path: "/community/:communityId/hosts/:hostId",
-        element: <HostLayout />,
+        element: withSuspense(<HostLayout />),
         children: [
           {
             index: true,
@@ -85,19 +94,19 @@ const router = createBrowserRouter([
           },
           {
             path: "dashboard",
-            element: <Dashboard />,
+            element: withSuspense(<Dashboard />),
           },
           {
             path: "players",
-            element: <Players />,
+            element: withSuspense(<Players />),
           },
           {
             path: "match",
-            element: <Match />,
+            element: withSuspense(<Match />),
           },
           {
             path: "payments",
-            element: <Payments />,
+            element: withSuspense(<Payments />),
           },
         ],
       },
@@ -110,7 +119,7 @@ const router = createBrowserRouter([
 
   {
     path: "*",
-    element: <NotFound />,
+    element: withSuspense(<NotFound />),
   },
 ]);
 
