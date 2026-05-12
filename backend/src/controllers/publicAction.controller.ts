@@ -181,6 +181,13 @@ export const playerRequestToJoinHost = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
+    if (host.status !== HostStatus.available) {
+      return response.status(400).json({
+        success: false,
+        message: "This host is no longer accepting requests",
+      });
+    }
+
     // 🚨 CHECK IF ALREADY EXISTS
     const existing = await prisma.player.findFirst({
       where: {

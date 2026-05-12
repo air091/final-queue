@@ -131,9 +131,7 @@ function PlayerSection({
                 <div className="flex items-center gap-3">
                   <label
                     className={`group relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 bg-gray-50 ${
-                      canUpdateStaticProfile
-                        ? "cursor-pointer"
-                        : ""
+                      canUpdateStaticProfile ? "cursor-pointer" : ""
                     }`}
                     title={
                       canUpdateStaticProfile
@@ -294,16 +292,10 @@ function PlayerSection({
                 Skill
               </th>
               <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Photo URL
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                 Status
               </th>
               <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                 Matches
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Last Result
               </th>
               <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
                 Actions
@@ -331,9 +323,7 @@ function PlayerSection({
                       <div className="flex items-center gap-3">
                         <label
                           className={`group relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 ${
-                            canUpdateStaticProfile
-                              ? "cursor-pointer"
-                              : ""
+                            canUpdateStaticProfile ? "cursor-pointer" : ""
                           }`}
                           title={
                             canUpdateStaticProfile
@@ -384,9 +374,6 @@ function PlayerSection({
                       </span>
                     </td>
 
-                    {/* PHOTO */}
-                    <td className="px-5 py-4 text-gray-400 text-xs">—</td>
-
                     {/* STATUS */}
                     <td className="px-5 py-4">
                       <span className="text-xs font-medium">
@@ -397,16 +384,6 @@ function PlayerSection({
                     {/* MATCHES */}
                     <td className="px-5 py-4 text-gray-600">
                       {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
-                    </td>
-
-                    {/* LAST RESULT */}
-                    <td className="px-5 py-4 text-gray-600">
-                      {acceptedPlayer?.matchHistory?.lastMatch?.result
-                        ? formatMatchResult(
-                            acceptedPlayer.matchHistory.lastMatch.result,
-                            acceptedPlayer.matchHistory.lastMatch.team,
-                          )
-                        : "-"}
                     </td>
 
                     {/* ACTIONS */}

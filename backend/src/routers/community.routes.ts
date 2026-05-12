@@ -10,6 +10,7 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   createStaticPlayer,
   deleteHost,
+  endHostSession,
   getHostById,
   getPlayerMatchHistory,
   getHosts,
@@ -51,6 +52,11 @@ router.delete("/:communityId", authenticate, deleteCommunity);
 router.post("/:communityId/host", authenticate, host);
 router.get("/:communityId/hosts", authenticate, getHosts);
 router.get("/:communityId/hosts/:hostId", authenticate, getHostById);
+router.patch(
+  "/:communityId/hosts/:hostId/end-session",
+  authenticate,
+  endHostSession,
+);
 router.get(
   "/:communityId/hosts/:hostId/players",
   authenticate,

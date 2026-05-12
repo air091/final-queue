@@ -36,6 +36,7 @@ export default function HostLayout() {
   );
   const [isHostLoading, setIsHostLoading] = useState(true);
   const [hostLoadError, setHostLoadError] = useState<string | null>(null);
+  const [isEndingHostSession, setIsEndingHostSession] = useState(false);
   const [historyLoadingPlayerId, setHistoryLoadingPlayerId] = useState<
     string | null
   >(null);
@@ -164,6 +165,37 @@ export default function HostLayout() {
     void loadHostData();
   }, [loadHostData]);
 
+  const handleEndHostSession = useCallback(async () => {
+    if (!communityId || !hostId || isEndingHostSession) return;
+
+    const confirmed = window.confirm(
+      "End this host session? Players will no longer be able to request to join.",
+    );
+
+    if (!confirmed) return;
+
+    setIsEndingHostSession(true);
+
+    try {
+      const response = await api.patch(
+        `/api/community/${communityId}/hosts/${hostId}/end-session`,
+      );
+
+      const updatedStatus = response.data.host?.status ?? "unavailable";
+      setHost((currentHost) =>
+        currentHost ? { ...currentHost, status: updatedStatus } : currentHost,
+      );
+    } catch (error) {
+      window.alert("Unable to end this host session.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setIsEndingHostSession(false);
+    }
+  }, [communityId, hostId, isEndingHostSession]);
+
   const openPlayerHistory = useCallback(
     (player: PlayerHistoryTarget) => {
       if (!communityId || !hostId) return;
@@ -242,7 +274,14 @@ export default function HostLayout() {
 
   return (
     <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden">
-      <Header setOpenSidebar={setOpenSidebar} />
+      <Header
+        setOpenSidebar={setOpenSidebar}
+        hostSession={{
+          isAvailable: host?.status === "available",
+          isEnding: isEndingHostSession,
+          onEnd: () => void handleEndHostSession(),
+        }}
+      />
 
       <main className="relative flex flex-1 overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">
         {openSidebar && <Sidebar />}

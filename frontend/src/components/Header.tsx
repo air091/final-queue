@@ -14,9 +14,14 @@ import { useAuth } from "../hooks/useAuth";
 
 type HeaderProps = {
   setOpenSidebar: Dispatch<SetStateAction<boolean>>;
+  hostSession?: {
+    isAvailable: boolean;
+    isEnding: boolean;
+    onEnd: () => void;
+  };
 };
 
-export default function Header({ setOpenSidebar }: HeaderProps) {
+export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
   const { user } = useAuth();
 
   const [openProfileDropdown, setOpenProfileDropdown] =
@@ -55,20 +60,33 @@ export default function Header({ setOpenSidebar }: HeaderProps) {
           Queue<span className="text-primary">Tato</span> Sports Management
         </h1>
       </div>
+      <div className="flex items-center gap-x-[16px]">
+        {hostSession?.isAvailable ? (
+          <div>
+            <button
+              type="button"
+              onClick={hostSession.onEnd}
+              disabled={hostSession.isEnding}
+              className="block w-full cursor-pointer rounded-md border border-red-200 px-4 py-0.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {hostSession.isEnding ? "Ending..." : "End session"}
+            </button>
+          </div>
+        ) : null}
+        <div ref={dropdownRef} className="relative">
+          <div
+            onClick={() => setOpenProfileDropdown((prev) => !prev)}
+            className="h-[28px] w-[28px] cursor-pointer rounded-full"
+          >
+            <img
+              src={user?.profileUrl}
+              alt={user?.username}
+              className="block h-full w-full rounded-full object-cover object-center"
+            />
+          </div>
 
-      <div ref={dropdownRef} className="relative">
-        <div
-          onClick={() => setOpenProfileDropdown((prev) => !prev)}
-          className="h-[28px] w-[28px] cursor-pointer rounded-full"
-        >
-          <img
-            src={user?.profileUrl}
-            alt={user?.username}
-            className="block h-full w-full rounded-full object-cover object-center"
-          />
+          {openProfileDropdown && <ProfileDropdown />}
         </div>
-
-        {openProfileDropdown && <ProfileDropdown />}
       </div>
     </div>
   );
