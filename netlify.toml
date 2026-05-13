@@ -1,8 +1,0 @@
-[build]
-  command = "pnpm install && pnpm run build"
-  publish = "frontend/dist"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
