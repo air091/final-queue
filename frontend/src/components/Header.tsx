@@ -57,7 +57,7 @@ export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
         </div>
 
         <h1 className="text-[18px] font-extrabold tracking-tight text-text">
-          Queue<span className="text-primary">Tato</span> Sports Management
+          Que<span className="text-primary">Tato</span> Sports Management
         </h1>
       </div>
       <div className="flex items-center gap-x-[16px]">
