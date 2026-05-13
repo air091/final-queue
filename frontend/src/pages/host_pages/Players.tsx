@@ -11,6 +11,7 @@ import {
   type HostPlayerRecord,
   type SkillLevelType,
 } from "../../lib/host";
+import { X } from "lucide-react";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -1705,8 +1706,14 @@ export default function Players() {
       </div>
 
       {editingStaticPlayer ? (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl">
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeEditStaticPlayerModal}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
+          >
             <header className="flex items-start justify-between gap-4">
               <div>
                 <h4 className="text-lg font-semibold text-text">
@@ -1721,10 +1728,10 @@ export default function Players() {
                 type="button"
                 onClick={closeEditStaticPlayerModal}
                 disabled={isSavingStaticPlayerEdit}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Close modal"
               >
-                X
+                <X size={18} />
               </button>
             </header>
 
