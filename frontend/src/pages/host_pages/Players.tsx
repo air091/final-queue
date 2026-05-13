@@ -231,28 +231,81 @@ function PlayerSection({
                     </button>
                   )}
 
-                  {playerRecord.status === "accepted" && (
-                    <button
-                      disabled={isBanDisabled}
-                      onClick={() => onBanPlayer(playerRecord.id)}
-                      className={`rounded-xl px-3 py-2 text-xs font-medium ${
-                        isBanDisabled
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-red-500 text-white"
-                      }`}
-                    >
-                      Ban
-                    </button>
-                  )}
+                  <details className="relative inline-block">
+                    <summary
+                      onClick={(event) => {
+                        const currentDetails =
+                          event.currentTarget.closest("details");
+                        const currentSection =
+                          currentDetails?.closest("section");
+                        if (!currentDetails || !currentSection) return;
 
-                  {playerRecord.status === "banned" && (
-                    <button
-                      onClick={() => onUnbanPlayer(playerRecord.id)}
-                      className="rounded-xl bg-gray-800 px-3 py-2 text-xs font-medium text-white cursor-pointer"
+                        currentSection
+                          .querySelectorAll("details")
+                          .forEach((detailsElement) => {
+                            if (detailsElement !== currentDetails) {
+                              detailsElement.removeAttribute("open");
+                            }
+                          });
+                      }}
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 cursor-pointer transition hover:bg-gray-50 [&>::-webkit-details-marker]:hidden"
                     >
-                      Unban
-                    </button>
-                  )}
+                      Actions
+                    </summary>
+
+                    <div className="absolute right-0 z-50 mt-2 max-h-[60vh] overflow-auto min-w-[140px] rounded-2xl border border-gray-200 bg-white shadow-lg">
+                      {playerRecord.status === "accepted" ? (
+                        <button
+                          type="button"
+                          disabled={isBanDisabled}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
+                            onBanPlayer(playerRecord.id);
+                          }}
+                          className={`block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
+                            isBanDisabled
+                              ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                              : "bg-white text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          Ban
+                        </button>
+                      ) : null}
+
+                      {playerRecord.status === "banned" ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
+                            onUnbanPlayer(playerRecord.id);
+                          }}
+                          className="block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium bg-white text-gray-900 hover:bg-gray-50"
+                        >
+                          Unban
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.currentTarget
+                            .closest("details")
+                            ?.removeAttribute("open");
+                          onDeletePlayer(playerRecord.id);
+                        }}
+                        className="block w-full px-4 py-3 text-left text-xs font-medium bg-white text-red-600 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </details>
 
                   {playerRecord.player.isStatic && onEditStaticPlayer ? (
                     <button
