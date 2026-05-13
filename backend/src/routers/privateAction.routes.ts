@@ -4,6 +4,7 @@ import {
   acceptPlayer,
   assignPlayerToCourt,
   banPlayer,
+  deletePlayer,
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
@@ -35,6 +36,12 @@ router.post(
   "/ban/community/:communityId/hosts/:hostId/players/:playerId",
   authenticate,
   banPlayer,
+);
+
+router.delete(
+  "/delete/community/:communityId/hosts/:hostId/players/:playerId",
+  authenticate,
+  deletePlayer,
 );
 
 router.post(

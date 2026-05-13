@@ -19,6 +19,7 @@ export type HostPlayerRecord = {
   status: HostPlayerStatus;
   paymentStatus?: PaymentStatus | string;
   player: PlayerType;
+  requestedAt?: string;
 };
 
 export type PlayerHistoryTarget = {

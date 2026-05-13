@@ -37,15 +37,6 @@ const readFileAsDataUrl = (file: File) =>
 const formatSkillLevel = (skillLevel: string) =>
   skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
-const formatMatchResult = (result: string | null, team: string | null) => {
-  if (!result) return "No result";
-
-  const normalizedResult =
-    result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
-
-  return team ? `${normalizedResult} (${team})` : normalizedResult;
-};
-
 type PlayerSectionProps = {
   title: string;
   description: string;
@@ -58,6 +49,7 @@ type PlayerSectionProps = {
   onRejectPlayer: (hostedPlayerId: string) => void;
   onBanPlayer: (hostedPlayerId: string) => void;
   onUnbanPlayer: (hostedPlayerId: string) => void;
+  onDeletePlayer: (hostedPlayerId: string) => void;
   onViewHistory: (player: HostPlayerRecord) => void;
   onUpdateStaticPlayerSkillLevel?: (
     hostedPlayerId: string,
@@ -84,6 +76,7 @@ function PlayerSection({
   onRejectPlayer,
   onBanPlayer,
   onUnbanPlayer,
+  onDeletePlayer,
   onViewHistory,
   savingStaticProfileUrlId,
   onStaticProfileImageChange,
@@ -92,7 +85,7 @@ function PlayerSection({
   extraContent,
 }: PlayerSectionProps) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <section className="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-visible">
       {/* HEADER */}
       <header className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
         <div>
@@ -390,6 +383,65 @@ function PlayerSection({
                       : "History"}
                   </button>
 
+                  <details className="relative inline-block">
+                    <summary className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 cursor-pointer transition hover:bg-gray-50 [&>::-webkit-details-marker]:hidden">
+                      Actions
+                    </summary>
+
+                    <div className="absolute right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                      {playerRecord.status === "accepted" ? (
+                        <button
+                          type="button"
+                          disabled={isBanDisabled}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
+                            onBanPlayer(playerRecord.id);
+                          }}
+                          className={`block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
+                            isBanDisabled
+                              ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                              : "bg-white text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          Ban
+                        </button>
+                      ) : null}
+
+                      {playerRecord.status === "banned" ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.currentTarget
+                              .closest("details")
+                              ?.removeAttribute("open");
+                            onUnbanPlayer(playerRecord.id);
+                          }}
+                          className="block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium bg-white text-gray-900 hover:bg-gray-50"
+                        >
+                          Unban
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.currentTarget
+                            .closest("details")
+                            ?.removeAttribute("open");
+                          onDeletePlayer(playerRecord.id);
+                        }}
+                        className="block w-full px-4 py-3 text-left text-xs font-medium bg-white text-red-600 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </details>
+
                   {playerRecord.player.isStatic && onEditStaticPlayer ? (
                     <button
                       type="button"
@@ -418,29 +470,6 @@ function PlayerSection({
                       Reject
                     </button>
                   )}
-
-                  {playerRecord.status === "accepted" && (
-                    <button
-                      disabled={isBanDisabled}
-                      onClick={() => onBanPlayer(playerRecord.id)}
-                      className={`rounded-xl px-3 py-2 text-xs font-medium ${
-                        isBanDisabled
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-red-500 text-white"
-                      }`}
-                    >
-                      Ban
-                    </button>
-                  )}
-
-                  {playerRecord.status === "banned" && (
-                    <button
-                      onClick={() => onUnbanPlayer(playerRecord.id)}
-                      className="rounded-xl bg-gray-800 px-3 py-2 text-xs font-medium text-white cursor-pointer"
-                    >
-                      Unban
-                    </button>
-                  )}
                 </div>
               </div>
             );
@@ -464,6 +493,8 @@ export default function Players() {
     setAcceptedPlayers,
     courts,
     setCourts,
+    queues,
+    setQueues,
     paymentsData,
     setPaymentsData,
     historyLoadingPlayerId,
@@ -504,8 +535,6 @@ export default function Players() {
   const [staticPlayerEditError, setStaticPlayerEditError] = useState<
     string | null
   >(null);
-  const accountPlayers = players.filter((player) => !player.player.isStatic);
-  const staticPlayers = players.filter((player) => player.player.isStatic);
 
   const updateStaticPlayerInState = (updatedPlayer: AcceptedPlayers) => {
     setPlayersInHost((currentPlayers) =>
@@ -822,6 +851,7 @@ export default function Players() {
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
+    const previousQueues = queues;
     const previousPaymentsData = paymentsData;
 
     setPlayersInHost((currentPlayers) =>
@@ -841,6 +871,14 @@ export default function Players() {
         ...court,
         assignments: court.assignments.filter(
           (assignment) => assignment.playerId !== hostedPlayerId,
+        ),
+      })),
+    );
+    setQueues((currentQueues) =>
+      currentQueues.map((queue) => ({
+        ...queue,
+        entries: queue.entries.filter(
+          (entry) => entry.playerId !== hostedPlayerId,
         ),
       })),
     );
@@ -865,6 +903,69 @@ export default function Players() {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
       setCourts(previousCourts);
+      setQueues(previousQueues);
+      setPaymentsData(previousPaymentsData);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    }
+  };
+
+  const handleDeletePlayer = async (hostedPlayerId: string) => {
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const previousCourts = courts;
+    const previousQueues = queues;
+    const previousPaymentsData = paymentsData;
+
+    setPlayersInHost((currentPlayers) =>
+      currentPlayers.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
+      ),
+    );
+    setAcceptedPlayers((currentPlayers) =>
+      currentPlayers.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
+      ),
+    );
+    setCourts((currentCourts) =>
+      currentCourts.map((court) => ({
+        ...court,
+        assignments: court.assignments.filter(
+          (assignment) => assignment.playerId !== hostedPlayerId,
+        ),
+      })),
+    );
+    setQueues((currentQueues) =>
+      currentQueues.map((queue) => ({
+        ...queue,
+        entries: queue.entries.filter(
+          (entry) => entry.playerId !== hostedPlayerId,
+        ),
+      })),
+    );
+    setPaymentsData((currentPaymentsData) => {
+      const nextPlayers = currentPaymentsData.players.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
+      );
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
+
+    try {
+      await api.delete(
+        `/api/private/actions/delete/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
+      );
+    } catch (error) {
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+      setCourts(previousCourts);
+      setQueues(previousQueues);
       setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error))
@@ -1323,6 +1424,29 @@ export default function Players() {
     (player) => player.status === "requested",
   );
 
+  const statusPriority: Record<string, number> = {
+    accepted: 0,
+    requested: 0,
+    rejected: 1,
+    banned: 2,
+  };
+
+  const sortPlayers = (list: HostPlayerRecord[]) => {
+    return [...list].sort((a, b) => {
+      // 1. Sort by status priority (accepted/requested first, then rejected, then banned)
+      const statusDiff =
+        (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
+
+      if (statusDiff !== 0) return statusDiff;
+
+      // 2. Within same status, sort by requestedAt (most recent first)
+      const aTime = a.requestedAt ? new Date(a.requestedAt).getTime() : 0;
+      const bTime = b.requestedAt ? new Date(b.requestedAt).getTime() : 0;
+
+      return bTime - aTime;
+    });
+  };
+
   return (
     <div className="p-2">
       <header className="mb-4 flex flex-col gap-2 rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
@@ -1397,7 +1521,7 @@ export default function Players() {
         <PlayerSection
           title="Players"
           description="Manage registered and walk-in badminton players."
-          players={players}
+          players={sortPlayers(players)}
           acceptedPlayers={acceptedPlayers}
           historyLoadingPlayerId={historyLoadingPlayerId}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
@@ -1406,6 +1530,7 @@ export default function Players() {
           onRejectPlayer={handleRejectPlayer}
           onBanPlayer={handleBanPlayer}
           onUnbanPlayer={handleUnbanPlayer}
+          onDeletePlayer={handleDeletePlayer}
           onViewHistory={openPlayerHistory}
           onUpdateStaticPlayerSkillLevel={handleUpdateStaticPlayerSkillLevel}
           onStaticProfileUrlDraftChange={(hostedPlayerId, profileUrl) =>

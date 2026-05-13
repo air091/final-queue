@@ -234,6 +234,10 @@ export const banPlayer = async (
       prisma.courtAssignment.deleteMany({
         where: { playerId: existing.id },
       }),
+
+      prisma.queueAssignment.deleteMany({
+        where: { playerId: existing.id },
+      }),
     ]);
 
     return response
@@ -241,6 +245,77 @@ export const banPlayer = async (
       .json({ success: true, message: "Player banned" });
   } catch (error) {
     console.error("Error accepting player to hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const deletePlayer = async (
+  request: Request<BanPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const host = await getAuthorizedHost(communityId, hostId, user.sub);
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const existing = await prisma.player.findFirst({
+      where: {
+        id: playerId,
+        hostId: host.id,
+      },
+      select: {
+        id: true,
+        courtAssignment: {
+          select: {
+            court: {
+              select: {
+                startedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existing)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    if (existing.courtAssignment?.court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot delete a player while they are in an active game",
+      });
+
+    await prisma.player.delete({
+      where: { id: existing.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Player deleted",
+    });
+  } catch (error) {
+    console.error("Error deleting player from hosts:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

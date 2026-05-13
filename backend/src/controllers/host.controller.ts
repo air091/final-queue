@@ -56,6 +56,7 @@ const mapHostPlayerRecord = (player: {
   id: string;
   hostStatus: PlayerHostStatuses;
   paymentStatus: string;
+  requestedAt?: Date;
   player: {
     id: string;
     username: string;
@@ -67,6 +68,7 @@ const mapHostPlayerRecord = (player: {
   id: player.id,
   status: player.hostStatus,
   paymentStatus: player.paymentStatus,
+  requestedAt: player.requestedAt?.toISOString(),
   player: buildPlayerProfile(player.player),
 });
 
@@ -278,6 +280,7 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          requestedAt: true,
           player: {
             select: {
               id: true,
@@ -305,6 +308,7 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          requestedAt: true,
           player: {
             select: {
               id: true,
@@ -332,6 +336,7 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          requestedAt: true,
           player: {
             select: {
               id: true,
@@ -359,6 +364,7 @@ export const getHostById = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          requestedAt: true,
           player: {
             select: {
               id: true,
@@ -582,6 +588,7 @@ export const getHostWithPlayers = async (
           hostStatus: true,
           paymentStatus: true,
           timerStartedAt: true,
+          requestedAt: true,
           queueAssignment: {
             select: {
               id: true,
