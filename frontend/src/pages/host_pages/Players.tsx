@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
@@ -384,11 +384,28 @@ function PlayerSection({
                   </button>
 
                   <details className="relative inline-block">
-                    <summary className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 cursor-pointer transition hover:bg-gray-50 [&>::-webkit-details-marker]:hidden">
+                    <summary
+                      onClick={(event) => {
+                        const currentDetails =
+                          event.currentTarget.closest("details");
+                        const currentSection =
+                          currentDetails?.closest("section");
+                        if (!currentDetails || !currentSection) return;
+
+                        currentSection
+                          .querySelectorAll("details")
+                          .forEach((detailsElement) => {
+                            if (detailsElement !== currentDetails) {
+                              detailsElement.removeAttribute("open");
+                            }
+                          });
+                      }}
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 cursor-pointer transition hover:bg-gray-50 [&>::-webkit-details-marker]:hidden"
+                    >
                       Actions
                     </summary>
 
-                    <div className="absolute right-0 z-50 mt-2 min-w-[140px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute right-0 z-20 mt-2 min-w-[140px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
                       {playerRecord.status === "accepted" ? (
                         <button
                           type="button"
@@ -535,6 +552,32 @@ export default function Players() {
   const [staticPlayerEditError, setStaticPlayerEditError] = useState<
     string | null
   >(null);
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      const openDetails = Array.from(
+        document.querySelectorAll("details[open]"),
+      );
+      if (openDetails.length === 0) return;
+
+      const clickedInsideOpenDetails = openDetails.some((detailsElement) =>
+        detailsElement.contains(target),
+      );
+      if (!clickedInsideOpenDetails) {
+        openDetails.forEach((detailsElement) => {
+          detailsElement.removeAttribute("open");
+        });
+      }
+    };
+
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, []);
 
   const updateStaticPlayerInState = (updatedPlayer: AcceptedPlayers) => {
     setPlayersInHost((currentPlayers) =>
