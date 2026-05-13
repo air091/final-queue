@@ -16,6 +16,7 @@ import {
   getHosts,
   getHostWithPlayers,
   host,
+  startHostSession,
 } from "../controllers/host.controller.js";
 import {
   createMatchCourt,
@@ -56,6 +57,11 @@ router.patch(
   "/:communityId/hosts/:hostId/end-session",
   authenticate,
   endHostSession,
+);
+router.patch(
+  "/:communityId/hosts/:hostId/start-session",
+  authenticate,
+  startHostSession,
 );
 router.get(
   "/:communityId/hosts/:hostId/players",

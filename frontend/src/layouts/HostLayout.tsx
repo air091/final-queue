@@ -37,6 +37,7 @@ export default function HostLayout() {
   const [isHostLoading, setIsHostLoading] = useState(true);
   const [hostLoadError, setHostLoadError] = useState<string | null>(null);
   const [isEndingHostSession, setIsEndingHostSession] = useState(false);
+  const [isStartingHostSession, setIsStartingHostSession] = useState(false);
   const [historyLoadingPlayerId, setHistoryLoadingPlayerId] = useState<
     string | null
   >(null);
@@ -196,6 +197,38 @@ export default function HostLayout() {
     }
   }, [communityId, hostId, isEndingHostSession]);
 
+  const handleStartHostSession = useCallback(async () => {
+    if (!communityId || !hostId || isStartingHostSession) return;
+
+    const confirmed = window.confirm(
+      "Start this host session? Players will now be able to request to join.",
+    );
+
+    if (!confirmed) return;
+
+    setIsStartingHostSession(true);
+
+    try {
+      const response = await api.patch(
+        `/api/community/${communityId}/hosts/${hostId}/start-session`,
+      );
+
+      const updatedStatus = response.data.host?.status ?? "available";
+
+      setHost((currentHost) =>
+        currentHost ? { ...currentHost, status: updatedStatus } : currentHost,
+      );
+    } catch (error) {
+      window.alert("Unable to start this host session.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setIsStartingHostSession(false);
+    }
+  }, [communityId, hostId, isStartingHostSession]);
+
   const openPlayerHistory = useCallback(
     (player: PlayerHistoryTarget) => {
       if (!communityId || !hostId) return;
@@ -278,7 +311,11 @@ export default function HostLayout() {
         setOpenSidebar={setOpenSidebar}
         hostSession={{
           isAvailable: host?.status === "available",
+
+          isStarting: isStartingHostSession,
           isEnding: isEndingHostSession,
+
+          onStart: () => void handleStartHostSession(),
           onEnd: () => void handleEndHostSession(),
         }}
       />

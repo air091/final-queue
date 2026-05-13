@@ -461,6 +461,67 @@ export const endHostSession = async (
   }
 };
 
+export const startHostSession = async (
+  request: Request<GetHostByIdParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId: community.id },
+      select: { id: true },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const updatedHost = await prisma.host.update({
+      where: { id: host.id },
+      data: { status: HostStatus.available },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Host session ended successfully",
+      host: updatedHost,
+    });
+  } catch (error) {
+    console.error("Error ending host session:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const getHostWithPlayers = async (
   request: Request<GetHostByIdParams>,
   response: Response,

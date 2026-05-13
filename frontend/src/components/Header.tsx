@@ -17,6 +17,8 @@ type HeaderProps = {
   hostSession?: {
     isAvailable: boolean;
     isEnding: boolean;
+    isStarting: boolean;
+    onStart: () => void;
     onEnd: () => void;
   };
 };
@@ -26,9 +28,7 @@ export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
 
   const [openProfileDropdown, setOpenProfileDropdown] =
     useState<boolean>(false);
-
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -61,18 +61,29 @@ export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
         </h1>
       </div>
       <div className="flex items-center gap-x-[16px]">
-        {hostSession?.isAvailable ? (
+        {hostSession && (
           <div>
-            <button
-              type="button"
-              onClick={hostSession.onEnd}
-              disabled={hostSession.isEnding}
-              className="block w-full cursor-pointer rounded-md border border-red-200 px-4 py-0.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {hostSession.isEnding ? "Ending..." : "End session"}
-            </button>
+            {hostSession.isAvailable ? (
+              <button
+                type="button"
+                onClick={hostSession.onEnd}
+                disabled={hostSession.isEnding}
+                className="block w-full cursor-pointer rounded-md border border-red-200 px-4 py-0.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {hostSession.isEnding ? "Ending..." : "End session"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={hostSession.onStart}
+                disabled={hostSession.isStarting}
+                className="block w-full cursor-pointer rounded-md border border-green-200 px-4 py-0.5 text-sm font-medium text-green-600 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {hostSession.isStarting ? "Starting..." : "Start session"}
+              </button>
+            )}
           </div>
-        ) : null}
+        )}
         <div ref={dropdownRef} className="relative">
           <div
             onClick={() => setOpenProfileDropdown((prev) => !prev)}
