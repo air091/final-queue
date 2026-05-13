@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm install && pnpm run build"
+  command = "pnpm install --include=dev && pnpm --dir frontend install --include=dev && pnpm run build"
   publish = "frontend/dist"
 
 [[redirects]]

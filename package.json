@@ -7,5 +7,8 @@
     "dev:backend": "pnpm --dir backend server",
     "build": "pnpm --dir frontend build",
     "migrate:deploy": "pnpm --dir backend exec prisma migrate deploy"
+  },
+  "dependencies": {
+    "dev": "^0.1.3"
   }
 }
