@@ -207,17 +207,6 @@ function PlayerSection({
                   Matches: {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
                 </div>
 
-                {/* Last Result */}
-                <div className="text-sm text-gray-600">
-                  Last:{" "}
-                  {acceptedPlayer?.matchHistory?.lastMatch?.result
-                    ? formatMatchResult(
-                        acceptedPlayer.matchHistory.lastMatch.result,
-                        acceptedPlayer.matchHistory.lastMatch.team,
-                      )
-                    : "-"}
-                </div>
-
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-2">
                   <button
@@ -292,174 +281,175 @@ function PlayerSection({
         )}
       </div>
 
-      {/* ===================== DESKTOP TABLE ===================== */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Player
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Skill
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Status
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Matches
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-gray-500">
-                Actions
-              </th>
-            </tr>
-          </thead>
+      {/* ===================== DESKTOP GRID ===================== */}
+      <div className="hidden md:grid grid-cols-5 gap-4 p-5">
+        {players.length > 0 ? (
+          players.map((playerRecord) => {
+            const acceptedPlayer = acceptedPlayers.find(
+              (a) => a.id === playerRecord.id,
+            );
 
-          <tbody className="divide-y divide-gray-100">
-            {players.length > 0 ? (
-              players.map((playerRecord) => {
-                const acceptedPlayer = acceptedPlayers.find(
-                  (a) => a.id === playerRecord.id,
-                );
+            const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
 
-                const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
-                const canUpdateStaticProfile =
-                  playerRecord.player.isStatic && onStaticProfileImageChange;
-                const isSavingProfile =
-                  savingStaticProfileUrlId === playerRecord.id;
+            const canUpdateStaticProfile =
+              playerRecord.player.isStatic && onStaticProfileImageChange;
 
-                return (
-                  <tr key={playerRecord.id} className="hover:bg-gray-50">
-                    {/* PLAYER */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <label
-                          className={`group relative h-10 w-10 overflow-hidden rounded-full border border-gray-200 ${
-                            canUpdateStaticProfile ? "cursor-pointer" : ""
-                          }`}
-                          title={
-                            canUpdateStaticProfile
-                              ? "Change static player photo"
-                              : undefined
+            const isSavingProfile =
+              savingStaticProfileUrlId === playerRecord.id;
+
+            return (
+              <div
+                key={playerRecord.id}
+                className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+              >
+                {/* PLAYER */}
+                <div className="flex flex-col items-center text-center">
+                  <label
+                    className={`group relative h-20 w-20 overflow-hidden rounded-full border border-gray-200 ${
+                      canUpdateStaticProfile ? "cursor-pointer" : ""
+                    }`}
+                  >
+                    <img
+                      src={playerRecord.player.profileUrl}
+                      alt={playerRecord.player.username}
+                      className="h-full w-full object-cover"
+                    />
+
+                    {canUpdateStaticProfile ? (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
+                        {isSavingProfile ? "Saving" : "Change"}
+                      </span>
+                    ) : null}
+
+                    {canUpdateStaticProfile ? (
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isSavingProfile}
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+
+                          if (file) {
+                            onStaticProfileImageChange(playerRecord.id, file);
                           }
-                        >
-                          <img
-                            src={playerRecord.player.profileUrl}
-                            alt={playerRecord.player.username}
-                            className="h-full w-full object-cover"
-                          />
-                          {canUpdateStaticProfile ? (
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
-                              {isSavingProfile ? "Saving" : "Change"}
-                            </span>
-                          ) : null}
-                          {canUpdateStaticProfile ? (
-                            <input
-                              type="file"
-                              accept="image/*"
-                              disabled={isSavingProfile}
-                              className="sr-only"
-                              onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                event.target.value = "";
-                                if (file) {
-                                  onStaticProfileImageChange(
-                                    playerRecord.id,
-                                    file,
-                                  );
-                                }
-                              }}
-                            />
-                          ) : null}
-                        </label>
+                        }}
+                      />
+                    ) : null}
+                  </label>
 
-                        <span className="font-medium text-text">
-                          {playerRecord.player.username}
-                        </span>
-                      </div>
-                    </td>
+                  <h5 className="mt-3 font-semibold text-text">
+                    {playerRecord.player.username}
+                  </h5>
 
-                    {/* SKILL */}
-                    <td className="px-5 py-4">
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                        {formatSkillLevel(playerRecord.player.skillLevel)}
-                      </span>
-                    </td>
+                  <p className="text-xs text-gray-500">
+                    {playerRecord.player.isStatic
+                      ? "Static Player"
+                      : "Registered Player"}
+                  </p>
+                </div>
 
-                    {/* STATUS */}
-                    <td className="px-5 py-4">
-                      <span className="text-xs font-medium">
-                        {playerRecord.status}
-                      </span>
-                    </td>
+                {/* TAGS */}
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    {formatSkillLevel(playerRecord.player.skillLevel)}
+                  </span>
 
-                    {/* MATCHES */}
-                    <td className="px-5 py-4 text-gray-600">
-                      {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
-                    </td>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      playerRecord.status === "accepted"
+                        ? "bg-green-100 text-green-700"
+                        : playerRecord.status === "requested"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : playerRecord.status === "banned"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {playerRecord.status}
+                  </span>
+                </div>
 
-                    {/* ACTIONS */}
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => onViewHistory(playerRecord)}
-                          className="rounded-xl border px-3 py-2 text-xs cursor-pointer"
-                        >
-                          History
-                        </button>
+                {/* MATCH INFO */}
+                <div className="mt-4 space-y-1 text-center text-sm text-gray-600">
+                  <p>
+                    Matches: {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
+                  </p>
+                </div>
 
-                        {playerRecord.player.isStatic &&
-                        onEditStaticPlayer ? (
-                          <button
-                            type="button"
-                            onClick={() => onEditStaticPlayer(playerRecord)}
-                            className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                        ) : null}
+                {/* ACTIONS */}
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <button
+                    onClick={() => onViewHistory(playerRecord)}
+                    disabled={historyLoadingPlayerId === playerRecord.id}
+                    className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium hover:bg-gray-50 cursor-pointer"
+                  >
+                    {historyLoadingPlayerId === playerRecord.id
+                      ? "Loading..."
+                      : "History"}
+                  </button>
 
-                        {playerRecord.status !== "accepted" && (
-                          <button
-                            onClick={() => onAcceptPlayer(playerRecord.id)}
-                            className="rounded-xl bg-green-100 px-3 py-2 text-xs text-green-700 cursor-pointer"
-                          >
-                            Accept
-                          </button>
-                        )}
+                  {playerRecord.player.isStatic && onEditStaticPlayer ? (
+                    <button
+                      type="button"
+                      onClick={() => onEditStaticPlayer(playerRecord)}
+                      className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-medium text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                  ) : null}
 
-                        {playerRecord.status === "requested" && (
-                          <button
-                            onClick={() => onRejectPlayer(playerRecord.id)}
-                            className="rounded-xl bg-red-100 px-3 py-2 text-xs text-red-700 cursor-pointer"
-                          >
-                            Reject
-                          </button>
-                        )}
+                  {playerRecord.status !== "accepted" &&
+                    playerRecord.status !== "banned" && (
+                      <button
+                        onClick={() => onAcceptPlayer(playerRecord.id)}
+                        className="rounded-xl bg-green-100 px-3 py-2 text-xs font-medium text-green-700 cursor-pointer"
+                      >
+                        Accept
+                      </button>
+                    )}
 
-                        {playerRecord.status === "accepted" && (
-                          <button
-                            disabled={isBanDisabled}
-                            onClick={() => onBanPlayer(playerRecord.id)}
-                            className="rounded-xl bg-red-500 px-3 py-2 text-xs text-white cursor-pointer"
-                          >
-                            Ban
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-500">
-                  {emptyMessage}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  {playerRecord.status === "requested" && (
+                    <button
+                      onClick={() => onRejectPlayer(playerRecord.id)}
+                      className="rounded-xl bg-red-100 px-3 py-2 text-xs font-medium text-red-700 cursor-pointer"
+                    >
+                      Reject
+                    </button>
+                  )}
+
+                  {playerRecord.status === "accepted" && (
+                    <button
+                      disabled={isBanDisabled}
+                      onClick={() => onBanPlayer(playerRecord.id)}
+                      className={`rounded-xl px-3 py-2 text-xs font-medium ${
+                        isBanDisabled
+                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-red-500 text-white"
+                      }`}
+                    >
+                      Ban
+                    </button>
+                  )}
+
+                  {playerRecord.status === "banned" && (
+                    <button
+                      onClick={() => onUnbanPlayer(playerRecord.id)}
+                      className="rounded-xl bg-gray-800 px-3 py-2 text-xs font-medium text-white cursor-pointer"
+                    >
+                      Unban
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="col-span-5 py-10 text-center text-gray-500">
+            {emptyMessage}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -1329,6 +1319,10 @@ export default function Players() {
     }
   };
 
+  const requestedPlayers = players.filter(
+    (player) => player.status === "requested",
+  );
+
   return (
     <div className="p-2">
       <header className="mb-4 flex flex-col gap-2 rounded-3xl border border-orange-100 bg-white px-6 py-5 shadow-sm">
@@ -1359,27 +1353,51 @@ export default function Players() {
         ) : null}
       </header>
 
+      {requestedPlayers.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+          <h4 className="text-sm font-semibold text-yellow-700">
+            Pending Requests ({requestedPlayers.length})
+          </h4>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {requestedPlayers.map((player) => (
+              <div
+                key={player.id}
+                className="flex items-center gap-2 rounded-xl border border-yellow-200 bg-white px-3 py-2"
+              >
+                <img
+                  src={player.player.profileUrl}
+                  alt={player.player.username}
+                  className="h-6 w-6 rounded-full object-cover"
+                />
+                <span className="text-sm font-medium text-stone-700">
+                  {player.player.username}
+                </span>
+
+                <button
+                  onClick={() => handleAcceptPlayer(player.id)}
+                  className="ml-2 rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700"
+                >
+                  Accept
+                </button>
+
+                <button
+                  onClick={() => handleRejectPlayer(player.id)}
+                  className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700"
+                >
+                  Reject
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-5">
         <PlayerSection
-          title="Account Players"
-          description="Registered players connected to the platform."
-          players={accountPlayers}
-          acceptedPlayers={acceptedPlayers}
-          historyLoadingPlayerId={historyLoadingPlayerId}
-          staticProfileUrlDrafts={staticProfileUrlDrafts}
-          savingStaticProfileUrlId={savingStaticProfileUrlId}
-          onAcceptPlayer={handleAcceptPlayer}
-          onRejectPlayer={handleRejectPlayer}
-          onBanPlayer={handleBanPlayer}
-          onUnbanPlayer={handleUnbanPlayer}
-          onViewHistory={openPlayerHistory}
-          emptyMessage="No account players yet."
-        />
-
-        <PlayerSection
-          title="Static Players"
-          description="Walk-in badminton players without an account."
-          players={staticPlayers}
+          title="Players"
+          description="Manage registered and walk-in badminton players."
+          players={players}
           acceptedPlayers={acceptedPlayers}
           historyLoadingPlayerId={historyLoadingPlayerId}
           staticProfileUrlDrafts={staticProfileUrlDrafts}
@@ -1401,7 +1419,7 @@ export default function Players() {
           }
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           onEditStaticPlayer={openEditStaticPlayerModal}
-          emptyMessage="No static players yet."
+          emptyMessage="No players yet."
           extraContent={
             <form
               onSubmit={(event) => void handleCreateStaticPlayer(event)}
