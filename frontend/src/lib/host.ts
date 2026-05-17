@@ -10,6 +10,7 @@ export type PlayerType = {
   profileUrl: string;
   skillLevel: SkillLevelType;
   isStatic: boolean;
+  isAdmin: boolean;
 };
 
 export type HostPlayerStatus = "requested" | "accepted" | "rejected" | "banned";

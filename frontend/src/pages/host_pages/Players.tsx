@@ -105,7 +105,7 @@ function PlayerSection({
       ) : null}
 
       {/* ===================== MOBILE CARDS ===================== */}
-      <div className="md:hidden flex flex-col divide-y divide-gray-100">
+      <div className="grid grid-cols-1 gap-3 p-3 min-[426px]:grid-cols-3 md:hidden">
         {players.length > 0 ? (
           players.map((playerRecord) => {
             const acceptedPlayer = acceptedPlayers.find(
@@ -121,7 +121,7 @@ function PlayerSection({
             return (
               <div
                 key={playerRecord.id}
-                className="p-5 space-y-4 hover:bg-gray-50/40"
+                className="space-y-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow-md"
               >
                 {/* Player */}
                 <div className="flex items-center gap-3">
@@ -168,9 +168,11 @@ function PlayerSection({
                     </span>
 
                     <span className="text-xs text-gray-500">
-                      {playerRecord.player.isStatic
-                        ? "Static Player"
-                        : "Dynamic"}
+                      {playerRecord.player.isAdmin
+                        ? "Admin"
+                        : playerRecord.player.isStatic
+                          ? "Static Player"
+                          : "Dynamic"}
                     </span>
                   </div>
                 </div>
@@ -180,6 +182,12 @@ function PlayerSection({
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                     {formatSkillLevel(playerRecord.player.skillLevel)}
                   </span>
+
+                  {playerRecord.player.isAdmin ? (
+                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
+                      Admin
+                    </span>
+                  ) : null}
 
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -322,14 +330,14 @@ function PlayerSection({
             );
           })
         ) : (
-          <div className="p-10 text-center text-sm text-gray-500">
+          <div className="col-span-full p-10 text-center text-sm text-gray-500">
             {emptyMessage}
           </div>
         )}
       </div>
 
       {/* ===================== DESKTOP GRID ===================== */}
-      <div className="hidden md:grid grid-cols-5 gap-4 p-5">
+      <div className="hidden md:grid grid-cols-4 gap-4 p-5">
         {players.length > 0 ? (
           players.map((playerRecord) => {
             const acceptedPlayer = acceptedPlayers.find(
@@ -347,7 +355,7 @@ function PlayerSection({
             return (
               <div
                 key={playerRecord.id}
-                className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                className="rounded-2xl border border-gray-200 bg-white py-4 px-2 shadow-sm transition hover:shadow-md"
               >
                 {/* PLAYER */}
                 <div className="flex flex-col items-center text-center">
@@ -386,12 +394,14 @@ function PlayerSection({
                     ) : null}
                   </label>
 
-                  <h5 className="mt-3 font-semibold text-text">
+                  <h5 className="mt-3 font-semibold text-[18px] text-text">
                     {playerRecord.player.username}
                   </h5>
 
                   <p className="text-xs text-gray-500">
-                    {playerRecord.player.isStatic
+                    {playerRecord.player.isAdmin
+                      ? "Admin"
+                      : playerRecord.player.isStatic
                       ? "Static Player"
                       : "Registered Player"}
                   </p>
@@ -402,6 +412,12 @@ function PlayerSection({
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                     {formatSkillLevel(playerRecord.player.skillLevel)}
                   </span>
+
+                  {playerRecord.player.isAdmin ? (
+                    <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
+                      Admin
+                    </span>
+                  ) : null}
 
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -419,7 +435,7 @@ function PlayerSection({
                 </div>
 
                 {/* MATCH INFO */}
-                <div className="mt-4 space-y-1 text-center text-sm text-gray-600">
+                <div className="mt-4 space-y-1 text-center text-gray-600">
                   <p>
                     Matches: {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
                   </p>

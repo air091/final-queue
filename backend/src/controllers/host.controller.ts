@@ -49,6 +49,7 @@ const buildPlayerProfile = (
     profileUrl: player?.profileUrl ?? "",
     skillLevel,
     isStatic: player?.role === UserRoles.static,
+    isAdmin: player?.role === UserRoles.master,
   };
 };
 
@@ -71,6 +72,25 @@ const mapHostPlayerRecord = (player: {
   requestedAt: player.requestedAt?.toISOString(),
   player: buildPlayerProfile(player.player),
 });
+
+const ensureAdminHostPlayer = async (hostId: string, masterId: string) => {
+  await prisma.player.upsert({
+    where: {
+      hostId_playerId: {
+        hostId,
+        playerId: masterId,
+      },
+    },
+    update: {
+      hostStatus: PlayerHostStatuses.accepted,
+    },
+    create: {
+      hostId,
+      playerId: masterId,
+      hostStatus: PlayerHostStatuses.accepted,
+    },
+  });
+};
 
 export const host = async (request: Request<Params>, response: Response) => {
   try {
@@ -121,6 +141,12 @@ export const host = async (request: Request<Params>, response: Response) => {
         startTime,
         endTime,
         maxPlayers,
+        players: {
+          create: {
+            playerId: user.sub,
+            hostStatus: PlayerHostStatuses.accepted,
+          },
+        },
       },
       select: {
         id: true,
@@ -239,6 +265,8 @@ export const getHostById = async (
       return response
         .status(404)
         .json({ success: false, message: "Community not found" });
+
+    await ensureAdminHostPlayer(hostId, user.sub);
 
     // get host
     const [
@@ -554,6 +582,8 @@ export const getHostWithPlayers = async (
       return response
         .status(404)
         .json({ success: false, message: "Community not found" });
+
+    await ensureAdminHostPlayer(hostId, user.sub);
 
     const [host, acceptedPlayers] = await Promise.all([
       prisma.host.findFirst({
