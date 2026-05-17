@@ -94,7 +94,7 @@ function CourtSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`relative border-2 border-white text-white w-full min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
+      className={`relative border-2 border-white text-white w-full min-h-[56px] sm:min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
     >
       {/* Blurred background layer */}
       <div
@@ -171,7 +171,7 @@ export default function CourtCard({
         : "End game";
 
   return (
-    <div className="relative w-[520px] rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+    <div className="relative w-full max-w-[420px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:max-w-[520px] sm:p-3">
       <svg
         width="100%"
         height="100%"

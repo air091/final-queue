@@ -423,6 +423,7 @@ export default function Match() {
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("waiting");
+  const [isPlayersListHidden, setIsPlayersListHidden] = useState(false);
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
   >(null);
@@ -1350,19 +1351,47 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex flex-col min-[1280px]:flex-row h-full w-full gap-4 py-2 px-2">
+        <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 min-[1280px]:flex-row">
           {/* PLAYERS */}
-          <div className="order-1 min-[1280px]:order-none flex flex-col flex-shrink min-w-0 w-full min-[1280px]:w-[360px] xl:w-[420px] rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
-            <header className="mb-4">
-              <h5 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                Players
-              </h5>
+          <div
+            className={`sticky top-2 z-999 order-1 flex w-full flex-col flex-shrink self-start min-w-0 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm min-[1280px]:order-none min-[1280px]:w-[360px] xl:w-[420px] ${
+              isPlayersListHidden
+                ? "max-h-none min-[1280px]:max-h-[calc(100dvh-1rem)]"
+                : "max-h-[45dvh] min-[426px]:max-h-[55dvh] min-[1280px]:max-h-[calc(100dvh-1rem)]"
+            }`}
+          >
+            <header
+              className={isPlayersListHidden ? "min-[1280px]:mb-4" : "mb-4"}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h5 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
+                    Players
+                  </h5>
 
-              <p className="mt-1 text-sm text-stone-500">
-                Manage active and waiting players.
-              </p>
+                  <p className="mt-1 text-sm text-stone-500 min-[1280px]:hidden">
+                    {filteredPlayers.length} shown
+                  </p>
 
-              <div className="mt-4 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1">
+                  <p className="mt-1 hidden text-sm text-stone-500 min-[1280px]:block">
+                    Manage active and waiting players.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPlayersListHidden((current) => !current)}
+                  className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-orange-100 min-[1280px]:hidden"
+                >
+                  {isPlayersListHidden ? "Show" : "Hide"}
+                </button>
+              </div>
+
+              <div
+                className={`mt-4 items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 ${
+                  isPlayersListHidden ? "hidden min-[1280px]:flex" : "flex"
+                }`}
+              >
                 {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
                     key={playerStatus.value}
@@ -1380,7 +1409,11 @@ export default function Match() {
               </div>
             </header>
 
-            <main className="grid w-full grid-cols-3 min-[1280px]:grid-cols-2 gap-3 overflow-hidden rounded-2xl border border-orange-100 bg-orange-50/40 p-3">
+            <main
+              className={`min-h-0 w-full grid-cols-1 min-[426px]:grid-cols-3 min-[1280px]:grid-cols-2 gap-3 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-3 ${
+                isPlayersListHidden ? "hidden min-[1280px]:grid" : "grid"
+              }`}
+            >
               {filteredPlayers.length > 0 ? (
                 filteredPlayers.map((p) => (
                   <PlayerCard
@@ -1391,7 +1424,7 @@ export default function Match() {
                   />
                 ))
               ) : (
-                <div className="col-span-2 flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
+                <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
                   No players in this status
                 </div>
               )}
@@ -1446,7 +1479,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                    flex h-[120px] w-[520px] items-center justify-center cursor-pointer
+                    flex h-[100px] w-full max-w-[420px] items-center justify-center cursor-pointer sm:h-[120px] sm:max-w-[520px]
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200
@@ -1508,7 +1541,6 @@ export default function Match() {
               </div>
             </main>
           </div>
-
           {/* DRAG OVERLAY */}
           <DragOverlay zIndex={2000}>
             {activeDraggedPlayer ? (
