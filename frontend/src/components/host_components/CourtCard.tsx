@@ -94,7 +94,7 @@ function CourtSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`relative border-2 border-white text-white w-full min-h-[56px] sm:min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
+      className={`relative border-2 border-white text-white w-full min-h-[56px] sm:min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1`}
     >
       {/* Blurred background layer */}
       <div
@@ -104,7 +104,7 @@ function CourtSlot({
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full flex items-center justify-center">
+      <div className="relative w-full flex items-center justify-center">
         {player ? (
           <PlayerCard
             player={player}
@@ -233,7 +233,7 @@ export default function CourtCard({
           strokeWidth="1.5"
         />
       </svg>
-      <header className="relative z-[120] flex items-center justify-between">
+      <header className="relative flex items-center justify-between">
         <div className="grid">
           <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
             {court.name}

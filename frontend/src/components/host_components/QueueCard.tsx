@@ -91,7 +91,7 @@ function QueueSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`relative border-2 border-white text-white w-full min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 z-50`}
+      className={`relative border-2 border-white text-white w-full min-h-[68px] flex items-center justify-center rounded-md overflow-hidden px-2 py-1 `}
     >
       {/* Blurred background layer */}
       <div
@@ -217,7 +217,7 @@ export default function QueueCard({
           strokeWidth="1.5"
         />
       </svg>
-      <header className="relative z-[120] flex items-center justify-between">
+      <header className="relative flex items-center justify-between">
         <div className="grid">
           <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
             {queue.name}

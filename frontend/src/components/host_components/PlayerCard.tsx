@@ -110,7 +110,7 @@ export default function PlayerCard({
 
       ${
         activeDropdown === player.id
-          ? "z-[120] border-primary"
+          ? " border-primary"
           : "border-gray-200 hover:border-primary/30"
       }
     `}
