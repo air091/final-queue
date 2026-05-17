@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
@@ -34,9 +34,11 @@ export default function PlayerSettingsDropdown({
   } = useHostData();
   const isPlayerInGame = player.matchStatus === "playing";
   const isHistoryLoading = historyLoadingPlayerId === player.id;
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(
+    null,
+  );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updatePosition = () => {
       const anchor = anchorRef.current;
       if (!anchor) return;
@@ -115,6 +117,8 @@ export default function PlayerSettingsDropdown({
     onCloseDropdown();
     openPlayerHistory(player);
   };
+
+  if (!position) return null;
 
   return createPortal(
     <div

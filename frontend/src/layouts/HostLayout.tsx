@@ -13,6 +13,7 @@ import {
   getPaymentBalance,
   normalizeAcceptedPlayers,
   type AcceptedPlayers,
+  type FinishedMatchHistoryPayload,
   type CourtType,
   type HostMeta,
   type HostPaymentsData,
@@ -273,6 +274,45 @@ export default function HostLayout() {
     setSelectedHistoryError(null);
   }, []);
 
+  const addFinishedMatchToPlayerHistory = useCallback(
+    (match: FinishedMatchHistoryPayload) => {
+      setPlayerHistoryById((currentHistory) => {
+        let hasUpdatedHistory = false;
+        const nextHistory = { ...currentHistory };
+
+        for (const participant of match.participants) {
+          const playerHistory = currentHistory[participant.playerId];
+
+          if (!playerHistory) continue;
+          if (playerHistory.some((entry) => entry.match.id === match.id)) {
+            continue;
+          }
+
+          hasUpdatedHistory = true;
+          nextHistory[participant.playerId] = [
+            {
+              id: participant.id,
+              team: participant.team,
+              result: participant.result,
+              joinedAt: participant.joinedAt,
+              match: {
+                id: match.id,
+                startedAt: match.startedAt,
+                endedAt: match.endedAt,
+                teamWinner: match.teamWinner,
+                court: match.court,
+              },
+            },
+            ...playerHistory,
+          ];
+        }
+
+        return hasUpdatedHistory ? nextHistory : currentHistory;
+      });
+    },
+    [],
+  );
+
   const selectedHistoryEntries = selectedHistoryPlayer
     ? (playerHistoryById[selectedHistoryPlayer.id] ?? [])
     : [];
@@ -302,6 +342,7 @@ export default function HostLayout() {
     historyLoadingPlayerId,
     openPlayerHistory,
     closePlayerHistory,
+    addFinishedMatchToPlayerHistory,
     refreshHostData: loadHostData,
   };
 

@@ -22,6 +22,7 @@ import {
   getPaymentBalance,
   type AcceptedPlayers,
   type CourtType,
+  type FinishedMatchHistoryPayload,
   type MatchHistorySummary,
   type MatchPlayerStatus,
   type QueueType,
@@ -204,23 +205,7 @@ const getUpdatedPlayerMatchSummaries = (
     };
   });
 
-type FinishedMatchPayload = {
-  id: string;
-  teamWinner: string;
-  startedAt: string | null;
-  endedAt: string | null;
-  court: {
-    id: string;
-    name: string;
-  } | null;
-  participants: Array<{
-    id: string;
-    playerId: string;
-    team: string | null;
-    result: string | null;
-    joinedAt: string;
-  }>;
-};
+type FinishedMatchPayload = FinishedMatchHistoryPayload;
 
 const getPlayersWithoutCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
@@ -420,6 +405,7 @@ export default function Match() {
     setQueues,
     paymentsData,
     setPaymentsData,
+    addFinishedMatchToPlayerHistory,
     refreshHostData,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
@@ -1193,6 +1179,8 @@ export default function Match() {
       const endedPlayerIds =
         response.hostedPlayerIds ?? response.playerIds ?? [];
 
+      if (response.match) addFinishedMatchToPlayerHistory(response.match);
+
       setPlayers((currentPlayers) =>
         response.match
           ? getUpdatedPlayerMatchSummaries(
@@ -1353,7 +1341,7 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex min-h-full w-full flex-col gap-y-4 gap-x-1 px-2 py-2 min-[1280px]:flex-row">
+        <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 min-[1280px]:flex-row">
           {/* PLAYERS */}
           <div
             className={`sticky top-2 z-20 order-1 flex w-full flex-col flex-shrink self-start min-w-0 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm min-[1280px]:order-none min-[1280px]:h-[calc(100dvh-5rem)] min-[1280px]:w-[360px] xl:w-[420px] ${
@@ -1481,7 +1469,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                    flex h-[100px] w-full max-w-[420px] items-center justify-center cursor-pointer sm:h-[120px] sm:max-w-[520px]
+                    flex h-[100px] w-[480px] items-center justify-center cursor-pointer sm:h-[120px] sm:max-w-[520px]
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200
@@ -1527,7 +1515,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                    flex h-[120px] w-[520px] items-center justify-center cursor-pointer
+                    flex h-[120px] w-[480px] items-center justify-center cursor-pointer
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200

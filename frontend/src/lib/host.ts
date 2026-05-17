@@ -89,6 +89,24 @@ export type PlayerMatchHistoryItem = {
   };
 };
 
+export type FinishedMatchHistoryPayload = {
+  id: string;
+  teamWinner: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  court: {
+    id: string;
+    name: string;
+  } | null;
+  participants: Array<{
+    id: string;
+    playerId: string;
+    team: string | null;
+    result: string | null;
+    joinedAt: string;
+  }>;
+};
+
 export const EMPTY_MATCH_HISTORY_SUMMARY: MatchHistorySummary = {
   matchCount: 0,
   winCount: 0,

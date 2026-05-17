@@ -6,6 +6,7 @@ import type {
   HostMeta,
   HostPaymentsData,
   HostPlayerRecord,
+  FinishedMatchHistoryPayload,
   PlayerHistoryTarget,
   QueueType,
 } from "../lib/host";
@@ -25,6 +26,7 @@ export type HostOutletContext = {
   historyLoadingPlayerId: string | null;
   openPlayerHistory: (player: PlayerHistoryTarget) => void;
   closePlayerHistory: () => void;
+  addFinishedMatchToPlayerHistory: (match: FinishedMatchHistoryPayload) => void;
   refreshHostData: () => Promise<void>;
 };
 

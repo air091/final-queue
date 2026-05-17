@@ -171,7 +171,7 @@ export default function CourtCard({
         : "End game";
 
   return (
-    <div className="relative w-full max-w-[420px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:max-w-[520px] sm:p-3">
+    <div className="relative w-[480px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:max-w-[520px] sm:p-3">
       <svg
         width="100%"
         height="100%"
