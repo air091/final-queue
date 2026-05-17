@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -1347,17 +1348,18 @@ export default function Match() {
     <>
       <DndContext
         sensors={sensors}
+        collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 min-[1280px]:flex-row">
+        <main className="flex min-h-full w-full flex-col gap-y-4 gap-x-1 px-2 py-2 min-[1280px]:flex-row">
           {/* PLAYERS */}
           <div
-            className={`sticky top-2 z-999 order-1 flex w-full flex-col flex-shrink self-start min-w-0 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm min-[1280px]:order-none min-[1280px]:w-[360px] xl:w-[420px] ${
+            className={`sticky top-2 z-20 order-1 flex w-full flex-col flex-shrink self-start min-w-0 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm min-[1280px]:order-none min-[1280px]:h-[calc(100dvh-5rem)] min-[1280px]:w-[360px] xl:w-[420px] ${
               isPlayersListHidden
-                ? "max-h-none min-[1280px]:max-h-[calc(100dvh-1rem)]"
-                : "max-h-[45dvh] min-[426px]:max-h-[55dvh] min-[1280px]:max-h-[calc(100dvh-1rem)]"
+                ? "max-h-none min-[1280px]:max-h-[calc(100dvh-5rem)]"
+                : "max-h-[45dvh] min-[426px]:max-h-[55dvh] min-[1280px]:max-h-[calc(100dvh-5rem)]"
             }`}
           >
             <header

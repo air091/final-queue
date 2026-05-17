@@ -96,8 +96,8 @@ export default function PlayerCard({
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Transform.toString(transform),
-        opacity: isDragging ? 0.4 : 1,
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
+        opacity: isDragging ? 0 : 1,
       }}
       className={`
       relative flex items-center justify-between
