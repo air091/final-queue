@@ -1,6 +1,11 @@
 import { NavLink, useParams } from "react-router-dom";
-import { HiUsers } from "react-icons/hi2";
-import { ArrowLeft, CreditCard, Gamepad2, LayoutDashboard } from "lucide-react";
+import {
+  ArrowLeft,
+  CreditCard,
+  Gamepad2,
+  LayoutDashboard,
+  UsersRound,
+} from "lucide-react";
 
 export default function Sidebar() {
   const { communityId, hostId } = useParams();
@@ -38,7 +43,7 @@ export default function Sidebar() {
           {
             path: `/community/${communityId}/hosts/${hostId}/players`,
             label: "Players",
-            icon: <HiUsers size={24} />,
+            icon: <UsersRound size={24} />,
           },
           {
             path: `/community/${communityId}/hosts/${hostId}/match`,
