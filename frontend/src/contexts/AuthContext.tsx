@@ -53,16 +53,60 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
+type StoredAuthSession = {
+  user: User;
+  accessToken: string;
+};
+
+const AUTH_STORAGE_KEY = "auth:session";
+
+const readStoredAuthSession = (): StoredAuthSession | null => {
+  try {
+    const storedSession = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!storedSession) return null;
+
+    const parsedSession = JSON.parse(
+      storedSession,
+    ) as Partial<StoredAuthSession>;
+
+    if (!parsedSession.user || !parsedSession.accessToken) return null;
+
+    return {
+      user: parsedSession.user,
+      accessToken: parsedSession.accessToken,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const storeAuthSession = (session: StoredAuthSession) => {
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+};
+
+const clearStoredAuthSession = () => {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+};
+
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(
+    () => readStoredAuthSession()?.user ?? null,
+  );
+  const [accessToken, setAccessToken] = useState<string | null>(
+    () => readStoredAuthSession()?.accessToken ?? null,
+  );
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setAuthToken(accessToken);
+  }, [accessToken]);
 
   useEffect(() => {
     const removeSessionExpiredListener = onSessionExpired(() => {
       setUser(null);
       setAccessToken(null);
       setAuthToken(null);
+      clearStoredAuthSession();
     });
 
     const removeAccessTokenRefreshedListener = onAccessTokenRefreshed(
@@ -90,13 +134,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (refreshedUser) {
         setUser(refreshedUser);
+        storeAuthSession({
+          user: refreshedUser,
+          accessToken: newAccessToken,
+        });
       }
 
       return newAccessToken;
     } catch (error) {
-      setAccessToken(null);
-      setUser(null);
-      setAuthToken(null);
       throw error;
     }
   }, []);
@@ -109,6 +154,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let isCancelled = false;
 
     const checkAuth = async () => {
+      const storedSession = readStoredAuthSession();
+
       try {
         await refreshAccessToken();
 
@@ -117,9 +164,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (isCancelled) return;
 
         console.error(error);
+
+        if (storedSession) {
+          setUser(storedSession.user);
+          setAccessToken(storedSession.accessToken);
+          setAuthToken(storedSession.accessToken);
+          return;
+        }
+
         setUser(null);
         setAccessToken(null);
         setAuthToken(null);
+        clearStoredAuthSession();
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
@@ -150,6 +206,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAccessToken(token);
     setAuthToken(token);
     setUser(response.data.user);
+    storeAuthSession({
+      user: response.data.user,
+      accessToken: token,
+    });
   }, []);
 
   const updateCurrentUser = useCallback((nextUser: User, token?: string) => {
@@ -158,8 +218,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (token) {
       setAccessToken(token);
       setAuthToken(token);
+      storeAuthSession({
+        user: nextUser,
+        accessToken: token,
+      });
+    } else if (accessToken) {
+      storeAuthSession({
+        user: nextUser,
+        accessToken,
+      });
     }
-  }, []);
+  }, [accessToken]);
 
   // =========================
   // LOGIN
@@ -176,6 +245,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAccessToken(token);
       setAuthToken(token);
       setUser(response.data.user);
+      storeAuthSession({
+        user: response.data.user,
+        accessToken: token,
+      });
     },
     [],
   );
@@ -193,6 +266,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAccessToken(null);
       setUser(null);
       setAuthToken(null);
+      clearStoredAuthSession();
     }
   }, []);
 

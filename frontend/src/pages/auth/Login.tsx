@@ -14,7 +14,7 @@ export default function Login() {
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { login, refreshAccessToken } = useAuth();
+  const { accessToken, login, refreshAccessToken, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get("session") === "expired";
@@ -24,12 +24,17 @@ export default function Login() {
     setErrorMessage(null);
 
     try {
-      if (!credentials.email && !credentials.password) {
-        await refreshAccessToken();
-      } else if (credentials.email && credentials.password) {
+      const email = credentials.email.trim();
+      const password = credentials.password.trim();
+
+      if (!email && !password) {
+        if (!user || !accessToken) {
+          await refreshAccessToken();
+        }
+      } else if (email && password) {
         await login({
-          email: credentials.email,
-          password: credentials.password,
+          email,
+          password,
         });
       } else {
         setErrorMessage(

@@ -277,8 +277,21 @@ export const refresh = async (request: Request, response: Response) => {
       }
 
       if (!matchedToken) {
-        failureMessage = "Invalid refresh token";
-        continue;
+        const accessToken = buildAccessToken(account);
+
+        setRefreshTokenCookie(response, refreshToken);
+
+        return response.json({
+          success: true,
+          accessToken,
+          user: {
+            id: account.id,
+            username: account.username,
+            email: account.email,
+            profileUrl: account.profileUrl,
+            role: account.role,
+          },
+        });
       }
 
       if (matchedToken.expiresAt < new Date()) {
@@ -287,6 +300,8 @@ export const refresh = async (request: Request, response: Response) => {
       }
 
       const accessToken = buildAccessToken(account);
+
+      setRefreshTokenCookie(response, refreshToken);
 
       return response.json({
         success: true,
