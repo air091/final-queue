@@ -60,6 +60,13 @@ export function verifyRefreshToken(token: string): JwtRefreshPayload {
   return decoded;
 }
 
+export function verifyRefreshTokenSignature(token: string): JwtRefreshPayload {
+  const decoded = jwt.verify(token, REFRESH_SECRET, {
+    ignoreExpiration: true,
+  }) as JwtRefreshPayload;
+  return decoded;
+}
+
 export function signAccessToken(payload: JwtAccessPayload): string {
   return jwt.sign(payload, ACCESS_SECRET, accessOptions);
 }

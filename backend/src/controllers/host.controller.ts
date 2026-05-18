@@ -617,6 +617,7 @@ export const getHostWithPlayers = async (
           id: true,
           hostStatus: true,
           paymentStatus: true,
+          gamesPlayed: true,
           timerStartedAt: true,
           requestedAt: true,
           queueAssignment: {
@@ -746,6 +747,7 @@ export const getHostWithPlayers = async (
         status: acceptedPlayer.hostStatus,
         hostStatus: acceptedPlayer.hostStatus,
         paymentStatus: acceptedPlayer.paymentStatus,
+        gamesPlayed: acceptedPlayer.gamesPlayed,
         timerStartedAt: acceptedPlayer.timerStartedAt,
         player: buildPlayerProfile(acceptedPlayer.player, host.sport),
         queueAssignment: acceptedPlayer.queueAssignment,

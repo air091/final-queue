@@ -35,6 +35,51 @@ type RefreshAccessTokenResponse = {
 
 let refreshTokenRequest: Promise<RefreshAccessTokenResponse> | null = null;
 
+const AUTH_ENDPOINTS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/refresh",
+  "/api/auth/logout",
+];
+
+const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 30;
+
+const getAuthorizationToken = (authorization?: unknown) => {
+  if (typeof authorization !== "string") return null;
+  if (!authorization.startsWith("Bearer ")) return null;
+
+  return authorization.slice("Bearer ".length);
+};
+
+const getTokenExpiresAtSeconds = (token: string) => {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decodedPayload = JSON.parse(window.atob(normalizedPayload)) as {
+      exp?: unknown;
+    };
+
+    return typeof decodedPayload.exp === "number"
+      ? decodedPayload.exp
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpiring = (token: string) => {
+  const expiresAtSeconds = getTokenExpiresAtSeconds(token);
+  if (!expiresAtSeconds) return false;
+
+  const nowSeconds = Date.now() / 1000;
+  return expiresAtSeconds - nowSeconds <= ACCESS_TOKEN_REFRESH_BUFFER_SECONDS;
+};
+
+const isAuthEndpoint = (url = "") =>
+  AUTH_ENDPOINTS.some((endpoint) => url.includes(endpoint));
+
 export const notifySessionExpired = () => {
   setAuthToken(null);
   window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
@@ -95,6 +140,29 @@ export const refreshAccessTokenRequest = () => {
   return refreshTokenRequest;
 };
 
+api.interceptors.request.use(async (config) => {
+  const requestUrl = config.url ?? "";
+
+  if (isAuthEndpoint(requestUrl)) {
+    return config;
+  }
+
+  const requestToken = getAuthorizationToken(config.headers.Authorization);
+  const defaultToken = getAuthorizationToken(
+    api.defaults.headers.common.Authorization,
+  );
+  const token = requestToken ?? defaultToken;
+
+  if (!token || !isTokenExpiring(token)) {
+    return config;
+  }
+
+  const { accessToken } = await refreshAccessTokenRequest();
+  config.headers.Authorization = `Bearer ${accessToken}`;
+
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -106,10 +174,7 @@ api.interceptors.response.use(
       status !== 401 ||
       !originalRequest ||
       originalRequest._retry ||
-      requestUrl.includes("/api/auth/login") ||
-      requestUrl.includes("/api/auth/register") ||
-      requestUrl.includes("/api/auth/refresh") ||
-      requestUrl.includes("/api/auth/logout")
+      isAuthEndpoint(requestUrl)
     ) {
       return Promise.reject(error);
     }

@@ -120,6 +120,7 @@ export type AcceptedPlayers = {
   hostStatus: "accepted";
   matchStatus: MatchPlayerStatus;
   timerStartedAt: string | null;
+  gamesPlayed: number;
   player: PlayerType;
   queueEntry: QueueAssignmentType | null;
   courtAssignment: CourtAssignmentType | null;
@@ -232,6 +233,7 @@ export const getDerivedMatchStatus = (
 export const normalizeAcceptedPlayers = (players: AcceptedPlayers[]) =>
   players.map((player) => ({
     ...player,
+    gamesPlayed: player.gamesPlayed ?? 0,
     matchStatus: player.matchStatus ?? getDerivedMatchStatus(player),
   }));
 

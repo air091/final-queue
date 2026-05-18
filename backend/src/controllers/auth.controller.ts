@@ -5,6 +5,7 @@ import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
+  verifyRefreshTokenSignature,
 } from "../lib/jwt.js";
 import {
   clearRefreshTokenCookie,
@@ -78,6 +79,35 @@ const getRefreshTokenCandidates = (request: Request) => {
   return [...candidates];
 };
 
+const getPublicAuthUser = (account: {
+  id: string;
+  username: string;
+  email: string;
+  profileUrl: string;
+  role: string;
+}) => ({
+  id: account.id,
+  username: account.username,
+  email: account.email,
+  profileUrl: account.profileUrl,
+  role: account.role,
+});
+
+const createRefreshTokenSession = async (accountId: string) => {
+  const refreshToken = signRefreshToken({ sub: accountId });
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+
+  await prisma.refreshToken.create({
+    data: {
+      accountId,
+      hashedToken: hashedRefreshToken,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+    },
+  });
+
+  return refreshToken;
+};
+
 type UpdateProfileImageBody = {
   imageData?: string;
   removeImage?: boolean;
@@ -118,16 +148,7 @@ export const register = async (request: Request, response: Response) => {
 
     const accessToken = buildAccessToken(account);
 
-    const refreshToken = signRefreshToken({ sub: account.id });
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-
-    await prisma.refreshToken.create({
-      data: {
-        accountId: account.id,
-        hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-    });
+    const refreshToken = await createRefreshTokenSession(account.id);
 
     setRefreshTokenCookie(response, refreshToken);
 
@@ -135,13 +156,7 @@ export const register = async (request: Request, response: Response) => {
       success: true,
       message: "Account created successfully.",
       accessToken,
-      user: {
-        id: account.id,
-        username: account.username,
-        email: account.email,
-        profileUrl: account.profileUrl,
-        role: account.role,
-      },
+      user: getPublicAuthUser(account),
     });
   } catch (error) {
     console.error("Error during registration:", error);
@@ -177,16 +192,7 @@ export const login = async (request: Request, response: Response) => {
 
     const accessToken = buildAccessToken(account);
 
-    const refreshToken = signRefreshToken({ sub: account.id });
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-
-    await prisma.refreshToken.create({
-      data: {
-        accountId: account.id,
-        hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-    });
+    const refreshToken = await createRefreshTokenSession(account.id);
 
     setRefreshTokenCookie(response, refreshToken);
 
@@ -194,13 +200,7 @@ export const login = async (request: Request, response: Response) => {
       success: true,
       message: "Login successful.",
       accessToken,
-      user: {
-        id: account.id,
-        username: account.username,
-        email: account.email,
-        profileUrl: account.profileUrl,
-        role: account.role,
-      },
+      user: getPublicAuthUser(account),
     });
   } catch (error) {
     console.error("Error during login:", error);
@@ -242,11 +242,17 @@ export const refresh = async (request: Request, response: Response) => {
       try {
         decoded = verifyRefreshToken(refreshToken);
       } catch (error) {
-        failureMessage =
-          error instanceof Error && error.name === "TokenExpiredError"
-            ? "Refresh token expired"
-            : "Invalid refresh token";
-        continue;
+        if (!(error instanceof Error && error.name === "TokenExpiredError")) {
+          failureMessage = "Invalid refresh token";
+          continue;
+        }
+
+        try {
+          decoded = verifyRefreshTokenSignature(refreshToken);
+        } catch {
+          failureMessage = "Invalid refresh token";
+          continue;
+        }
       }
 
       // find account
@@ -277,21 +283,8 @@ export const refresh = async (request: Request, response: Response) => {
       }
 
       if (!matchedToken) {
-        const accessToken = buildAccessToken(account);
-
-        setRefreshTokenCookie(response, refreshToken);
-
-        return response.json({
-          success: true,
-          accessToken,
-          user: {
-            id: account.id,
-            username: account.username,
-            email: account.email,
-            profileUrl: account.profileUrl,
-            role: account.role,
-          },
-        });
+        failureMessage = "Invalid refresh token";
+        continue;
       }
 
       if (matchedToken.expiresAt < new Date()) {
@@ -300,19 +293,19 @@ export const refresh = async (request: Request, response: Response) => {
       }
 
       const accessToken = buildAccessToken(account);
+      const nextRefreshToken = await createRefreshTokenSession(account.id);
 
-      setRefreshTokenCookie(response, refreshToken);
+      await prisma.refreshToken.update({
+        where: { id: matchedToken.id },
+        data: { revokedAt: new Date() },
+      });
+
+      setRefreshTokenCookie(response, nextRefreshToken);
 
       return response.json({
         success: true,
         accessToken,
-        user: {
-          id: account.id,
-          username: account.username,
-          email: account.email,
-          profileUrl: account.profileUrl,
-          role: account.role,
-        },
+        user: getPublicAuthUser(account),
       });
     }
 
