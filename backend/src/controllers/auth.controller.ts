@@ -78,6 +78,20 @@ const getRefreshTokenCandidates = (request: Request) => {
   return [...candidates];
 };
 
+const getPublicAuthUser = (account: {
+  id: string;
+  username: string;
+  email: string;
+  profileUrl: string;
+  role: string;
+}) => ({
+  id: account.id,
+  username: account.username,
+  email: account.email,
+  profileUrl: account.profileUrl,
+  role: account.role,
+});
+
 type UpdateProfileImageBody = {
   imageData?: string;
   removeImage?: boolean;
@@ -126,13 +140,7 @@ export const register = async (request: Request, response: Response) => {
       success: true,
       message: "Account created successfully.",
       accessToken,
-      user: {
-        id: account.id,
-        username: account.username,
-        email: account.email,
-        profileUrl: account.profileUrl,
-        role: account.role,
-      },
+      user: getPublicAuthUser(account),
     });
   } catch (error) {
     console.error("Error during registration:", error);
@@ -176,13 +184,7 @@ export const login = async (request: Request, response: Response) => {
       success: true,
       message: "Login successful.",
       accessToken,
-      user: {
-        id: account.id,
-        username: account.username,
-        email: account.email,
-        profileUrl: account.profileUrl,
-        role: account.role,
-      },
+      user: getPublicAuthUser(account),
     });
   } catch (error) {
     console.error("Error during login:", error);
@@ -248,13 +250,7 @@ export const refresh = async (request: Request, response: Response) => {
       return response.json({
         success: true,
         accessToken,
-        user: {
-          id: account.id,
-          username: account.username,
-          email: account.email,
-          profileUrl: account.profileUrl,
-          role: account.role,
-        },
+        user: getPublicAuthUser(account),
       });
     }
 

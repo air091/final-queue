@@ -168,6 +168,19 @@ const getPlayersWithResetTimer = (
   );
 };
 
+const getPlayersWithIncrementedGames = (
+  currentPlayers: AcceptedPlayers[],
+  playerIds: string[],
+) =>
+  currentPlayers.map((player) =>
+    playerIds.includes(player.id)
+      ? {
+          ...player,
+          gamesPlayed: player.gamesPlayed + 1,
+        }
+      : player,
+  );
+
 const getUpdatedPlayerMatchSummaries = (
   currentPlayers: AcceptedPlayers[],
   match: FinishedMatchPayload,
@@ -1141,7 +1154,12 @@ export default function Match() {
 
     setCourtBusy(courtId, true, "ending");
     setCourts(getEndedCourt(previousCourts, courtId));
-    setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "waiting"));
+    setPlayers(
+      getPlayersWithIncrementedGames(
+        getPlayersWithResetTimer(previousPlayers, playerIds, "waiting"),
+        playerIds,
+      ),
+    );
     setPaymentsData((currentPaymentsData) => {
       const nextPlayers = currentPaymentsData.players.map((player) => {
         if (!playerIds.includes(player.id)) return player;

@@ -5,6 +5,7 @@ import PlayerSettingsDropdown from "./PlayerDropdown";
 import { useEffect, useRef, useState } from "react";
 import { TbArrowBack } from "react-icons/tb";
 import type { AcceptedPlayers } from "../../lib/host";
+import { Gamepad } from "lucide-react";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
@@ -20,6 +21,9 @@ type PlayerCardProps = {
   queueId?: string;
   onRemoveFromQueue?: (hostedPlayerId: string, queueId: string) => void;
 };
+
+const formatSkillLevel = (skillLevel: string) =>
+  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
 export default function PlayerCard({
   player,
@@ -91,6 +95,10 @@ export default function PlayerCard({
     inQueue: "border-yellow-500 bg-yellow-300",
     playing: "border-red-500 bg-red-300",
   }[player.matchStatus];
+  const gamesPlayed = player.gamesPlayed ?? 0;
+  const skillLevel = player.player.skillLevel
+    ? formatSkillLevel(player.player.skillLevel)
+    : "Beginner";
 
   return (
     <div
@@ -115,6 +123,14 @@ export default function PlayerCard({
       }
     `}
     >
+      {/* PLAYER GAMES */}
+      <div className="absolute text-[10px] -top-2 left-1.5 px-1 bg-white text-stone-700 flex items-center gap-x-1 rounded-full">
+        <span className="flex items-center gap-x-1">
+          <Gamepad size={12} /> {gamesPlayed}
+        </span>
+        <span>{skillLevel}</span>
+      </div>
+
       {/* ================= PLAYER INFO ================= */}
       <div
         ref={canDrag ? setActivatorNodeRef : undefined}
