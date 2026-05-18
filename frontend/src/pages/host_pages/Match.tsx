@@ -521,7 +521,8 @@ export default function Match() {
     setBusyCourtActions((currentActions) => {
       if (isBusy) return { ...currentActions, [courtId]: action };
 
-      const { [courtId]: _removedAction, ...nextActions } = currentActions;
+      const nextActions = { ...currentActions };
+      delete nextActions[courtId];
       return nextActions;
     });
   };
@@ -1128,10 +1129,7 @@ export default function Match() {
     }
   };
 
-  const handleEndCourtGame = async (
-    courtId: string,
-    teamWinner: "A" | "B",
-  ) => {
+  const handleEndCourtGame = async (courtId: string, teamWinner: "A" | "B") => {
     if (busyCourtActions[courtId]) return;
 
     const previousCourts = courts;
@@ -1346,83 +1344,73 @@ export default function Match() {
       >
         <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 min-[1280px]:flex-row">
           {/* PLAYERS */}
-          <div
-            className={`sticky top-2 z-20 order-1 flex w-full flex-col flex-shrink self-start min-w-0 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm min-[1280px]:order-none min-[1280px]:h-[calc(100dvh-5rem)] min-[1280px]:w-[360px] xl:w-[420px] ${
-              isPlayersListHidden
-                ? "max-h-none min-[1280px]:max-h-[calc(100dvh-5rem)]"
-                : "max-h-[45dvh] min-[426px]:max-h-[55dvh] min-[1280px]:max-h-[calc(100dvh-5rem)]"
-            }`}
-          >
-            <header
-              className={isPlayersListHidden ? "min-[1280px]:mb-4" : "mb-4"}
+          {isPlayersListHidden ? (
+            <button
+              type="button"
+              onClick={() => setIsPlayersListHidden(false)}
+              className="sticky top-2 z-40 ml-auto w-fit cursor-pointer self-end rounded-2xl border border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:bg-orange-50"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h5 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                    Players
-                  </h5>
+              Show players
+            </button>
+          ) : (
+            <div className="sticky top-2 z-40 flex max-h-[45dvh] w-full flex-shrink flex-col self-start rounded-3xl border border-orange-100 bg-white p-3 shadow-sm min-[1280px]:h-[calc(100dvh-5rem)] min-[1280px]:max-h-[calc(100dvh-5rem)] min-[1280px]:w-[360px] min-[1280px]:p-4 xl:w-[420px]">
+              <header className="mb-3 min-[1280px]:mb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h5 className="text-base font-bold tracking-tight text-[var(--color-text)] min-[1280px]:text-xl">
+                      Players
+                    </h5>
 
-                  <p className="mt-1 text-sm text-stone-500 min-[1280px]:hidden">
-                    {filteredPlayers.length} shown
-                  </p>
+                    <p className="mt-0.5 text-xs text-stone-500 min-[1280px]:mt-1 min-[1280px]:text-sm">
+                      Manage active and waiting players.
+                    </p>
+                  </div>
 
-                  <p className="mt-1 hidden text-sm text-stone-500 min-[1280px]:block">
-                    Manage active and waiting players.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsPlayersListHidden((current) => !current)}
-                  className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-sm font-semibold text-[var(--color-text)] transition hover:bg-orange-100 min-[1280px]:hidden"
-                >
-                  {isPlayersListHidden ? "Show" : "Hide"}
-                </button>
-              </div>
-
-              <div
-                className={`mt-4 items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 ${
-                  isPlayersListHidden ? "hidden min-[1280px]:flex" : "flex"
-                }`}
-              >
-                {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                   <button
-                    key={playerStatus.value}
                     type="button"
-                    onClick={() => setActivePlayerStatus(playerStatus.value)}
-                    className={`w-full rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      activePlayerStatus === playerStatus.value
-                        ? "bg-white text-[var(--color-text)] shadow-sm"
-                        : "text-stone-500 hover:bg-white hover:text-[var(--color-accent)]"
-                    }`}
+                    onClick={() => setIsPlayersListHidden(true)}
+                    className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-orange-100 min-[1280px]:px-3 min-[1280px]:py-2 min-[1280px]:text-sm"
                   >
-                    {playerStatus.label}
+                    Hide
                   </button>
-                ))}
-              </div>
-            </header>
-
-            <main
-              className={`min-h-0 w-full grid-cols-1 min-[426px]:grid-cols-3 min-[1280px]:grid-cols-2 gap-3 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-3 ${
-                isPlayersListHidden ? "hidden min-[1280px]:grid" : "grid"
-              }`}
-            >
-              {filteredPlayers.length > 0 ? (
-                filteredPlayers.map((p) => (
-                  <PlayerCard
-                    key={p.id}
-                    player={p}
-                    activeDropdown={playerActiveDropdown}
-                    onToggleDropdown={handlePlayerDropdown}
-                  />
-                ))
-              ) : (
-                <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
-                  No players in this status
                 </div>
-              )}
-            </main>
-          </div>
+
+                <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-4">
+                  {PLAYER_STATUS_FILTERS.map((playerStatus) => (
+                    <button
+                      key={playerStatus.value}
+                      type="button"
+                      onClick={() => setActivePlayerStatus(playerStatus.value)}
+                      className={`w-full rounded-xl px-2 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer min-[1280px]:px-3 min-[1280px]:py-2 min-[1280px]:text-sm ${
+                        activePlayerStatus === playerStatus.value
+                          ? "bg-white text-[var(--color-text)] shadow-sm"
+                          : "text-stone-500 hover:bg-white hover:text-[var(--color-accent)]"
+                      }`}
+                    >
+                      {playerStatus.label}
+                    </button>
+                  ))}
+                </div>
+              </header>
+
+              <main className="grid min-h-0 w-full grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-2 sm:grid-cols-6 min-[1280px]:gap-3 min-[1280px]:p-3">
+                {filteredPlayers.length > 0 ? (
+                  filteredPlayers.map((p) => (
+                    <PlayerCard
+                      key={p.id}
+                      player={p}
+                      activeDropdown={playerActiveDropdown}
+                      onToggleDropdown={handlePlayerDropdown}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
+                    No players in this status
+                  </div>
+                )}
+              </main>
+            </div>
+          )}
 
           {/* COURTS & QUEUES */}
           <div className="order-2 min-[1280px]:order-none flex-1 min-w-0 lg:min-w-[700px]">
@@ -1449,7 +1437,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {courts.map((court) => (
                       <CourtCard
                         key={court.id}
@@ -1472,7 +1460,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                    flex h-[100px] w-[480px] items-center justify-center cursor-pointer sm:h-[120px] sm:max-w-[520px]
+                    flex h-[100px] w-full max-w-[520px] items-center justify-center cursor-pointer sm:h-[120px]
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200
@@ -1495,7 +1483,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {queues.map((queue) => (
                       <QueueCard
                         key={queue.id}
@@ -1518,7 +1506,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                    flex h-[120px] w-[480px] items-center justify-center cursor-pointer
+                    flex h-[120px] w-full max-w-[520px] items-center justify-center cursor-pointer
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200

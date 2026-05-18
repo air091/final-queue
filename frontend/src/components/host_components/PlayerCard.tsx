@@ -128,7 +128,7 @@ export default function PlayerCard({
         }}
       >
         {/* AVATAR */}
-        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+        <div className="lg:h-10 lg:w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 md:h-8 md:w-8">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
@@ -139,12 +139,14 @@ export default function PlayerCard({
         {/* TEXT */}
         <div className="min-w-0 flex flex-col">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="truncate text-[12px] font-semibold text-text">
+            <span className="truncate lg:text-[12px] md:text-[10px] font-semibold text-text">
               {player.player.username}
             </span>
           </div>
 
-          <span className="mt-0.5 text-xs text-gray-500">{formattedTimer}</span>
+          <span className="mt-0.5 md:text-[10px] lg:text-xs text-gray-500">
+            {formattedTimer}
+          </span>
         </div>
       </div>
 
@@ -158,12 +160,12 @@ export default function PlayerCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
             className="
-            flex h-9 w-9 items-center justify-center cursor-pointer
+            flex h-8 w-8 items-center justify-center cursor-pointer md:h-7 md:w-7 lg:h-9 lg:w-9
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "
           >
-            <TbArrowBack size={16} />
+            <TbArrowBack className="h-4 w-4 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4" />
           </button>
         )}
 
@@ -181,12 +183,12 @@ export default function PlayerCard({
             title="Settings"
             onClick={() => onToggleDropdown(player.id)}
             className="
-            flex h-9 w-9 items-center justify-center cursor-pointer
+            flex h-8 w-8 items-center justify-center cursor-pointer md:h-7 md:w-7 lg:h-9 lg:w-9
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "
           >
-            <HiOutlineDotsVertical size={16} />
+            <HiOutlineDotsVertical className="h-4 w-4 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4" />
           </button>
 
           {activeDropdown === player.id && (
