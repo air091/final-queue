@@ -10,7 +10,7 @@ type CourtCardProps = {
   players: AcceptedPlayers[];
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   onStartCourtGame: (courtId: string) => void;
-  onEndCourtGame: (courtId: string) => void;
+  onEndCourtGame: (courtId: string, teamWinner: "A" | "B") => void;
   onRenameCourt: (courtId: string, nextName: string) => void;
   onDeleteCourt: (courtId: string) => void;
   activeDropdown: string | null;
@@ -163,12 +163,6 @@ export default function CourtCard({
     !isBusy && !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
   const isGameStarted = Boolean(court.startedAt);
   const isInteractionDisabled = isBusy || isGameStarted;
-  const endButtonLabel =
-    busyAction === "starting"
-      ? "Starting..."
-      : busyAction === "ending"
-        ? "Ending..."
-        : "End game";
 
   return (
     <div className="relative w-[480px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:max-w-[520px] sm:p-3">
@@ -256,16 +250,6 @@ export default function CourtCard({
                 Start game
               </button>
             )}
-            {court.startedAt && (
-              <button
-                type="button"
-                onClick={() => onEndCourtGame(court.id)}
-                disabled={isBusy}
-                className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-70"
-              >
-                {endButtonLabel}
-              </button>
-            )}
             <div
               data-dropdown
               onPointerDown={(e) => e.stopPropagation()}
@@ -291,10 +275,20 @@ export default function CourtCard({
         </div>
         {isGameStarted && (
           <div className="flex items-center justify-between rounded-md border">
-            <button className="block w-full py-1 cursor-pointer bg-blue-400 rounded-l-md text-[14px] font-medium hover:bg-blue-500 hover:text-white">
+            <button
+              type="button"
+              onClick={() => onEndCourtGame(court.id, "A")}
+              disabled={isBusy}
+              className="block w-full py-1 cursor-pointer bg-blue-400 rounded-l-md text-[14px] font-medium hover:bg-blue-500 hover:text-white disabled:cursor-wait disabled:opacity-70"
+            >
               WIN TEAM A
             </button>
-            <button className="block w-full py-1 cursor-pointer bg-red-400 rounded-r-md text-[14px] font-medium hover:bg-red-500 hover:text-white">
+            <button
+              type="button"
+              onClick={() => onEndCourtGame(court.id, "B")}
+              disabled={isBusy}
+              className="block w-full py-1 cursor-pointer bg-red-400 rounded-r-md text-[14px] font-medium hover:bg-red-500 hover:text-white disabled:cursor-wait disabled:opacity-70"
+            >
               WIN TEAM B
             </button>
           </div>

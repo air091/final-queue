@@ -566,10 +566,10 @@ export default function Match() {
     );
   };
 
-  const endCourtGameAPI = async (courtId: string) => {
+  const endCourtGameAPI = async (courtId: string, teamWinner: "A" | "B") => {
     const response = await api.post(
       `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/end`,
-      {},
+      { teamWinner },
     );
 
     return response.data as {
@@ -1128,7 +1128,10 @@ export default function Match() {
     }
   };
 
-  const handleEndCourtGame = async (courtId: string) => {
+  const handleEndCourtGame = async (
+    courtId: string,
+    teamWinner: "A" | "B",
+  ) => {
     if (busyCourtActions[courtId]) return;
 
     const previousCourts = courts;
@@ -1175,7 +1178,7 @@ export default function Match() {
 
     try {
       await waitForPendingPlayerOperations(playerIds);
-      const response = await endCourtGameAPI(courtId);
+      const response = await endCourtGameAPI(courtId, teamWinner);
       const endedPlayerIds =
         response.hostedPlayerIds ?? response.playerIds ?? [];
 
