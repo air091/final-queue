@@ -6,7 +6,10 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../lib/jwt.js";
-import { setRefreshTokenCookie } from "../lib/cookies.js";
+import {
+  clearRefreshTokenCookie,
+  setRefreshTokenCookie,
+} from "../lib/cookies.js";
 import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 
 const DEFAULT_PROFILE_URL =
@@ -40,6 +43,40 @@ const buildAccessToken = (account: {
     profileUrl: account.profileUrl,
     role: account.role,
   });
+
+const getRefreshTokenCandidates = (request: Request) => {
+  const candidates = new Set<string>();
+  const parsedCookieToken = request.cookies?.refreshToken;
+
+  if (typeof parsedCookieToken === "string" && parsedCookieToken) {
+    candidates.add(parsedCookieToken);
+  }
+
+  const rawCookieHeader = request.headers.cookie;
+  if (!rawCookieHeader) {
+    return [...candidates];
+  }
+
+  for (const cookiePair of rawCookieHeader.split(";")) {
+    const trimmedCookiePair = cookiePair.trim();
+    const separatorIndex = trimmedCookiePair.indexOf("=");
+
+    if (separatorIndex === -1) continue;
+
+    const cookieName = trimmedCookiePair.slice(0, separatorIndex);
+    const cookieValue = trimmedCookiePair.slice(separatorIndex + 1);
+
+    if (cookieName !== "refreshToken" || !cookieValue) continue;
+
+    try {
+      candidates.add(decodeURIComponent(cookieValue));
+    } catch {
+      candidates.add(cookieValue);
+    }
+  }
+
+  return [...candidates];
+};
 
 type UpdateProfileImageBody = {
   imageData?: string;
@@ -176,12 +213,7 @@ export const login = async (request: Request, response: Response) => {
 
 export const logout = async (request: Request, response: Response) => {
   try {
-    response.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/", // important if you set it when creating cookie
-    });
+    clearRefreshTokenCookie(response);
 
     return response.json({ success: true, message: "Logout successful." });
   } catch (error) {
@@ -195,87 +227,83 @@ export const logout = async (request: Request, response: Response) => {
 
 export const refresh = async (request: Request, response: Response) => {
   try {
-    // get refresh token from cookie
-    const refreshToken = request.cookies?.refreshToken;
-    if (!refreshToken)
+    const refreshTokenCandidates = getRefreshTokenCandidates(request);
+    if (refreshTokenCandidates.length === 0) {
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
-
-    // verify jwt
-    const decoded = verifyRefreshToken(refreshToken);
-
-    // find account
-    const account = await prisma.account.findUnique({
-      where: { id: decoded.sub },
-    });
-
-    if (!account)
-      return response
-        .status(401)
-        .json({ success: false, message: "Unauthorized" });
-
-    // get valid refresh token
-    const storedTokens = await prisma.refreshToken.findMany({
-      where: {
-        accountId: account.id,
-        revokedAt: null,
-      },
-    });
-
-    let matchedToken = null;
-    for (const token of storedTokens) {
-      const isMatch = await bcrypt.compare(refreshToken, token.hashedToken);
-      if (isMatch) {
-        matchedToken = token;
-        break;
-      }
     }
 
-    if (!matchedToken)
-      return response.status(401).json({
-        success: false,
-        message: "Invalid refresh token",
+    let failureMessage = "Invalid refresh token";
+
+    for (const refreshToken of refreshTokenCandidates) {
+      // verify jwt
+      let decoded: ReturnType<typeof verifyRefreshToken>;
+      try {
+        decoded = verifyRefreshToken(refreshToken);
+      } catch (error) {
+        failureMessage =
+          error instanceof Error && error.name === "TokenExpiredError"
+            ? "Refresh token expired"
+            : "Invalid refresh token";
+        continue;
+      }
+
+      // find account
+      const account = await prisma.account.findUnique({
+        where: { id: decoded.sub },
       });
 
-    if (matchedToken.expiresAt < new Date())
-      return response.status(401).json({
-        success: false,
-        message: "Refresh token expired",
+      if (!account) {
+        failureMessage = "Unauthorized";
+        continue;
+      }
+
+      // get valid refresh token
+      const storedTokens = await prisma.refreshToken.findMany({
+        where: {
+          accountId: account.id,
+          revokedAt: null,
+        },
       });
 
-    // token rotation
+      let matchedToken = null;
+      for (const token of storedTokens) {
+        const isMatch = await bcrypt.compare(refreshToken, token.hashedToken);
+        if (isMatch) {
+          matchedToken = token;
+          break;
+        }
+      }
 
-    // revoke old token
-    await prisma.refreshToken.update({
-      where: {
-        id: matchedToken.id,
-      },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+      if (!matchedToken) {
+        failureMessage = "Invalid refresh token";
+        continue;
+      }
 
-    // create new refresh token
-    const newRefreshToken = signRefreshToken({ sub: account.id });
-    const hashedRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+      if (matchedToken.expiresAt < new Date()) {
+        failureMessage = "Refresh token expired";
+        continue;
+      }
 
-    // store new refresh token
-    await prisma.refreshToken.create({
-      data: {
-        accountId: account.id,
-        hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-    });
+      const accessToken = buildAccessToken(account);
 
-    const accessToken = buildAccessToken(account);
+      return response.json({
+        success: true,
+        accessToken,
+        user: {
+          id: account.id,
+          username: account.username,
+          email: account.email,
+          profileUrl: account.profileUrl,
+          role: account.role,
+        },
+      });
+    }
 
-    setRefreshTokenCookie(response, newRefreshToken);
-
-    return response.json({
-      success: true,
-      accessToken,
+    return response.status(401).json({
+      success: false,
+      message: failureMessage,
     });
   } catch (error) {
     console.error("Error during refresh:", error);

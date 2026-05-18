@@ -22,7 +22,18 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-let refreshTokenRequest: Promise<string> | null = null;
+type RefreshAccessTokenResponse = {
+  accessToken: string;
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+    profileUrl: string;
+    role: string;
+  };
+};
+
+let refreshTokenRequest: Promise<RefreshAccessTokenResponse> | null = null;
 
 export const notifySessionExpired = () => {
   setAuthToken(null);
@@ -68,6 +79,22 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
+export const refreshAccessTokenRequest = () => {
+  refreshTokenRequest ??= refreshClient
+    .post("/api/auth/refresh")
+    .then((response) => {
+      const nextAccessToken = response.data.accessToken as string;
+      setAuthToken(nextAccessToken);
+      notifyAccessTokenRefreshed(nextAccessToken);
+      return response.data as RefreshAccessTokenResponse;
+    })
+    .finally(() => {
+      refreshTokenRequest = null;
+    });
+
+  return refreshTokenRequest;
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -90,20 +117,8 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      refreshTokenRequest ??= refreshClient
-        .post("/api/auth/refresh")
-        .then((response) => {
-          const nextAccessToken = response.data.accessToken as string;
-          setAuthToken(nextAccessToken);
-          notifyAccessTokenRefreshed(nextAccessToken);
-          return nextAccessToken;
-        })
-        .finally(() => {
-          refreshTokenRequest = null;
-        });
-
-      const nextAccessToken = await refreshTokenRequest;
-      originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+      const { accessToken } = await refreshAccessTokenRequest();
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
       return api(originalRequest);
     } catch (refreshError) {

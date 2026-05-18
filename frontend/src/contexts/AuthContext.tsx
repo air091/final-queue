@@ -11,6 +11,7 @@ import {
   api,
   onAccessTokenRefreshed,
   onSessionExpired,
+  refreshAccessTokenRequest,
   setAuthToken,
 } from "../lib/api";
 
@@ -82,10 +83,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshAccessToken = useCallback(async () => {
     try {
-      const response = await api.post("/api/auth/refresh");
-      const newAccessToken = response.data.accessToken;
+      const { accessToken: newAccessToken, user: refreshedUser } =
+        await refreshAccessTokenRequest();
+
       setAccessToken(newAccessToken);
-      setAuthToken(newAccessToken);
+
+      if (refreshedUser) {
+        setUser(refreshedUser);
+      }
+
       return newAccessToken;
     } catch (error) {
       setAccessToken(null);
@@ -96,40 +102,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // =========================
-  // CHECK AUTH
-  // =========================
-
-  const checkAuth = useCallback(async () => {
-    try {
-      let token = accessToken;
-      // No access token?
-      // Try refresh
-      if (!token) {
-        token = await refreshAccessToken();
-      }
-      const response = await api.get("/api/auth/check-auth", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setUser(response.data.user);
-    } catch (error) {
-      console.error(error);
-      setUser(null);
-      setAccessToken(null);
-      setAuthToken(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken, refreshAccessToken]);
-
-  // =========================
   // INITIAL AUTH CHECK
   // =========================
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    let isCancelled = false;
+
+    const checkAuth = async () => {
+      try {
+        await refreshAccessToken();
+
+        if (isCancelled) return;
+      } catch (error) {
+        if (isCancelled) return;
+
+        console.error(error);
+        setUser(null);
+        setAccessToken(null);
+        setAuthToken(null);
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    };
+
+    void checkAuth();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [refreshAccessToken]);
 
   // =========================
   // LOGIN
