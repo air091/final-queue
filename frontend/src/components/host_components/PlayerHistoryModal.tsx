@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type {
   MatchHistorySummary,
   PlayerHistoryTarget,
@@ -76,19 +77,30 @@ export default function PlayerHistoryModal({
             <p className="text-xs uppercase tracking-[0.24em] text-stone-500">
               Match history
             </p>
-            <h3 className="text-xl font-semibold text-stone-900">
-              {player.player.username}
-            </h3>
-            <p className="text-sm text-stone-500">
-              {player.player.isStatic ? "Static player" : "Account player"}
-            </p>
+            <div className="flex items-center gap-x-3 mt-3">
+              <div className="w-[64px] h-[64px] overflow-hidden rounded-full">
+                <img
+                  src={player.player.profileUrl}
+                  alt={player.player.username}
+                  className="block w-full h-full object-cover object-center rounded-full"
+                />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-stone-900">
+                  {player.player.username}
+                </h3>
+                <p className="text-sm text-stone-500">
+                  {player.player.isStatic ? "Static player" : "Account player"}
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
+            className="border border-stone-300 p-2 rounded-full text-sm text-stone-700 hover:bg-stone-100 cursor-pointer"
           >
-            Close
+            <X size={18} />
           </button>
         </header>
 
@@ -173,9 +185,13 @@ export default function PlayerHistoryModal({
                   </div>
 
                   <div className="mt-3 grid gap-2 text-sm text-stone-600 sm:grid-cols-2">
-                    <div>Started: {formatMatchDateTime(entry.match.startedAt)}</div>
+                    <div>
+                      Started: {formatMatchDateTime(entry.match.startedAt)}
+                    </div>
                     <div>Ended: {formatMatchDateTime(entry.match.endedAt)}</div>
-                    <div>Winning team: {formatWinningTeam(entry.match.teamWinner)}</div>
+                    <div>
+                      Winning team: {formatWinningTeam(entry.match.teamWinner)}
+                    </div>
                     <div>Recorded: {formatMatchDateTime(entry.joinedAt)}</div>
                   </div>
                 </article>

@@ -25,7 +25,7 @@ export type HostPlayerRecord = {
 
 export type PlayerHistoryTarget = {
   id: string;
-  player: Pick<PlayerType, "username" | "isStatic">;
+  player: Pick<PlayerType, "username" | "isStatic" | "profileUrl">;
 };
 
 export type HostMeta = {
