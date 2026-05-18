@@ -42,7 +42,7 @@ type AuthContextType = {
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<string>;
-  updateCurrentUser: (user: User, token?: string) => void;
+  updateCurrentUser: (nextUser: User, token?: string) => void;
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -212,23 +212,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }, []);
 
-  const updateCurrentUser = useCallback((nextUser: User, token?: string) => {
-    setUser(nextUser);
+  const updateCurrentUser = useCallback(
+    (nextUser: User, token?: string) => {
+      setUser(nextUser);
 
-    if (token) {
-      setAccessToken(token);
-      setAuthToken(token);
-      storeAuthSession({
-        user: nextUser,
-        accessToken: token,
-      });
-    } else if (accessToken) {
-      storeAuthSession({
-        user: nextUser,
-        accessToken,
-      });
-    }
-  }, [accessToken]);
+      if (token) {
+        setAccessToken(token);
+        setAuthToken(token);
+        storeAuthSession({
+          user: nextUser,
+          accessToken: token,
+        });
+      } else if (accessToken) {
+        storeAuthSession({
+          user: nextUser,
+          accessToken,
+        });
+      }
+    },
+    [accessToken],
+  );
 
   // =========================
   // LOGIN

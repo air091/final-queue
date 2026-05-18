@@ -119,15 +119,6 @@ export const register = async (request: Request, response: Response) => {
     const accessToken = buildAccessToken(account);
 
     const refreshToken = signRefreshToken({ sub: account.id });
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-
-    await prisma.refreshToken.create({
-      data: {
-        accountId: account.id,
-        hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-    });
 
     setRefreshTokenCookie(response, refreshToken);
 
@@ -178,15 +169,6 @@ export const login = async (request: Request, response: Response) => {
     const accessToken = buildAccessToken(account);
 
     const refreshToken = signRefreshToken({ sub: account.id });
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-
-    await prisma.refreshToken.create({
-      data: {
-        accountId: account.id,
-        hashedToken: hashedRefreshToken,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-      },
-    });
 
     setRefreshTokenCookie(response, refreshToken);
 
@@ -256,46 +238,6 @@ export const refresh = async (request: Request, response: Response) => {
 
       if (!account) {
         failureMessage = "Unauthorized";
-        continue;
-      }
-
-      // get valid refresh token
-      const storedTokens = await prisma.refreshToken.findMany({
-        where: {
-          accountId: account.id,
-          revokedAt: null,
-        },
-      });
-
-      let matchedToken = null;
-      for (const token of storedTokens) {
-        const isMatch = await bcrypt.compare(refreshToken, token.hashedToken);
-        if (isMatch) {
-          matchedToken = token;
-          break;
-        }
-      }
-
-      if (!matchedToken) {
-        const accessToken = buildAccessToken(account);
-
-        setRefreshTokenCookie(response, refreshToken);
-
-        return response.json({
-          success: true,
-          accessToken,
-          user: {
-            id: account.id,
-            username: account.username,
-            email: account.email,
-            profileUrl: account.profileUrl,
-            role: account.role,
-          },
-        });
-      }
-
-      if (matchedToken.expiresAt < new Date()) {
-        failureMessage = "Refresh token expired";
         continue;
       }
 

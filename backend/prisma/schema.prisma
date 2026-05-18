@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,6 +5,196 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model Account {
+  id                String             @id @default(uuid())
+  profileUrl        String             @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
+  username          String
+  email             String             @unique
+  password          String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  role              UserRoles          @default(player)
+  status            AccountStatuses    @default(active)
+  communities       Community[]
+  matchParticipants MatchParticipant[]
+  hostedPlayers     Player[]
+  sports            UserSport[]
+}
+
+model UserSport {
+  id         String      @id @default(uuid())
+  accountId  String
+  sport      Sports
+  skillLevel SkillLevels @default(beginner)
+  account    Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+model Community {
+  id            String   @id @default(uuid())
+  profileUrl    String   @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
+  communityName String
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  masterId      String
+  master        Account  @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  hosts         Host[]
+
+  @@index([masterId])
+}
+
+model Host {
+  id          String       @id @default(uuid())
+  communityId String
+  hostName    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  status      HostStatus   @default(available)
+  sport       String
+  location    String?
+  maxPlayers  Int          @default(0)
+  startTime   DateTime?
+  endTime     DateTime?
+  courts      Court[]
+  community   Community    @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  pricing     HostPricing?
+  matches     Match[]
+  players     Player[]
+  queues      Queue[]
+
+  @@index([communityId])
+}
+
+model Player {
+  id                  String             @id @default(uuid())
+  hostId              String
+  playerId            String
+  paymentStatus       PaymentStatuses    @default(unpaid)
+  gamesPlayed         Int                @default(0)
+  hostStatus          PlayerHostStatuses @default(requested)
+  timerStartedAt      DateTime?
+  updatedAt           DateTime           @updatedAt
+  requestedAt         DateTime           @default(now())
+  courtAssignment     CourtAssignment?
+  matchParticipations MatchParticipant[]
+  host                Host               @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  player              Account            @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  payments            PlayerPayment[]
+  queueAssignment     QueueAssignment?
+
+  @@unique([hostId, playerId])
+  @@index([hostId, hostStatus, playerId])
+  @@index([hostId, paymentStatus])
+}
+
+model Queue {
+  id      String            @id @default(uuid())
+  hostId  String
+  name    String
+  host    Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  entries QueueAssignment[]
+
+  @@index([hostId])
+}
+
+model QueueAssignment {
+  id           String   @id @default(uuid())
+  playerId     String   @unique
+  queueId      String
+  position     Int
+  assignedAt   DateTime @default(now())
+  hostedPlayer Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  queue        Queue    @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, position])
+  @@index([queueId])
+}
+
+model Court {
+  id          String            @id @default(uuid())
+  hostId      String
+  name        String
+  endedAt     DateTime?
+  startedAt   DateTime?
+  host        Host              @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  assignments CourtAssignment[]
+  matches     Match[]
+
+  @@index([hostId])
+}
+
+model CourtAssignment {
+  id           String @id @default(uuid())
+  courtId      String
+  position     Int
+  playerId     String @unique
+  court        Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  hostedPlayer Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([courtId, position])
+  @@index([courtId])
+}
+
+model Match {
+  id           String             @id @default(uuid())
+  hostId       String
+  courtId      String?
+  status       MatchStatus        @default(ongoing)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  teamWinner   String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  court        Court?             @relation(fields: [courtId], references: [id])
+  host         Host               @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  participants MatchParticipant[]
+
+  @@index([hostId, status, startedAt])
+  @@index([courtId])
+}
+
+model MatchParticipant {
+  id        String   @id @default(uuid())
+  matchId   String
+  accountId String?
+  team      String?
+  result    String?
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  playerId  String
+  account   Account? @relation(fields: [accountId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+  @@index([accountId])
+}
+
+model HostPricing {
+  id          String     @id @default(uuid())
+  hostId      String     @unique
+  entranceFee Decimal    @default(0) @db.Decimal(10, 2)
+  perMatchFee Decimal    @default(0) @db.Decimal(10, 2)
+  updatedAt   DateTime   @updatedAt
+  currency    Currencies @default(PHP)
+  expectedFee Decimal    @default(0) @db.Decimal(10, 2)
+  host        Host       @relation(fields: [hostId], references: [id], onDelete: Cascade)
+}
+
+model PlayerPayment {
+  id           String   @id @default(uuid())
+  amountPaid   Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+  playerId     String
+  hostedPlayer Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 enum AccountStatuses {
@@ -23,35 +208,6 @@ enum UserRoles {
   static
 }
 
-model Account {
-  id                    String @id @default(uuid())
-  profileUrl            String @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
-  username              String
-  email                 String @unique
-  password              String
-  role                  UserRoles @default(player)
-  status                AccountStatuses @default(active)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  tokens                RefreshToken[]
-  sports                UserSport[]
-  communities           Community[]
-  hostedPlayers         Player[]
-  matchParticipants     MatchParticipant[]
-}
-
-model RefreshToken {
-  id                    String @id @default(uuid())
-  accountId             String
-  hashedToken           String @unique
-  revokedAt             DateTime?
-  expiresAt             DateTime
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  account               Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  @@index([accountId])
-}
-
 enum SkillLevels {
   beginner
   intermediate
@@ -63,58 +219,9 @@ enum Sports {
   badminton
 }
 
-model UserSport {
-  id                    String @id @default(uuid())
-  accountId             String
-  sport                 Sports
-  skillLevel            SkillLevels @default(beginner)
-  account               Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  @@index([accountId])
-}
-
-model Community {
-  id                    String @id @default(uuid())
-  profileUrl            String @default("https://static.vecteezy.com/system/resources/previews/030/750/807/non_2x/user-icon-in-trendy-outline-style-isolated-on-white-background-user-silhouette-symbol-for-your-website-design-logo-app-ui-illustration-eps10-free-vector.jpg")
-  masterId              String
-  communityName         String
-  description           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  master                Account @relation(fields: [masterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  hosts                 Host[]
-
-  @@index([masterId])
-}
-
 enum HostStatus {
   available
   unavailable
-}
-
-// HOST RELATIONSHIP
-
-model Host {
-  id                    String @id @default(uuid())
-  communityId           String
-  hostName              String
-  sport                 String
-  location              String?
-  startTime             DateTime?
-  endTime               DateTime?
-  maxPlayers            Int @default(0)
-  status                HostStatus @default(available)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  community             Community @relation(fields: [communityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  
-  players               Player[]
-  courts                Court[]
-  queues                Queue[]
-  matches               Match[]
-  pricing               HostPricing?
-
-  @@index([communityId])
 }
 
 enum PaymentStatuses {
@@ -134,157 +241,12 @@ enum PlayerHostStatuses {
   banned
 }
 
-model Player {
-  id                   String @id @default(uuid())
-  hostId               String
-  playerId             String
-  paymentStatus        PaymentStatuses @default(unpaid)
-  gamesPlayed          Int @default(0)
-  hostStatus           PlayerHostStatuses @default(requested)
-  timerStartedAt       DateTime?
-  requestedAt          DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  host                 Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  player               Account? @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  // Match presence is derived:
-  // waiting  => no queueEntry and no courtAssignment
-  // inQueue  => queueEntry exists, or courtAssignment exists before the court starts
-  // playing  => courtAssignment exists on a started court
-  // timerStartedAt continues from waiting into queue,
-  // resets when a game starts, and resets again when a game ends.
-  queueAssignment      QueueAssignment?
-  courtAssignment      CourtAssignment?
-  matchParticipations  MatchParticipant[]
-  payments             PlayerPayment[]
-
-  @@unique([hostId, playerId])
-  @@index([hostId, hostStatus, playerId])
-  @@index([hostId, paymentStatus])
-}
-
-// QUEUE RELATIONSHIP
-
-model Queue {
-  id                  String @id @default(uuid())
-  hostId              String
-  name                String
-  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  entries             QueueAssignment[]
-
-  @@index([hostId])
-}
-
-model QueueAssignment {
-  id                  String @id @default(uuid())
-  playerId            String
-  queueId             String
-  position            Int
-  assignedAt          DateTime @default(now())  
-  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  queue               Queue @relation(fields: [queueId], references: [id], onDelete: Cascade)
-
-  @@unique([queueId, position])
-  @@unique([playerId])
-  @@index([queueId])
-}
-
-// COURT RELATIONSHIP
-
-model Court {
-  id                  String @id @default(uuid())
-  hostId              String
-  name                String
-  startedAt           DateTime?
-  endedAt             DateTime?
-  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  assignments         CourtAssignment[]
-  matches             Match[]
-
-  @@index([hostId])
-}
-
-model CourtAssignment {
-  id                  String @id @default(uuid())
-  playerId            String
-  courtId             String
-  position            Int
-  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  court               Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
-
-  @@unique([courtId, position])
-  @@unique([playerId])
-  @@index([courtId])
-}
-
 enum MatchStatus {
   finished
   ongoing
 }
 
-model Match {
-  id                  String @id @default(uuid())
-  hostId              String
-  courtId             String?
-  status              MatchStatus @default(ongoing)
-  startedAt           DateTime?
-  endedAt             DateTime?
-  teamWinner          String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  court               Court? @relation(fields: [courtId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  participants        MatchParticipant[]
-
-  @@index([hostId, status, startedAt])
-  @@index([courtId])
-}
-
-model MatchParticipant {
-  id                  String @id @default(uuid())
-  matchId             String
-  playerId            String
-  accountId           String?
-  team                String?
-  result              String?
-  joinedAt            DateTime @default(now())
-  createdAt           DateTime @default(now())
-
-  match               Match @relation(fields: [matchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  player              Player @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  account             Account? @relation(fields: [accountId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  @@unique([matchId, playerId])
-  @@index([matchId])
-  @@index([playerId])
-  @@index([accountId])
-}
-
 enum Currencies {
   PHP
   USD
-}
-
-model HostPricing {
-  id                  String @id @default(uuid())
-  hostId              String @unique
-  entranceFee         Decimal @default(0) @db.Decimal(10, 2)
-  perMatchFee         Decimal @default(0) @db.Decimal(10, 2)
-  expectedFee         Decimal @default(0) @db.Decimal(10, 2)
-  currency            Currencies @default(PHP)
-  updatedAt           DateTime @updatedAt
-
-  host                Host @relation(fields: [hostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-}
-
-model PlayerPayment {
-  id                  String @id @default(uuid())
-  playerId            String
-  amountPaid          Decimal @default(0) @db.Decimal(10, 2)
-  createdAt           DateTime @default(now())
-  hostedPlayer        Player @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([playerId])
 }
