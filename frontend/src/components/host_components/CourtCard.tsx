@@ -233,60 +233,74 @@ export default function CourtCard({
           strokeWidth="1.5"
         />
       </svg>
-      <header className="relative flex items-center justify-between">
-        <div className="grid">
-          <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
-            {court.name}
-          </span>
-          {court.startedAt && (
-            <span className="text-[12px] text-green-700">Game in progress</span>
-          )}
-        </div>
-        <div className="flex items-center gap-x-2">
-          {canStartGame && (
-            <button
-              type="button"
-              onClick={() => onStartCourtGame(court.id)}
-              disabled={isBusy}
-              className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700 disabled:cursor-wait disabled:opacity-70"
-            >
-              Start game
-            </button>
-          )}
-          {court.startedAt && (
-            <button
-              type="button"
-              onClick={() => onEndCourtGame(court.id)}
-              disabled={isBusy}
-              className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-70"
-            >
-              {endButtonLabel}
-            </button>
-          )}
-          <div
-            data-dropdown
-            onPointerDown={(e) => e.stopPropagation()}
-            className={`relative ${activeDropdown === court.id ? "z-[130]" : ""}`}
-          >
-            <div
-              title="Court settings"
-              className="cursor-pointer text-background hover:bg-green-800 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]"
-              onClick={() => onToggleDropdown(court.id)}
-            >
-              <HiOutlineDotsVertical />
-            </div>
-            {activeDropdown === court.id && (
-              <CourtDropdown
-                courtName={court.name}
-                onRename={(nextName) => onRenameCourt(court.id, nextName)}
-                onDelete={() => onDeleteCourt(court.id)}
-                isDeleteDisabled={isInteractionDisabled}
-              />
+      <header className="relative flex flex-col">
+        <div className="flex items-center justify-between w-full">
+          <div className="grid">
+            <span className="leading-[12px] font-semibold text-background [text-shadow:0_1px_2px_rgba(0,0,0,1)]">
+              {court.name}
+            </span>
+            {court.startedAt && (
+              <span className="text-[12px] text-green-700">
+                Game in progress
+              </span>
             )}
           </div>
+          <div className="flex items-center gap-x-2">
+            {canStartGame && (
+              <button
+                type="button"
+                onClick={() => onStartCourtGame(court.id)}
+                disabled={isBusy}
+                className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700 disabled:cursor-wait disabled:opacity-70"
+              >
+                Start game
+              </button>
+            )}
+            {court.startedAt && (
+              <button
+                type="button"
+                onClick={() => onEndCourtGame(court.id)}
+                disabled={isBusy}
+                className="cursor-pointer rounded-md bg-red-600 px-2 py-1 text-[12px] text-white hover:bg-red-500 disabled:cursor-wait disabled:opacity-70"
+              >
+                {endButtonLabel}
+              </button>
+            )}
+            <div
+              data-dropdown
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`relative ${activeDropdown === court.id ? "z-[130]" : ""}`}
+            >
+              <div
+                title="Court settings"
+                className="cursor-pointer text-background hover:bg-green-800 p-1 rounded-full w-fit [text-shadow:0_1px_2px_rgba(0,0,0,1)]"
+                onClick={() => onToggleDropdown(court.id)}
+              >
+                <HiOutlineDotsVertical />
+              </div>
+              {activeDropdown === court.id && (
+                <CourtDropdown
+                  courtName={court.name}
+                  onRename={(nextName) => onRenameCourt(court.id, nextName)}
+                  onDelete={() => onDeleteCourt(court.id)}
+                  isDeleteDisabled={isInteractionDisabled}
+                />
+              )}
+            </div>
+          </div>
         </div>
+        {isGameStarted && (
+          <div className="flex items-center justify-between rounded-md border">
+            <button className="block w-full py-1 cursor-pointer bg-blue-400 rounded-l-md text-[14px] font-medium hover:bg-blue-500 hover:text-white">
+              WIN TEAM A
+            </button>
+            <button className="block w-full py-1 cursor-pointer bg-red-400 rounded-r-md text-[14px] font-medium hover:bg-red-500 hover:text-white">
+              WIN TEAM B
+            </button>
+          </div>
+        )}
       </header>
-      <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-3 z-10">
+      <main className="grid grid-cols-2 gap-x-2 gap-y-3 mt-2 z-10">
         {COURT_SLOTS.map((slot) => (
           <CourtSlot
             key={slot.position}
