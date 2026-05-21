@@ -1,6 +1,10 @@
 ﻿import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
-import { Currencies, PaymentStatuses } from "../generated/prisma/enums.js";
+import {
+  Currencies,
+  PaymentStatuses,
+  UserRoles,
+} from "../generated/prisma/enums.js";
 
 type HostPaymentParams = {
   communityId: string;
@@ -282,6 +286,7 @@ export const getHostPayments = async (
             id: true,
             username: true,
             profileUrl: true,
+            role: true,
             sports: {
               select: {
                 sport: true,
@@ -312,6 +317,8 @@ export const getHostPayments = async (
         id: player.player?.id ?? null,
         username: player.player?.username ?? "",
         profileUrl: player.player?.profileUrl ?? "",
+        isStatic: player.player?.role === UserRoles.static,
+        isAdmin: player.player?.role === UserRoles.master,
         sports: player.player?.sports ?? [],
       },
       payment: player.payments[0] ?? null,

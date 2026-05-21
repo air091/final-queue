@@ -25,7 +25,10 @@ export type HostPlayerRecord = {
 
 export type PlayerHistoryTarget = {
   id: string;
-  player: Pick<PlayerType, "username" | "isStatic" | "profileUrl">;
+  player: Pick<
+    PlayerType,
+    "id" | "username" | "isStatic" | "isAdmin" | "profileUrl"
+  >;
 };
 
 export type HostMeta = {
@@ -176,7 +179,10 @@ export type PaymentPlayer = {
   status: "accepted" | "banned";
   paymentStatus: PaymentStatus;
   gamesPlayed: number;
-  player: Pick<PlayerType, "username" | "isStatic" | "profileUrl">;
+  player: Pick<
+    PlayerType,
+    "id" | "username" | "isStatic" | "isAdmin" | "profileUrl"
+  >;
   payment: PaymentRecord;
 };
 

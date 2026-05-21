@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
+import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../lib/api";
 import {
   EMPTY_MATCH_HISTORY_SUMMARY,
@@ -583,6 +584,7 @@ function PlayerSection({
 
 export default function Players() {
   const { communityId, hostId } = useParams();
+  const { user } = useAuth();
   const {
     playersInHost: players,
     setPlayersInHost,
@@ -745,9 +747,11 @@ export default function Players() {
         paymentStatus: "unpaid" as const,
         gamesPlayed: 0,
         player: {
+          id: nextAcceptedPlayer.player.id,
           username: nextAcceptedPlayer.player.username,
           profileUrl: nextAcceptedPlayer.player.profileUrl,
           isStatic: nextAcceptedPlayer.player.isStatic,
+          isAdmin: nextAcceptedPlayer.player.isAdmin,
         },
         payment: {
           id: null,
@@ -908,9 +912,11 @@ export default function Players() {
         paymentStatus: "unpaid" as const,
         gamesPlayed: 0,
         player: {
+          id: nextAcceptedPlayer.player.id,
           username: nextAcceptedPlayer.player.username,
           profileUrl: nextAcceptedPlayer.player.profileUrl,
           isStatic: nextAcceptedPlayer.player.isStatic,
+          isAdmin: nextAcceptedPlayer.player.isAdmin,
         },
         payment: {
           id: null,
@@ -1154,9 +1160,11 @@ export default function Players() {
         paymentStatus: "unpaid" as const,
         gamesPlayed: 0,
         player: {
+          id: nextAcceptedPlayer.player.id,
           username: nextAcceptedPlayer.player.username,
           profileUrl: nextAcceptedPlayer.player.profileUrl,
           isStatic: nextAcceptedPlayer.player.isStatic,
+          isAdmin: nextAcceptedPlayer.player.isAdmin,
         },
         payment: {
           id: null,
@@ -1545,7 +1553,15 @@ export default function Players() {
     }
   };
 
-  const requestedPlayers = players.filter(
+  const visiblePlayers = players.filter(
+    (player) =>
+      !(
+        player.player.id === user?.id &&
+        player.status !== "accepted"
+      ),
+  );
+
+  const requestedPlayers = visiblePlayers.filter(
     (player) => player.status === "requested",
   );
 
@@ -1646,7 +1662,7 @@ export default function Players() {
         <PlayerSection
           title="Players"
           description="Manage registered and walk-in badminton players."
-          players={sortPlayers(players)}
+          players={sortPlayers(visiblePlayers)}
           acceptedPlayers={acceptedPlayers}
           historyLoadingPlayerId={historyLoadingPlayerId}
           staticProfileUrlDrafts={staticProfileUrlDrafts}

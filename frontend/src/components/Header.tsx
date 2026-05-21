@@ -7,7 +7,7 @@ import {
 } from "react";
 
 import { NavLink } from "react-router-dom";
-import { TextAlignJustify } from "lucide-react";
+import { TextAlignJustify, UserRoundMinus, UserRoundPlus } from "lucide-react";
 import { RiLogoutBoxLine } from "react-icons/ri";
 
 import { useAuth } from "../hooks/useAuth";
@@ -21,9 +21,18 @@ type HeaderProps = {
     onStart: () => void;
     onEnd: () => void;
   };
+  hostPlayer?: {
+    isIncluded: boolean;
+    isSaving: boolean;
+    onToggle: () => void;
+  };
 };
 
-export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
+export default function Header({
+  setOpenSidebar,
+  hostSession,
+  hostPlayer,
+}: HeaderProps) {
   const { user } = useAuth();
 
   const [openProfileDropdown, setOpenProfileDropdown] =
@@ -83,6 +92,29 @@ export default function Header({ setOpenSidebar, hostSession }: HeaderProps) {
               </button>
             )}
           </div>
+        )}
+        {hostPlayer && (
+          <button
+            type="button"
+            title={
+              hostPlayer.isIncluded
+                ? "Hide host from match players"
+                : "Join this match as host"
+            }
+            onClick={hostPlayer.onToggle}
+            disabled={hostPlayer.isSaving}
+            className={`cursor-pointer rounded-full border-2 p-1 transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              hostPlayer.isIncluded
+                ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
+                : "border-green-500 text-green-500 hover:bg-green-50"
+            }`}
+          >
+            {hostPlayer.isIncluded ? (
+              <UserRoundMinus size={18} />
+            ) : (
+              <UserRoundPlus size={18} />
+            )}
+          </button>
         )}
         <div ref={dropdownRef} className="relative">
           <div

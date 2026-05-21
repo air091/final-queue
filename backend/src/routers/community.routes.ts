@@ -16,6 +16,8 @@ import {
   getHosts,
   getHostWithPlayers,
   host,
+  includeHostAsPlayer,
+  removeHostAsPlayer,
   startHostSession,
 } from "../controllers/host.controller.js";
 import {
@@ -62,6 +64,16 @@ router.patch(
   "/:communityId/hosts/:hostId/start-session",
   authenticate,
   startHostSession,
+);
+router.post(
+  "/:communityId/hosts/:hostId/host-player",
+  authenticate,
+  includeHostAsPlayer,
+);
+router.delete(
+  "/:communityId/hosts/:hostId/host-player",
+  authenticate,
+  removeHostAsPlayer,
 );
 router.get(
   "/:communityId/hosts/:hostId/players",

@@ -9,6 +9,7 @@ import type { HostOutletContext } from "../hooks/useHostData";
 import { api } from "../lib/api";
 import {
   EMPTY_HOST_PAYMENTS_DATA,
+  EMPTY_MATCH_HISTORY_SUMMARY,
   buildPaymentsSummary,
   getPaymentBalance,
   normalizeAcceptedPlayers,
@@ -24,9 +25,11 @@ import {
   type QueueType,
 } from "../lib/host";
 import Header from "../components/Header";
+import { useAuth } from "../hooks/useAuth";
 
 export default function HostLayout() {
   const { communityId, hostId } = useParams();
+  const { user } = useAuth();
   const [playersInHost, setPlayersInHost] = useState<HostPlayerRecord[]>([]);
   const [acceptedPlayers, setAcceptedPlayers] = useState<AcceptedPlayers[]>([]);
   const [courts, setCourts] = useState<CourtType[]>([]);
@@ -39,6 +42,7 @@ export default function HostLayout() {
   const [hostLoadError, setHostLoadError] = useState<string | null>(null);
   const [isEndingHostSession, setIsEndingHostSession] = useState(false);
   const [isStartingHostSession, setIsStartingHostSession] = useState(false);
+  const [isTogglingHostPlayer, setIsTogglingHostPlayer] = useState(false);
   const [historyLoadingPlayerId, setHistoryLoadingPlayerId] = useState<
     string | null
   >(null);
@@ -66,9 +70,11 @@ export default function HostLayout() {
         paymentStatus: string;
         gamesPlayed: number;
         player?: {
+          id?: string | null;
           username?: string;
           profileUrl?: string;
           isStatic?: boolean;
+          isAdmin?: boolean;
         } | null;
         payment?: { id: string; amountPaid: number } | null;
       }>,
@@ -86,9 +92,11 @@ export default function HostLayout() {
           paymentStatus,
           gamesPlayed: player.gamesPlayed,
           player: {
+            id: player.player?.id ?? null,
             username: player.player?.username ?? "",
             profileUrl: player.player?.profileUrl ?? "",
             isStatic: player.player?.isStatic ?? false,
+            isAdmin: player.player?.isAdmin ?? false,
           },
           payment: {
             id: player.payment?.id ?? null,
@@ -230,6 +238,176 @@ export default function HostLayout() {
     }
   }, [communityId, hostId, isStartingHostSession]);
 
+  const isHostIncludedAsPlayer = acceptedPlayers.some(
+    (player) => player.player.id === user?.id,
+  );
+
+  const removeHostedPlayerFromLocalState = useCallback(
+    (hostedPlayerId: string) => {
+      setPlayersInHost((currentPlayers) =>
+        currentPlayers.filter((player) => player.id !== hostedPlayerId),
+      );
+      setAcceptedPlayers((currentPlayers) =>
+        currentPlayers.filter((player) => player.id !== hostedPlayerId),
+      );
+      setCourts((currentCourts) =>
+        currentCourts.map((court) => ({
+          ...court,
+          assignments: court.assignments.filter(
+            (assignment) => assignment.playerId !== hostedPlayerId,
+          ),
+        })),
+      );
+      setQueues((currentQueues) =>
+        currentQueues.map((queue) => ({
+          ...queue,
+          entries: queue.entries.filter(
+            (entry) => entry.playerId !== hostedPlayerId,
+          ),
+        })),
+      );
+      setPaymentsData((currentPaymentsData) => {
+        const players = currentPaymentsData.players.filter(
+          (player) => player.id !== hostedPlayerId,
+        );
+
+        return {
+          ...currentPaymentsData,
+          players,
+          summary: buildPaymentsSummary(players),
+        };
+      });
+    },
+    [],
+  );
+
+  const addHostedPlayerToLocalState = useCallback(
+    (hostedPlayer: AcceptedPlayers) => {
+      const normalizedPlayer = normalizeAcceptedPlayers([
+        {
+          ...hostedPlayer,
+          matchHistory:
+            hostedPlayer.matchHistory ?? EMPTY_MATCH_HISTORY_SUMMARY,
+        },
+      ])[0];
+
+      setPlayersInHost((currentPlayers) => {
+        const nextPlayer: HostPlayerRecord = {
+          id: normalizedPlayer.id,
+          status: normalizedPlayer.hostStatus,
+          paymentStatus: "unpaid",
+          player: normalizedPlayer.player,
+        };
+        const playersWithoutHost = currentPlayers.filter(
+          (player) => player.id !== normalizedPlayer.id,
+        );
+
+        return [nextPlayer, ...playersWithoutHost];
+      });
+      setAcceptedPlayers((currentPlayers) => [
+        normalizedPlayer,
+        ...currentPlayers.filter((player) => player.id !== normalizedPlayer.id),
+      ]);
+      setPaymentsData((currentPaymentsData) => {
+        if (
+          currentPaymentsData.players.some(
+            (player) => player.id === normalizedPlayer.id,
+          )
+        ) {
+          return currentPaymentsData;
+        }
+
+        const amountExpected =
+          currentPaymentsData.pricing.entranceFee +
+          currentPaymentsData.pricing.perMatchFee *
+            normalizedPlayer.gamesPlayed;
+        const players = [
+          ...currentPaymentsData.players,
+          {
+            id: normalizedPlayer.id,
+            status: "accepted" as const,
+            paymentStatus: "unpaid" as const,
+            gamesPlayed: normalizedPlayer.gamesPlayed,
+            player: {
+              id: normalizedPlayer.player.id,
+              username: normalizedPlayer.player.username,
+              profileUrl: normalizedPlayer.player.profileUrl,
+              isStatic: normalizedPlayer.player.isStatic,
+              isAdmin: normalizedPlayer.player.isAdmin,
+            },
+            payment: {
+              id: null,
+              amountExpected,
+              amountPaid: 0,
+              balance: amountExpected,
+              currency: currentPaymentsData.pricing.currency,
+              status: "unpaid" as const,
+              method: null,
+            },
+          },
+        ];
+
+        return {
+          ...currentPaymentsData,
+          players,
+          summary: buildPaymentsSummary(players),
+        };
+      });
+    },
+    [],
+  );
+
+  const handleToggleHostPlayer = useCallback(async () => {
+    if (!communityId || !hostId || isTogglingHostPlayer) return;
+
+    setIsTogglingHostPlayer(true);
+
+    try {
+      if (isHostIncludedAsPlayer) {
+        const response = await api.delete(
+          `/api/community/${communityId}/hosts/${hostId}/host-player`,
+        );
+        const hostedPlayerId =
+          response.data.hostedPlayerId ??
+          acceptedPlayers.find(
+            (player) => player.player.id === user?.id,
+          )?.id;
+
+        if (hostedPlayerId) {
+          removeHostedPlayerFromLocalState(hostedPlayerId);
+        }
+      } else {
+        const response = await api.post(
+          `/api/community/${communityId}/hosts/${hostId}/host-player`,
+        );
+        if (response.data.hostedPlayer) {
+          addHostedPlayerToLocalState(response.data.hostedPlayer);
+        }
+      }
+    } catch (error) {
+      window.alert(
+        isHostIncludedAsPlayer
+          ? "Unable to hide the host from players."
+          : "Unable to add the host as a player.",
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setIsTogglingHostPlayer(false);
+    }
+  }, [
+    acceptedPlayers,
+    addHostedPlayerToLocalState,
+    communityId,
+    hostId,
+    isHostIncludedAsPlayer,
+    isTogglingHostPlayer,
+    removeHostedPlayerFromLocalState,
+    user?.id,
+  ]);
+
   const openPlayerHistory = useCallback(
     (player: PlayerHistoryTarget) => {
       if (!communityId || !hostId) return;
@@ -358,6 +536,11 @@ export default function HostLayout() {
 
           onStart: () => void handleStartHostSession(),
           onEnd: () => void handleEndHostSession(),
+        }}
+        hostPlayer={{
+          isIncluded: isHostIncludedAsPlayer,
+          isSaving: isTogglingHostPlayer,
+          onToggle: () => void handleToggleHostPlayer(),
         }}
       />
 

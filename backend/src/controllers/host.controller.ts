@@ -73,25 +73,6 @@ const mapHostPlayerRecord = (player: {
   player: buildPlayerProfile(player.player),
 });
 
-const ensureAdminHostPlayer = async (hostId: string, masterId: string) => {
-  await prisma.player.upsert({
-    where: {
-      hostId_playerId: {
-        hostId,
-        playerId: masterId,
-      },
-    },
-    update: {
-      hostStatus: PlayerHostStatuses.accepted,
-    },
-    create: {
-      hostId,
-      playerId: masterId,
-      hostStatus: PlayerHostStatuses.accepted,
-    },
-  });
-};
-
 export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
@@ -141,12 +122,6 @@ export const host = async (request: Request<Params>, response: Response) => {
         startTime,
         endTime,
         maxPlayers,
-        players: {
-          create: {
-            playerId: user.sub,
-            hostStatus: PlayerHostStatuses.accepted,
-          },
-        },
       },
       select: {
         id: true,
@@ -265,8 +240,6 @@ export const getHostById = async (
       return response
         .status(404)
         .json({ success: false, message: "Community not found" });
-
-    await ensureAdminHostPlayer(hostId, user.sub);
 
     // get host
     const [
@@ -582,8 +555,6 @@ export const getHostWithPlayers = async (
       return response
         .status(404)
         .json({ success: false, message: "Community not found" });
-
-    await ensureAdminHostPlayer(hostId, user.sub);
 
     const [host, acceptedPlayers] = await Promise.all([
       prisma.host.findFirst({
@@ -937,6 +908,342 @@ type CreateStaticPlayerBody = {
   username?: string;
   skillLevel?: SkillLevels;
   profileUrl?: string;
+};
+
+const selectAcceptedPlayerForResponse = {
+  id: true,
+  hostStatus: true,
+  paymentStatus: true,
+  gamesPlayed: true,
+  timerStartedAt: true,
+  queueAssignment: {
+    select: {
+      id: true,
+      queueId: true,
+      position: true,
+    },
+  },
+  courtAssignment: {
+    select: {
+      id: true,
+      courtId: true,
+      position: true,
+      court: {
+        select: {
+          startedAt: true,
+        },
+      },
+    },
+  },
+  player: {
+    select: {
+      id: true,
+      username: true,
+      profileUrl: true,
+      role: true,
+      sports: {
+        select: {
+          sport: true,
+          skillLevel: true,
+        },
+      },
+    },
+  },
+} as const;
+
+type AcceptedPlayerForResponse = {
+  id: string;
+  hostStatus: PlayerHostStatuses;
+  paymentStatus: string;
+  gamesPlayed: number;
+  timerStartedAt: Date | null;
+  queueAssignment: {
+    id: string;
+    queueId: string;
+    position: number;
+  } | null;
+  courtAssignment: {
+    id: string;
+    courtId: string;
+    position: number;
+    court: {
+      startedAt: Date | null;
+    } | null;
+  } | null;
+  player: {
+    id: string;
+    username: string;
+    profileUrl: string;
+    role: UserRoles;
+    sports: { sport: string; skillLevel: SkillLevels }[];
+  } | null;
+};
+
+const mapAcceptedPlayerForResponse = (
+  acceptedPlayer: AcceptedPlayerForResponse,
+  sport: string,
+) => ({
+  id: acceptedPlayer.id,
+  status: acceptedPlayer.hostStatus,
+  hostStatus: acceptedPlayer.hostStatus,
+  paymentStatus: acceptedPlayer.paymentStatus,
+  gamesPlayed: acceptedPlayer.gamesPlayed,
+  timerStartedAt: acceptedPlayer.timerStartedAt,
+  player: buildPlayerProfile(acceptedPlayer.player, sport),
+  queueAssignment: acceptedPlayer.queueAssignment,
+  courtAssignment: acceptedPlayer.courtAssignment
+    ? {
+        id: acceptedPlayer.courtAssignment.id,
+        courtId: acceptedPlayer.courtAssignment.courtId,
+        position: acceptedPlayer.courtAssignment.position,
+      }
+    : null,
+  matchStatus: getMatchPlayerStatus(acceptedPlayer),
+});
+
+export const includeHostAsPlayer = async (
+  request: Request<Params>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const host = await prisma.host.findFirst({
+      where: {
+        id: hostId,
+        community: {
+          id: communityId,
+          masterId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+        sport: true,
+      },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    await prisma.player.upsert({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: user.sub,
+        },
+      },
+      update: {
+        hostStatus: PlayerHostStatuses.accepted,
+        timerStartedAt: new Date(),
+      },
+      create: {
+        hostId: host.id,
+        playerId: user.sub,
+        hostStatus: PlayerHostStatuses.accepted,
+        timerStartedAt: new Date(),
+      },
+    });
+
+    const hostedPlayer = await prisma.player.findFirst({
+      where: {
+        hostId: host.id,
+        playerId: user.sub,
+        hostStatus: PlayerHostStatuses.accepted,
+      },
+      select: selectAcceptedPlayerForResponse,
+    });
+
+    if (!hostedPlayer)
+      return response
+        .status(404)
+        .json({ success: false, message: "Hosted player not found" });
+
+    const matchParticipants = await prisma.matchParticipant.findMany({
+      where: {
+        playerId: hostedPlayer.id,
+        match: {
+          hostId: host.id,
+          status: MatchStatus.finished,
+        },
+      },
+      orderBy: { joinedAt: "desc" },
+      select: {
+        team: true,
+        result: true,
+        match: {
+          select: {
+            startedAt: true,
+            endedAt: true,
+            teamWinner: true,
+            court: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    const matchHistory = matchParticipants.reduce(
+      (summary, participant, index) => ({
+        matchCount: summary.matchCount + 1,
+        winCount:
+          summary.winCount + (participant.result === "win" ? 1 : 0),
+        lossCount:
+          summary.lossCount + (participant.result === "loss" ? 1 : 0),
+        lastMatch:
+          index === 0
+            ? {
+                team: participant.team,
+                result: participant.result,
+                startedAt: participant.match.startedAt,
+                endedAt: participant.match.endedAt,
+                teamWinner: participant.match.teamWinner,
+                courtName: participant.match.court?.name ?? null,
+              }
+            : summary.lastMatch,
+      }),
+      {
+        matchCount: 0,
+        winCount: 0,
+        lossCount: 0,
+        lastMatch: null as {
+          team: string | null;
+          result: string | null;
+          startedAt: Date | null;
+          endedAt: Date | null;
+          teamWinner: string;
+          courtName: string | null;
+        } | null,
+      },
+    );
+
+    return response.status(200).json({
+      success: true,
+      message: "Host added as player",
+      hostedPlayer: {
+        ...mapAcceptedPlayerForResponse(hostedPlayer, host.sport),
+        matchHistory,
+      },
+    });
+  } catch (error) {
+    console.error("Error adding host as player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const removeHostAsPlayer = async (
+  request: Request<Params>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const host = await prisma.host.findFirst({
+      where: {
+        id: hostId,
+        community: {
+          id: communityId,
+          masterId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const hostedPlayer = await prisma.player.findFirst({
+      where: {
+        hostId: host.id,
+        playerId: user.sub,
+        hostStatus: PlayerHostStatuses.accepted,
+      },
+      select: {
+        id: true,
+        courtAssignment: {
+          select: {
+            court: {
+              select: {
+                startedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!hostedPlayer)
+      return response.status(200).json({
+        success: true,
+        message: "Host is already hidden from players",
+      });
+
+    if (hostedPlayer.courtAssignment?.court.startedAt)
+      return response.status(400).json({
+        success: false,
+        message: "Cannot hide the host while they are in an active game",
+      });
+
+    await prisma.$transaction([
+      prisma.player.update({
+        where: { id: hostedPlayer.id },
+        data: {
+          hostStatus: PlayerHostStatuses.rejected,
+          timerStartedAt: null,
+        },
+      }),
+      prisma.courtAssignment.deleteMany({
+        where: { playerId: hostedPlayer.id },
+      }),
+      prisma.queueAssignment.deleteMany({
+        where: { playerId: hostedPlayer.id },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Host hidden from players",
+      hostedPlayerId: hostedPlayer.id,
+    });
+  } catch (error) {
+    console.error("Error hiding host as player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
 };
 
 export const createStaticPlayer = async (
