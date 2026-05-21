@@ -74,20 +74,44 @@ export default function PlayerCard({
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const formattedTimer = (() => {
-    if (!player.timerStartedAt) return "00:00:00";
+  const { formattedTimer, timerStyle } = (() => {
+    if (!player.timerStartedAt) {
+      return {
+        formattedTimer: "00:00:00",
+        timerStyle: "text-gray-500",
+      };
+    }
 
     const startedAt = new Date(player.timerStartedAt).getTime();
     const elapsedMs = Math.max(0, now - startedAt);
+
     const totalSeconds = Math.floor(elapsedMs / 1000);
+
     const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+
     const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
       2,
       "0",
     );
+
     const seconds = String(totalSeconds % 60).padStart(2, "0");
 
-    return `${hours}:${minutes}:${seconds}`;
+    let timerStyle = "text-gray-500";
+
+    // >= 1 hour
+    if (totalSeconds >= 3600) {
+      timerStyle = "text-red-500 font-bold";
+    }
+
+    // >= 30 minutes
+    else if (totalSeconds >= 1800) {
+      timerStyle = "text-yellow-500 font-medium";
+    }
+
+    return {
+      formattedTimer: `${hours}:${minutes}:${seconds}`,
+      timerStyle,
+    };
   })();
 
   const statusClasses = {
@@ -160,7 +184,7 @@ export default function PlayerCard({
             </span>
           </div>
 
-          <span className="mt-0.5 md:text-[10px] lg:text-[10px] text-gray-500">
+          <span className={`mt-0.5 text-[10px] ${timerStyle}`}>
             {formattedTimer}
           </span>
         </div>
