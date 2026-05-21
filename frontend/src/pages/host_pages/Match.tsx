@@ -405,7 +405,6 @@ const PLAYER_STATUS_FILTERS: Array<{
   { label: "Waiting", value: "waiting" },
   { label: "In queue", value: "inQueue" },
   { label: "Playing", value: "playing" },
-  { label: "Paid", value: "paid" },
 ];
 
 const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1280px)";
