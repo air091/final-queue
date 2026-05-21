@@ -11,12 +11,17 @@ import {
   type PaymentStatus,
   type PaymentPlayer,
 } from "../../lib/host";
+import { AArrowDown, AArrowUp, Gamepad, MoveDown, MoveUp } from "lucide-react";
 
 type PricingDraft = {
   entranceFee: string;
   perMatchFee: string;
   currency: PaymentCurrency;
 };
+
+type PaymentStatusFilter = "all" | PaymentStatus;
+type SortDirection = "asc" | "desc";
+type PaymentPlayerSortField = "name" | "games";
 
 const CURRENCY_OPTIONS: PaymentCurrency[] = ["PHP", "USD", "EUR"];
 const FALLBACK_PROFILE_URL = "https://image.pngaaa.com/189/734189-middle.png";
@@ -43,6 +48,15 @@ export default function Payments() {
   });
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState<PaymentStatusFilter>("all");
+  const [nameSortDirection, setNameSortDirection] =
+    useState<SortDirection>("asc");
+  const [gamesSortDirection, setGamesSortDirection] =
+    useState<SortDirection>("desc");
+  const [primarySortField, setPrimarySortField] =
+    useState<PaymentPlayerSortField>("name");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -218,6 +232,75 @@ export default function Payments() {
       setSavingPlayerId(null);
     }
   };
+
+  const togglePaymentPlayerSort = (field: PaymentPlayerSortField) => {
+    setPrimarySortField(field);
+
+    if (field === "name") {
+      setNameSortDirection((currentDirection) =>
+        currentDirection === "asc" ? "desc" : "asc",
+      );
+      return;
+    }
+
+    setGamesSortDirection((currentDirection) =>
+      currentDirection === "asc" ? "desc" : "asc",
+    );
+  };
+
+  const comparePaymentPlayers = (
+    firstPlayer: PaymentPlayer,
+    secondPlayer: PaymentPlayer,
+    field: PaymentPlayerSortField,
+  ) => {
+    if (field === "games") {
+      const gamesMultiplier = gamesSortDirection === "asc" ? 1 : -1;
+      return (
+        (firstPlayer.gamesPlayed - secondPlayer.gamesPlayed) * gamesMultiplier
+      );
+    }
+
+    const nameMultiplier = nameSortDirection === "asc" ? 1 : -1;
+    return (
+      firstPlayer.player.username.localeCompare(
+        secondPlayer.player.username,
+        undefined,
+        { sensitivity: "base" },
+      ) * nameMultiplier
+    );
+  };
+
+  const normalizedPlayerSearchTerm = playerSearchTerm.trim().toLowerCase();
+  const filteredPaymentPlayers = paymentsData.players
+    .filter((player) => {
+      const matchesPaymentStatus =
+        paymentStatusFilter === "all" ||
+        player.paymentStatus === paymentStatusFilter;
+      const matchesSearch =
+        normalizedPlayerSearchTerm === "" ||
+        player.player.username
+          .toLowerCase()
+          .includes(normalizedPlayerSearchTerm);
+
+      return matchesPaymentStatus && matchesSearch;
+    })
+    .sort((firstPlayer, secondPlayer) => {
+      const secondarySortField =
+        primarySortField === "name" ? "games" : "name";
+      const primaryResult = comparePaymentPlayers(
+        firstPlayer,
+        secondPlayer,
+        primarySortField,
+      );
+
+      if (primaryResult !== 0) return primaryResult;
+
+      return comparePaymentPlayers(
+        firstPlayer,
+        secondPlayer,
+        secondarySortField,
+      );
+    });
 
   return (
     <div className="grid gap-5 p-2">
@@ -400,13 +483,77 @@ export default function Payments() {
       {/* PLAYERS TABLE */}
       <section className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
         <header className="border-b border-orange-100 px-5 py-4">
-          <h4 className="text-lg font-semibold text-[var(--color-text)]">
-            Player Payments
-          </h4>
+          <div>
+            <h4 className="text-lg font-semibold text-[var(--color-text)]">
+              Player Payments
+            </h4>
 
-          <p className="mt-1 text-sm text-stone-500">
-            Track and update badminton match payments.
-          </p>
+            <p className="mt-1 text-sm text-stone-500">
+              Track and update badminton match payments.
+            </p>
+          </div>
+          <div className="flex items-center gap-x-3">
+            <input
+              type="text"
+              placeholder="Search player"
+              value={playerSearchTerm}
+              onChange={(event) => setPlayerSearchTerm(event.target.value)}
+              className="w-full block border rounded-full mt-2 px-3 outline-orange-100 py-1 border-orange-100"
+            />
+            {/* filters */}
+            <div className="flex items-center gap-x-3">
+              {/* paid & unpaid */}
+              <select
+                name="paid"
+                value={paymentStatusFilter}
+                onChange={(event) =>
+                  setPaymentStatusFilter(
+                    event.target.value as PaymentStatusFilter,
+                  )
+                }
+                className="border rounded-full px-3 py-1 outline-orange-100 border-orange-100 cursor-pointer"
+              >
+                <option value="all">All</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </select>
+
+              {/* more letters */}
+              <button
+                type="button"
+                title="Sort by player name"
+                aria-pressed={primarySortField === "name"}
+                onClick={() => togglePaymentPlayerSort("name")}
+                className={`flex items-center border rounded-full px-3 py-1 outline-orange-100 border-orange-100 cursor-pointer transition hover:bg-orange-50 ${
+                  primarySortField === "name" ? "bg-orange-50" : ""
+                }`}
+              >
+                {nameSortDirection === "desc" ? (
+                  <AArrowDown size={24} />
+                ) : (
+                  <AArrowUp size={24} />
+                )}
+              </button>
+
+              {/* more games */}
+              <button
+                type="button"
+                title="Sort by games played"
+                aria-pressed={primarySortField === "games"}
+                onClick={() => togglePaymentPlayerSort("games")}
+                className={`flex items-center border rounded-full px-3 py-1 outline-orange-100 border-orange-100 cursor-pointer transition hover:bg-orange-50 ${
+                  primarySortField === "games" ? "bg-orange-50" : ""
+                }`}
+              >
+                <Gamepad size={24} />
+                {gamesSortDirection === "desc" ? (
+                  <MoveUp size={14} />
+                ) : (
+                  <MoveDown size={14} />
+                )}
+              </button>
+            </div>
+          </div>
         </header>
 
         {/* ===================== DESKTOP TABLE (md+) ===================== */}
@@ -441,8 +588,8 @@ export default function Payments() {
             </thead>
 
             <tbody>
-              {paymentsData.players.length > 0 ? (
-                paymentsData.players.map((player) => {
+              {filteredPaymentPlayers.length > 0 ? (
+                filteredPaymentPlayers.map((player) => {
                   const nextStatus =
                     player.paymentStatus === "paid" ? "unpaid" : "paid";
 
@@ -514,7 +661,11 @@ export default function Payments() {
                             )
                           }
                           disabled={savingPlayerId === player.id}
-                          className="rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
+                          className={`rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer text-white transition ${
+                            nextStatus === "paid"
+                              ? "bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
+                              : "bg-red-500 hover:bg-red-600"
+                          }`}
                         >
                           {savingPlayerId === player.id
                             ? "Saving..."
@@ -532,7 +683,9 @@ export default function Payments() {
                     colSpan={6}
                     className="px-4 py-10 text-center text-sm text-stone-500"
                   >
-                    No players available for payments.
+                    {normalizedPlayerSearchTerm
+                      ? "No players match your search."
+                      : "No players available for payments."}
                   </td>
                 </tr>
               )}
@@ -542,8 +695,8 @@ export default function Payments() {
 
         {/* ===================== MOBILE CARDS (< md) ===================== */}
         <div className="grid gap-3 p-4 md:hidden">
-          {paymentsData.players.length > 0 ? (
-            paymentsData.players.map((player) => {
+          {filteredPaymentPlayers.length > 0 ? (
+            filteredPaymentPlayers.map((player) => {
               const expectedAmount =
                 paymentsData.pricing.entranceFee +
                 paymentsData.pricing.perMatchFee * player.gamesPlayed;
@@ -622,7 +775,11 @@ export default function Payments() {
                         )
                       }
                       disabled={savingPlayerId === player.id}
-                      className="rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer bg-[var(--color-primary)] text-white"
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer text-white transition ${
+                        nextStatus === "paid"
+                          ? "bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
+                          : "bg-red-500 hover:bg-red-600"
+                      }`}
                     >
                       {savingPlayerId === player.id
                         ? "Saving..."
@@ -636,7 +793,9 @@ export default function Payments() {
             })
           ) : (
             <p className="text-center text-sm text-stone-500 py-8">
-              No players available for payments.
+              {normalizedPlayerSearchTerm
+                ? "No players match your search."
+                : "No players available for payments."}
             </p>
           )}
         </div>

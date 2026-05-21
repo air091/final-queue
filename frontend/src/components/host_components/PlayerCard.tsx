@@ -91,9 +91,9 @@ export default function PlayerCard({
   })();
 
   const statusClasses = {
-    waiting: "border-green-500 bg-green-300",
-    inQueue: "border-yellow-500 bg-yellow-300",
-    playing: "border-red-500 bg-red-300",
+    waiting: "border-green-500",
+    inQueue: "border-yellow-500",
+    playing: "border-red-500",
   }[player.matchStatus];
   const gamesPlayed = player.gamesPlayed ?? 0;
   const skillLevel = player.player.skillLevel
@@ -109,7 +109,7 @@ export default function PlayerCard({
       }}
       className={`
       relative flex items-center justify-between
-      gap-1 rounded-2xl border bg-white w-full
+      gap-1 rounded-2xl border-2 bg-white w-full
       px-1 py-2 shadow-sm transition-all duration-200
 
       ${statusClasses}
@@ -144,7 +144,7 @@ export default function PlayerCard({
         }}
       >
         {/* AVATAR */}
-        <div className="lg:h-10 lg:w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 md:h-8 md:w-8">
+        <div className="lg:h-7 lg:w-7 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 md:h-8 md:w-8">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
@@ -155,12 +155,12 @@ export default function PlayerCard({
         {/* TEXT */}
         <div className="min-w-0 flex flex-col">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="truncate lg:text-[12px] md:text-[10px] font-semibold text-text">
+            <span className="truncate lg:text-[10px] md:text-[10px] font-semibold text-text">
               {player.player.username}
             </span>
           </div>
 
-          <span className="mt-0.5 md:text-[10px] lg:text-xs text-gray-500">
+          <span className="mt-0.5 md:text-[10px] lg:text-[10px] text-gray-500">
             {formattedTimer}
           </span>
         </div>
@@ -176,7 +176,7 @@ export default function PlayerCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
             className="
-            flex h-8 w-8 items-center justify-center cursor-pointer md:h-7 md:w-7 lg:h-9 lg:w-9
+            flex h-8 w-8 items-center justify-center cursor-pointer md:h-6 md:w-6 lg:h-7 lg:w-7
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "
@@ -199,7 +199,7 @@ export default function PlayerCard({
             title="Settings"
             onClick={() => onToggleDropdown(player.id)}
             className="
-            flex h-8 w-8 items-center justify-center cursor-pointer md:h-7 md:w-7 lg:h-9 lg:w-9
+            flex h-8 w-8 items-center justify-center cursor-pointer md:h-6 md:w-6 lg:h-7 lg:w-7
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
           "

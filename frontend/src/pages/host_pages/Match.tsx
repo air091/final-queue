@@ -407,6 +407,8 @@ const PLAYER_STATUS_FILTERS: Array<{
   { label: "Playing", value: "playing" },
 ];
 
+const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1280px)";
+
 export default function Match() {
   const { communityId, hostId } = useParams();
   const {
@@ -423,6 +425,7 @@ export default function Match() {
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("waiting");
+  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
   const [isPlayersListHidden, setIsPlayersListHidden] = useState(false);
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
@@ -1325,6 +1328,22 @@ export default function Match() {
   };
 
   useEffect(() => {
+    const desktopPlayersLayout = window.matchMedia(
+      DESKTOP_PLAYERS_LAYOUT_QUERY,
+    );
+
+    const showPlayersOnDesktop = () => {
+      if (desktopPlayersLayout.matches) setIsPlayersListHidden(false);
+    };
+
+    showPlayersOnDesktop();
+    desktopPlayersLayout.addEventListener("change", showPlayersOnDesktop);
+
+    return () =>
+      desktopPlayersLayout.removeEventListener("change", showPlayersOnDesktop);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const dropdowns = document.querySelectorAll("[data-dropdown]");
@@ -1343,11 +1362,16 @@ export default function Match() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [courtActiveDropdown, queueActiveDropdown]);
 
-  const filteredPlayers = players.filter((player) =>
-    activePlayerStatus === "all"
-      ? true
-      : player.matchStatus === activePlayerStatus,
-  );
+  const normalizedPlayerSearchTerm = playerSearchTerm.trim().toLowerCase();
+  const filteredPlayers = players.filter((player) => {
+    const matchesStatus =
+      activePlayerStatus === "all" || player.matchStatus === activePlayerStatus;
+    const matchesSearch =
+      normalizedPlayerSearchTerm === "" ||
+      player.player.username.toLowerCase().includes(normalizedPlayerSearchTerm);
+
+    return matchesStatus && matchesSearch;
+  });
 
   const isEmptyCourtAvailable = Boolean(getFirstAvailableEmptyCourt(courts));
 
@@ -1373,27 +1397,31 @@ export default function Match() {
           ) : (
             <div className="sticky top-2 z-40 flex max-h-[45dvh] w-full flex-shrink flex-col self-start rounded-3xl border border-orange-100 bg-white p-3 shadow-sm min-[1280px]:h-[calc(100dvh-5rem)] min-[1280px]:max-h-[calc(100dvh-5rem)] min-[1280px]:w-[360px] min-[1280px]:p-4 xl:w-[420px]">
               <header className="mb-3 min-[1280px]:mb-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+                <div className="">
+                  <div className="w-full flex items-center justify-between">
                     <h5 className="text-base font-bold tracking-tight text-[var(--color-text)] min-[1280px]:text-xl">
                       Players
                     </h5>
-
-                    <p className="mt-0.5 text-xs text-stone-500 min-[1280px]:mt-1 min-[1280px]:text-sm">
-                      Manage active and waiting players.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsPlayersListHidden(true)}
+                      className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-[var(--color-text)] lg:hidden transition hover:bg-orange-100 min-[1280px]:block min-[1280px]:px-3 min-[1280px]:py-2 min-[1280px]:text-sm"
+                    >
+                      Hide
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayersListHidden(true)}
-                    className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:bg-orange-100 min-[1280px]:px-3 min-[1280px]:py-2 min-[1280px]:text-sm"
-                  >
-                    Hide
-                  </button>
+                  <input
+                    type="text"
+                    placeholder="Search player"
+                    value={playerSearchTerm}
+                    onChange={(event) =>
+                      setPlayerSearchTerm(event.target.value)
+                    }
+                    className="w-full block border rounded-full mt-2 px-3 outline-orange-100 py-1 border-orange-100"
+                  />
                 </div>
 
-                <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-4">
+                <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-3">
                   {PLAYER_STATUS_FILTERS.map((playerStatus) => (
                     <button
                       key={playerStatus.value}
@@ -1411,7 +1439,7 @@ export default function Match() {
                 </div>
               </header>
 
-              <main className="grid min-h-0 w-full grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-2 sm:grid-cols-6 min-[1280px]:gap-3 min-[1280px]:p-3">
+              <main className="grid min-h-0 w-full grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-2 sm:grid-cols-2 sm:gap-3 min-[1280px]:gap-3 min-[1280px]:p-3">
                 {filteredPlayers.length > 0 ? (
                   filteredPlayers.map((p) => (
                     <PlayerCard
@@ -1423,7 +1451,9 @@ export default function Match() {
                   ))
                 ) : (
                   <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
-                    No players in this status
+                    {normalizedPlayerSearchTerm
+                      ? "No players match your search"
+                      : "No players in this status"}
                   </div>
                 )}
               </main>
