@@ -42,7 +42,7 @@ type QueueDropData = {
 
 type DropData = CourtDropData | QueueDropData;
 
-type PlayerStatusFilter = "all" | MatchPlayerStatus;
+type PlayerStatusFilter = "all" | "paid" | MatchPlayerStatus;
 
 const getUpdatedCourts = (
   currentCourts: CourtType[],
@@ -405,6 +405,7 @@ const PLAYER_STATUS_FILTERS: Array<{
   { label: "Waiting", value: "waiting" },
   { label: "In queue", value: "inQueue" },
   { label: "Playing", value: "playing" },
+  { label: "Paid", value: "paid" },
 ];
 
 const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1023px)";
@@ -422,10 +423,10 @@ export default function Match() {
     setPaymentsData,
     addFinishedMatchToPlayerHistory,
     refreshHostData,
+    playerSearchTerm,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("waiting");
-  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
   const [isPlayersListHidden, setIsPlayersListHidden] = useState(false);
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
@@ -1363,9 +1364,20 @@ export default function Match() {
   }, [courtActiveDropdown, queueActiveDropdown]);
 
   const normalizedPlayerSearchTerm = playerSearchTerm.trim().toLowerCase();
+  const paidPlayerIds = new Set(
+    paymentsData.players
+      .filter((player) => player.paymentStatus === "paid")
+      .map((player) => player.id),
+  );
   const filteredPlayers = players.filter((player) => {
     const matchesStatus =
-      activePlayerStatus === "all" || player.matchStatus === activePlayerStatus;
+      activePlayerStatus === "all" ||
+      (activePlayerStatus === "paid"
+        ? paidPlayerIds.has(player.id)
+        : activePlayerStatus === "waiting"
+          ? player.matchStatus === activePlayerStatus &&
+            !paidPlayerIds.has(player.id)
+        : player.matchStatus === activePlayerStatus);
     const matchesSearch =
       normalizedPlayerSearchTerm === "" ||
       player.player.username.toLowerCase().includes(normalizedPlayerSearchTerm);
@@ -1410,15 +1422,6 @@ export default function Match() {
                       Hide
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Search player"
-                    value={playerSearchTerm}
-                    onChange={(event) =>
-                      setPlayerSearchTerm(event.target.value)
-                    }
-                    className="w-full block border rounded-full mt-2 px-3 outline-orange-100 py-1 border-orange-100"
-                  />
                 </div>
 
                 <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-3">

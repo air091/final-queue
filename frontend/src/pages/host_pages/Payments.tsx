@@ -40,7 +40,8 @@ const toAmount = (value: string) => {
 
 export default function Payments() {
   const { communityId, hostId } = useParams();
-  const { paymentsData, setPaymentsData, refreshHostData } = useHostData();
+  const { paymentsData, setPaymentsData, refreshHostData, playerSearchTerm } =
+    useHostData();
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>({
     entranceFee: "0",
     perMatchFee: "0",
@@ -48,7 +49,6 @@ export default function Payments() {
   });
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
-  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] =
     useState<PaymentStatusFilter>("all");
   const [nameSortDirection, setNameSortDirection] =
@@ -493,13 +493,6 @@ export default function Payments() {
             </p>
           </div>
           <div className="flex items-center gap-x-3">
-            <input
-              type="text"
-              placeholder="Search player"
-              value={playerSearchTerm}
-              onChange={(event) => setPlayerSearchTerm(event.target.value)}
-              className="w-full block border rounded-full mt-2 px-3 outline-orange-100 py-1 border-orange-100"
-            />
             {/* filters */}
             <div className="flex items-center gap-x-3">
               {/* paid & unpaid */}

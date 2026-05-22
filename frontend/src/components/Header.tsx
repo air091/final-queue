@@ -26,12 +26,18 @@ type HeaderProps = {
     isSaving: boolean;
     onToggle: () => void;
   };
+  centerSearch?: {
+    value: string;
+    placeholder: string;
+    onChange: (value: string) => void;
+  };
 };
 
 export default function Header({
   setOpenSidebar,
   hostSession,
   hostPlayer,
+  centerSearch,
 }: HeaderProps) {
   const { user } = useAuth();
 
@@ -56,8 +62,8 @@ export default function Header({
   }, []);
 
   return (
-    <div className="flex items-center justify-between border-b border-stone-200 px-6 py-3">
-      <div className="flex items-center gap-x-2">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(180px,420px)_minmax(0,1fr)] items-center gap-4 border-b border-stone-200 px-6 py-3">
+      <div className="flex min-w-0 items-center gap-x-2">
         <div
           onClick={() => setOpenSidebar((prev) => !prev)}
           className="cursor-pointer rounded-full p-1 hover:bg-stone-200"
@@ -72,7 +78,20 @@ export default function Header({
           </span>
         </h1>
       </div>
-      <div className="flex items-center gap-x-[16px]">
+
+      <div className="flex justify-center">
+        {centerSearch ? (
+          <input
+            type="text"
+            placeholder={centerSearch.placeholder}
+            value={centerSearch.value}
+            onChange={(event) => centerSearch.onChange(event.target.value)}
+            className="w-full rounded-full border border-orange-200 px-4 py-2 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
+          />
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-end gap-x-[16px]">
         {hostSession && (
           <div>
             {hostSession.isAvailable ? (

@@ -43,6 +43,7 @@ export default function HostLayout() {
   const [isEndingHostSession, setIsEndingHostSession] = useState(false);
   const [isStartingHostSession, setIsStartingHostSession] = useState(false);
   const [isTogglingHostPlayer, setIsTogglingHostPlayer] = useState(false);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
   const [historyLoadingPlayerId, setHistoryLoadingPlayerId] = useState<
     string | null
   >(null);
@@ -517,13 +518,14 @@ export default function HostLayout() {
     paymentsData,
     setPaymentsData,
     host,
+    playerSearchTerm,
+    setPlayerSearchTerm,
     historyLoadingPlayerId,
     openPlayerHistory,
     closePlayerHistory,
     addFinishedMatchToPlayerHistory,
     refreshHostData: loadHostData,
   };
-
   return (
     <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden">
       <Header
@@ -541,6 +543,11 @@ export default function HostLayout() {
           isIncluded: isHostIncludedAsPlayer,
           isSaving: isTogglingHostPlayer,
           onToggle: () => void handleToggleHostPlayer(),
+        }}
+        centerSearch={{
+          value: playerSearchTerm,
+          placeholder: "Search player name",
+          onChange: setPlayerSearchTerm,
         }}
       />
 

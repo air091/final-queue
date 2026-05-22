@@ -23,6 +23,8 @@ export type HostOutletContext = {
   paymentsData: HostPaymentsData;
   setPaymentsData: Dispatch<SetStateAction<HostPaymentsData>>;
   host: HostMeta | null;
+  playerSearchTerm: string;
+  setPlayerSearchTerm: Dispatch<SetStateAction<string>>;
   historyLoadingPlayerId: string | null;
   openPlayerHistory: (player: PlayerHistoryTarget) => void;
   closePlayerHistory: () => void;
