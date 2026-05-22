@@ -39,6 +39,13 @@ const readFileAsDataUrl = (file: File) =>
 const formatSkillLevel = (skillLevel: string) =>
   skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
+const formatWinTotalGames = (player?: AcceptedPlayers) => {
+  const matchHistory = player?.matchHistory;
+  if (!matchHistory) return "-";
+
+  return `${matchHistory.winCount}/${matchHistory.matchCount}`;
+};
+
 type PlayerSectionProps = {
   title: string;
   description: string;
@@ -207,7 +214,7 @@ function PlayerSection({
 
                 {/* Matches */}
                 <div className="text-sm text-gray-600">
-                  Matches: {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
+                  Games: {formatWinTotalGames(acceptedPlayer)}
                 </div>
 
                 {/* Actions */}
@@ -439,9 +446,7 @@ function PlayerSection({
 
                 {/* MATCH INFO */}
                 <div className="mt-4 space-y-1 text-center text-gray-600">
-                  <p>
-                    Matches: {acceptedPlayer?.matchHistory?.matchCount ?? "-"}
-                  </p>
+                  <p>Games: {formatWinTotalGames(acceptedPlayer)}</p>
                 </div>
 
                 {/* ACTIONS */}
