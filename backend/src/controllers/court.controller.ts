@@ -947,6 +947,26 @@ export const transferQueueToCourtAndStart = async (
 
     const now = new Date();
     const playerIds = queue.entries.map((entry) => entry.playerId);
+    const activeQueuedPlayer = await prisma.queueAssignment.findFirst({
+      where: {
+        queueId: queue.id,
+        playerId: { in: playerIds },
+        hostedPlayer: {
+          courtAssignment: {
+            court: {
+              startedAt: { not: null },
+            },
+          },
+        },
+      },
+      select: { playerId: true },
+    });
+
+    if (activeQueuedPlayer)
+      return response.status(400).json({
+        success: false,
+        message: "End active games before transferring queued players",
+      });
 
     const [, , , startedCourt] = await prisma.$transaction([
       prisma.courtAssignment.createMany({

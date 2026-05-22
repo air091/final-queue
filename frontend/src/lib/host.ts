@@ -236,12 +236,25 @@ export const getDerivedMatchStatus = (
   return "waiting";
 };
 
-export const normalizeAcceptedPlayers = (players: AcceptedPlayers[]) =>
-  players.map((player) => ({
-    ...player,
-    gamesPlayed: player.gamesPlayed ?? 0,
-    matchStatus: player.matchStatus ?? getDerivedMatchStatus(player),
-  }));
+type AcceptedPlayerPayload = AcceptedPlayers & {
+  queueAssignment?: QueueAssignmentType | null;
+};
+
+export const normalizeAcceptedPlayers = (players: AcceptedPlayerPayload[]) =>
+  players.map((player) => {
+    const queueEntry = player.queueEntry ?? player.queueAssignment ?? null;
+    const normalizedPlayer = {
+      ...player,
+      queueEntry,
+      gamesPlayed: player.gamesPlayed ?? 0,
+    };
+
+    return {
+      ...normalizedPlayer,
+      matchStatus:
+        normalizedPlayer.matchStatus ?? getDerivedMatchStatus(normalizedPlayer),
+    };
+  });
 
 export const getPaymentBalance = (amountExpected: number, amountPaid: number) =>
   Math.max(0, amountExpected - amountPaid);

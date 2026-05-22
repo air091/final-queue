@@ -1111,6 +1111,18 @@ export const assignPlayerToQueue = async (
         message: "Player is already in a queue",
       });
 
+    const existingCourtAssignment = await prisma.courtAssignment.findFirst({
+      where: { playerId: player.id },
+      select: {
+        id: true,
+        court: {
+          select: {
+            startedAt: true,
+          },
+        },
+      },
+    });
+
     const occupied = await prisma.queueAssignment.findFirst({
       where: {
         queueId: queue.id,
@@ -1125,17 +1137,25 @@ export const assignPlayerToQueue = async (
       });
     }
 
-    await prisma.queueAssignment.upsert({
-      where: { playerId: player.id },
-      update: {
-        queueId: queue.id,
-        position,
-      },
-      create: {
-        playerId: player.id,
-        queueId: queue.id,
-        position,
-      },
+    await prisma.$transaction(async (transaction) => {
+      await transaction.queueAssignment.upsert({
+        where: { playerId: player.id },
+        update: {
+          queueId: queue.id,
+          position,
+        },
+        create: {
+          playerId: player.id,
+          queueId: queue.id,
+          position,
+        },
+      });
+
+      if (existingCourtAssignment && !existingCourtAssignment.court.startedAt) {
+        await transaction.courtAssignment.delete({
+          where: { id: existingCourtAssignment.id },
+        });
+      }
     });
 
     return response.status(200).json({

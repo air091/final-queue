@@ -149,8 +149,15 @@ export default function QueueCard({
   const hasTeamBPlayer = queue.entries?.some(
     (entry) => entry.position === 2 || entry.position === 4,
   );
+  const hasPlayingPlayer = queue.entries?.some((entry) =>
+    players.some(
+      (player) =>
+        player.id === entry.playerId && player.matchStatus === "playing",
+    ),
+  );
   const canShowTransferButton = Boolean(hasTeamAPlayer && hasTeamBPlayer);
-  const isTransferDisabled = !canTransferToCourt || isTransferring;
+  const isTransferDisabled =
+    !canTransferToCourt || isTransferring || Boolean(hasPlayingPlayer);
 
   const queueSlots = QUEUE_SLOTS;
 
@@ -228,6 +235,11 @@ export default function QueueCard({
             <button
               type="button"
               disabled={isTransferDisabled}
+              title={
+                hasPlayingPlayer
+                  ? "End active games before transferring this queue"
+                  : undefined
+              }
               onClick={() => onTransferToCourt(queue.id)}
               className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-stone-400"
             >

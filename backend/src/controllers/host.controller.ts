@@ -721,7 +721,7 @@ export const getHostWithPlayers = async (
         gamesPlayed: acceptedPlayer.gamesPlayed,
         timerStartedAt: acceptedPlayer.timerStartedAt,
         player: buildPlayerProfile(acceptedPlayer.player, host.sport),
-        queueAssignment: acceptedPlayer.queueAssignment,
+        queueEntry: acceptedPlayer.queueAssignment,
         courtAssignment: acceptedPlayer.courtAssignment
           ? {
               id: acceptedPlayer.courtAssignment.id,
@@ -990,7 +990,7 @@ const mapAcceptedPlayerForResponse = (
   gamesPlayed: acceptedPlayer.gamesPlayed,
   timerStartedAt: acceptedPlayer.timerStartedAt,
   player: buildPlayerProfile(acceptedPlayer.player, sport),
-  queueAssignment: acceptedPlayer.queueAssignment,
+  queueEntry: acceptedPlayer.queueAssignment,
   courtAssignment: acceptedPlayer.courtAssignment
     ? {
         id: acceptedPlayer.courtAssignment.id,

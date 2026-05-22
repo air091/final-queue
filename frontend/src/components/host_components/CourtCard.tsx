@@ -32,6 +32,7 @@ type CourtSlotProps = {
   position: number;
   label: string;
   player?: AcceptedPlayers;
+  isBusy: boolean;
   isInteractionDisabled: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   activeCourtDropdown: string | null;
@@ -44,6 +45,7 @@ function CourtSlot({
   position,
   label,
   player,
+  isBusy,
   isInteractionDisabled,
   onRemovePlayerFromCourt,
   activeCourtDropdown,
@@ -112,7 +114,7 @@ function CourtSlot({
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
             isInSlot
-            canDrag={!isInteractionDisabled}
+            canDrag={!isBusy}
             canRemoveFromCourt={!isInteractionDisabled}
             courtId={courtId}
             onRemoveFromCourt={onRemovePlayerFromCourt}
@@ -302,6 +304,7 @@ export default function CourtCard({
             position={slot.position}
             label={getSlotLabel(slot.position)}
             player={getAssignedPlayer(slot.position)}
+            isBusy={isBusy}
             isInteractionDisabled={isInteractionDisabled}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
             activeCourtDropdown={activeDropdown}

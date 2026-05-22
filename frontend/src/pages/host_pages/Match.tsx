@@ -155,17 +155,21 @@ const getPlayersWithResetTimer = (
   if (!playerIds) return currentPlayers;
   const now = new Date().toISOString();
 
-  return currentPlayers.map((player) =>
-    playerIds.includes(player.id)
-      ? {
-          ...player,
-          courtAssignment:
-            nextStatus === "playing" ? player.courtAssignment : null,
-          matchStatus: nextStatus,
-          timerStartedAt: now,
-        }
-      : player,
-  );
+  return currentPlayers.map((player) => {
+    if (!playerIds.includes(player.id)) return player;
+
+    const nextPlayer = {
+      ...player,
+      courtAssignment: nextStatus === "playing" ? player.courtAssignment : null,
+      timerStartedAt: now,
+    };
+
+    return {
+      ...nextPlayer,
+      matchStatus:
+        nextStatus === "waiting" ? getDerivedMatchStatus(nextPlayer) : nextStatus,
+    };
+  });
 };
 
 const getPlayersWithIncrementedGames = (
@@ -348,16 +352,26 @@ const getPlayersWithQueueAssignment = (
 ) =>
   currentPlayers.map((player) =>
     player.id === playerId
-      ? {
-          ...player,
-          courtAssignment: null,
-          queueEntry: {
-            id: player.queueEntry?.id ?? `${queueId}-${playerId}-${position}`,
-            queueId,
-            position,
-          },
-          matchStatus: "inQueue" as MatchPlayerStatus,
-        }
+      ? (() => {
+          const nextPlayer = {
+            ...player,
+            courtAssignment:
+              player.matchStatus === "playing" ? player.courtAssignment : null,
+            queueEntry: {
+              id: player.queueEntry?.id ?? `${queueId}-${playerId}-${position}`,
+              queueId,
+              position,
+            },
+          };
+
+          return {
+            ...nextPlayer,
+            matchStatus:
+              player.matchStatus === "playing"
+                ? ("playing" as MatchPlayerStatus)
+                : getDerivedMatchStatus(nextPlayer),
+          };
+        })()
       : player,
   );
 
@@ -375,7 +389,10 @@ const getPlayersWithoutQueueAssignment = (
 
     return {
       ...nextPlayer,
-      matchStatus: getDerivedMatchStatus(nextPlayer),
+      matchStatus:
+        player.matchStatus === "playing" && nextPlayer.courtAssignment
+          ? ("playing" as MatchPlayerStatus)
+          : getDerivedMatchStatus(nextPlayer),
     };
   });
 
@@ -393,7 +410,10 @@ const getPlayersWithoutQueueAssignments = (
 
     return {
       ...nextPlayer,
-      matchStatus: getDerivedMatchStatus(nextPlayer),
+      matchStatus:
+        player.matchStatus === "playing" && nextPlayer.courtAssignment
+          ? ("playing" as MatchPlayerStatus)
+          : getDerivedMatchStatus(nextPlayer),
     };
   });
 
@@ -799,8 +819,12 @@ export default function Match() {
 
       // Check if player is coming from a court and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
+      const sourceCourt = player?.courtAssignment
+        ? courts.find((court) => court.id === player.courtAssignment?.courtId)
+        : null;
+      const shouldKeepCourtAssignment = Boolean(sourceCourt?.startedAt);
       let updatedCourts = courts;
-      if (player?.courtAssignment) {
+      if (player?.courtAssignment && !shouldKeepCourtAssignment) {
         updatedCourts = getCourtsWithoutPlayer(
           courts,
           hostedPlayerId,
@@ -827,7 +851,7 @@ export default function Match() {
             dropData.position,
           );
           // Remove from court if they were in one
-          if (player?.courtAssignment) {
+          if (player?.courtAssignment && !shouldKeepCourtAssignment) {
             await removePlayerFromCourtAPI(
               hostedPlayerId,
               player.courtAssignment.courtId,
@@ -1377,6 +1401,9 @@ export default function Match() {
         : activePlayerStatus === "waiting"
           ? player.matchStatus === activePlayerStatus &&
             !paidPlayerIds.has(player.id)
+          : activePlayerStatus === "inQueue"
+            ? player.matchStatus === activePlayerStatus ||
+              Boolean(player.queueEntry)
         : player.matchStatus === activePlayerStatus);
     const matchesSearch =
       normalizedPlayerSearchTerm === "" ||
