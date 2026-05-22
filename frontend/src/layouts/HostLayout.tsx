@@ -480,6 +480,10 @@ export default function HostLayout() {
                 endedAt: match.endedAt,
                 teamWinner: match.teamWinner,
                 court: match.court,
+                participants: match.participants.map((matchParticipant) => ({
+                  ...matchParticipant,
+                  player: matchParticipant.player ?? null,
+                })),
               },
             },
             ...playerHistory,

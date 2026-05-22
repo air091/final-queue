@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import type {
   MatchHistorySummary,
+  MatchParticipantHistoryItem,
   PlayerHistoryTarget,
   PlayerMatchHistoryItem,
 } from "../../lib/host";
@@ -27,6 +28,29 @@ const formatWinningTeam = (teamWinner: string) => {
   if (teamWinner === "A" || teamWinner === "B") return `Team ${teamWinner}`;
   return "Unknown";
 };
+
+const getParticipantName = (participant: MatchParticipantHistoryItem) =>
+  participant.player?.username?.trim() || "Unknown player";
+
+const getMatchParticipants = (
+  entry: PlayerMatchHistoryItem,
+  player: PlayerHistoryTarget,
+) =>
+  entry.match.participants?.length
+    ? entry.match.participants
+    : [
+        {
+          id: entry.id,
+          playerId: player.id,
+          team: entry.team,
+          result: entry.result,
+          joinedAt: entry.joinedAt,
+          player: {
+            username: player.player.username,
+            profileUrl: player.player.profileUrl,
+          },
+        },
+      ];
 
 export const summarizePlayerHistory = (
   history: PlayerMatchHistoryItem[],
@@ -68,6 +92,48 @@ export default function PlayerHistoryModal({
   onClose,
 }: PlayerHistoryModalProps) {
   if (!player) return null;
+
+  const renderTeam = (
+    teamName: "A" | "B",
+    participants: MatchParticipantHistoryItem[],
+  ) => {
+    const teamPlayers = participants.filter(
+      (participant) => participant.team === teamName,
+    );
+
+    return (
+      <div className="rounded-xl border border-stone-200 bg-white p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+          Team {teamName}
+        </div>
+        <div className="mt-2 grid gap-2">
+          {teamPlayers.length > 0 ? (
+            teamPlayers.map((participant) => (
+              <div
+                key={participant.id}
+                className="flex min-w-0 items-center gap-2"
+              >
+                {participant.player?.profileUrl ? (
+                  <img
+                    src={participant.player.profileUrl}
+                    alt={getParticipantName(participant)}
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-7 w-7 rounded-full bg-stone-200" />
+                )}
+                <span className="truncate text-sm font-medium text-stone-800">
+                  {getParticipantName(participant)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <span className="text-sm text-stone-400">No players recorded</span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-stone-950/45 px-4 py-6">
@@ -157,45 +223,57 @@ export default function PlayerHistoryModal({
             </p>
           ) : (
             <div className="grid gap-3">
-              {history.map((entry, index) => (
-                <article
-                  key={entry.id}
-                  className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-stone-900">
-                        Match {history.length - index}
-                      </div>
-                      <div className="mt-1 text-sm text-stone-600">
-                        {entry.match.court?.name ?? "Unknown court"}
-                      </div>
-                    </div>
-                    <span
-                      className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
-                        entry.result === "win"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : entry.result === "loss"
-                            ? "bg-rose-100 text-rose-800"
-                            : "bg-stone-200 text-stone-700"
-                      }`}
-                    >
-                      {formatMatchResult(entry.result, entry.team)}
-                    </span>
-                  </div>
+              {history.map((entry, index) => {
+                const participants = getMatchParticipants(entry, player);
 
-                  <div className="mt-3 grid gap-2 text-sm text-stone-600 sm:grid-cols-2">
-                    <div>
-                      Started: {formatMatchDateTime(entry.match.startedAt)}
+                return (
+                  <article
+                    key={entry.id}
+                    className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-stone-900">
+                          Match {history.length - index}
+                        </div>
+                        <div className="mt-1 text-sm text-stone-600">
+                          {entry.match.court?.name ?? "Unknown court"}
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
+                          entry.result === "win"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : entry.result === "loss"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-stone-200 text-stone-700"
+                        }`}
+                      >
+                        {formatMatchResult(entry.result, entry.team)}
+                      </span>
                     </div>
-                    <div>Ended: {formatMatchDateTime(entry.match.endedAt)}</div>
-                    <div>
-                      Winning team: {formatWinningTeam(entry.match.teamWinner)}
+
+                    <div className="mt-3 grid gap-2 text-sm text-stone-600 sm:grid-cols-2">
+                      <div>
+                        Started: {formatMatchDateTime(entry.match.startedAt)}
+                      </div>
+                      <div>
+                        Ended: {formatMatchDateTime(entry.match.endedAt)}
+                      </div>
+                      <div>
+                        Winning team:{" "}
+                        {formatWinningTeam(entry.match.teamWinner)}
+                      </div>
+                      <div>Recorded: {formatMatchDateTime(entry.joinedAt)}</div>
                     </div>
-                    <div>Recorded: {formatMatchDateTime(entry.joinedAt)}</div>
-                  </div>
-                </article>
-              ))}
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {renderTeam("A", participants)}
+                      {renderTeam("B", participants)}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

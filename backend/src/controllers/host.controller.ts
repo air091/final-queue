@@ -801,7 +801,7 @@ export const getPlayerMatchHistory = async (
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    const history = await prisma.matchParticipant.findMany({
+    const historyRecords = await prisma.matchParticipant.findMany({
       where: {
         playerId: player.id,
         match: {
@@ -827,10 +827,50 @@ export const getPlayerMatchHistory = async (
                 name: true,
               },
             },
+            participants: {
+              orderBy: [{ team: "asc" }, { joinedAt: "asc" }],
+              select: {
+                id: true,
+                playerId: true,
+                team: true,
+                result: true,
+                joinedAt: true,
+                player: {
+                  select: {
+                    player: {
+                      select: {
+                        username: true,
+                        profileUrl: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
+
+    const history = historyRecords.map((entry) => ({
+      ...entry,
+      match: {
+        ...entry.match,
+        participants: entry.match.participants.map((participant) => ({
+          id: participant.id,
+          playerId: participant.playerId,
+          team: participant.team,
+          result: participant.result,
+          joinedAt: participant.joinedAt,
+          player: participant.player.player
+            ? {
+                username: participant.player.player.username,
+                profileUrl: participant.player.player.profileUrl,
+              }
+            : null,
+        })),
+      },
+    }));
 
     return response.status(200).json({
       success: true,

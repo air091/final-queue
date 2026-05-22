@@ -330,12 +330,23 @@ export const endMatchCourt = async (
             },
           },
           participants: {
+            orderBy: [{ team: "asc" }, { joinedAt: "asc" }],
             select: {
               id: true,
               playerId: true,
               team: true,
               result: true,
               joinedAt: true,
+              player: {
+                select: {
+                  player: {
+                    select: {
+                      username: true,
+                      profileUrl: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -345,13 +356,30 @@ export const endMatchCourt = async (
       }),
     ]);
 
+    const matchWithParticipants = {
+      ...match,
+      participants: match.participants.map((participant) => ({
+        id: participant.id,
+        playerId: participant.playerId,
+        team: participant.team,
+        result: participant.result,
+        joinedAt: participant.joinedAt,
+        player: participant.player.player
+          ? {
+              username: participant.player.player.username,
+              profileUrl: participant.player.player.profileUrl,
+            }
+          : null,
+      })),
+    };
+
     return response.status(200).json({
       success: true,
       message: "Game ended",
       court: endedCourt,
       playerIds,
       hostedPlayerIds: playerIds,
-      match,
+      match: matchWithParticipants,
     });
   } catch (error) {
     console.error("Error ending match court host:", error);

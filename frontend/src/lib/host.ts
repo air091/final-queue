@@ -76,6 +76,20 @@ export type MatchHistorySummary = {
   } | null;
 };
 
+export type MatchParticipantHistoryPlayer = {
+  username: string;
+  profileUrl: string;
+};
+
+export type MatchParticipantHistoryItem = {
+  id: string;
+  playerId: string;
+  team: string | null;
+  result: string | null;
+  joinedAt: string;
+  player: MatchParticipantHistoryPlayer | null;
+};
+
 export type PlayerMatchHistoryItem = {
   id: string;
   team: string | null;
@@ -90,6 +104,7 @@ export type PlayerMatchHistoryItem = {
       id: string;
       name: string;
     } | null;
+    participants?: MatchParticipantHistoryItem[];
   };
 };
 
@@ -108,6 +123,7 @@ export type FinishedMatchHistoryPayload = {
     team: string | null;
     result: string | null;
     joinedAt: string;
+    player?: MatchParticipantHistoryPlayer | null;
   }>;
 };
 
