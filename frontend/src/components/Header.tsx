@@ -65,8 +65,11 @@ export default function Header({
           <TextAlignJustify size={24} />
         </div>
 
-        <h1 className="text-[18px] font-extrabold tracking-tight text-text">
-          Que<span className="text-primary">Tato</span> Sports Management
+        <h1 className="relative text-[18px] font-extrabold tracking-tight text-text">
+          QUE<span className="text-primary">TATO</span> SPORTS
+          <span className="absolute text-[10px] font-medium border top-1 -right-12 bg-red-200 text-red-500 border-red-500 px-2 py-0.5 rounded-full">
+            BETA
+          </span>
         </h1>
       </div>
       <div className="flex items-center gap-x-[16px]">
