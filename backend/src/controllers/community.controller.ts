@@ -81,10 +81,11 @@ const getMatchPlayerStatus = (player: {
   queueAssignment: { id: string } | null;
   courtAssignment: {
     id: string;
-    court: { startedAt: Date | null } | null;
+    court: { startedAt: Date | null; endedAt: Date | null } | null;
   } | null;
 }) => {
-  if (player.courtAssignment?.court?.startedAt) return "playing";
+  const court = player.courtAssignment?.court;
+  if (court?.startedAt && !court.endedAt) return "playing";
   if (player.courtAssignment) return "inQueue";
   if (player.queueAssignment) return "inQueue";
   return "waiting";
@@ -108,6 +109,7 @@ const mapHostedPlayerForResponse = (
       position: number;
       court: {
         startedAt: Date | null;
+        endedAt: Date | null;
       } | null;
     } | null;
     player: {
@@ -602,6 +604,7 @@ export const addCommunityPlayersToHost = async (
             court: {
               select: {
                 startedAt: true,
+                endedAt: true,
               },
             },
           },

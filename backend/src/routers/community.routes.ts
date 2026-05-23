@@ -33,8 +33,10 @@ import {
   endMatchCourt,
   getMatchCourts,
   getQueueCourts,
+  pauseMatchCourt,
   renameMatchCourt,
   renameQueueCourt,
+  resumeMatchCourt,
   startMatchCourt,
   transferQueueToCourtAndStart,
 } from "../controllers/court.controller.js";
@@ -136,6 +138,16 @@ router.post(
   "/:communityId/hosts/:hostId/courts/:courtId/start",
   authenticate,
   startMatchCourt,
+);
+router.post(
+  "/:communityId/hosts/:hostId/courts/:courtId/pause",
+  authenticate,
+  pauseMatchCourt,
+);
+router.post(
+  "/:communityId/hosts/:hostId/courts/:courtId/resume",
+  authenticate,
+  resumeMatchCourt,
 );
 router.post(
   "/:communityId/hosts/:hostId/courts/:courtId/end",

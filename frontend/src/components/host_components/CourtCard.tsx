@@ -10,6 +10,8 @@ type CourtCardProps = {
   players: AcceptedPlayers[];
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   onStartCourtGame: (courtId: string) => void;
+  onPauseCourtGame: (courtId: string) => void;
+  onResumeCourtGame: (courtId: string) => void;
   onEndCourtGame: (courtId: string, teamWinner: "A" | "B") => void;
   onRenameCourt: (courtId: string, nextName: string) => void;
   onDeleteCourt: (courtId: string) => void;
@@ -17,7 +19,7 @@ type CourtCardProps = {
   activePlayerDropdown: string | null;
   onToggleDropdown: (courtId: string) => void;
   onOpenPlayerDropdown: () => void;
-  busyAction?: "starting" | "ending";
+  busyAction?: "starting" | "pausing" | "resuming" | "ending";
 };
 
 const COURT_SLOTS = [
@@ -32,7 +34,6 @@ type CourtSlotProps = {
   position: number;
   label: string;
   player?: AcceptedPlayers;
-  isBusy: boolean;
   isInteractionDisabled: boolean;
   onRemovePlayerFromCourt: (hostedPlayerId: string, courtId: string) => void;
   activeCourtDropdown: string | null;
@@ -45,7 +46,6 @@ function CourtSlot({
   position,
   label,
   player,
-  isBusy,
   isInteractionDisabled,
   onRemovePlayerFromCourt,
   activeCourtDropdown,
@@ -114,7 +114,7 @@ function CourtSlot({
             activeDropdown={playerActiveDropdown}
             onToggleDropdown={handlePlayerDropdown}
             isInSlot
-            canDrag={!isBusy}
+            canDrag={!isInteractionDisabled}
             canRemoveFromCourt={!isInteractionDisabled}
             courtId={courtId}
             onRemoveFromCourt={onRemovePlayerFromCourt}
@@ -132,6 +132,8 @@ export default function CourtCard({
   players,
   onRemovePlayerFromCourt,
   onStartCourtGame,
+  onPauseCourtGame,
+  onResumeCourtGame,
   onEndCourtGame,
   onRenameCourt,
   onDeleteCourt,
@@ -163,8 +165,13 @@ export default function CourtCard({
   const isBusy = Boolean(busyAction);
   const canStartGame =
     !isBusy && !court.startedAt && hasTeamAPlayer && hasTeamBPlayer;
+  const isGameActive = Boolean(court.startedAt && !court.endedAt);
+  const isGamePaused = Boolean(court.startedAt && court.endedAt);
   const isGameStarted = Boolean(court.startedAt);
-  const isInteractionDisabled = isBusy || isGameStarted;
+  const canResumeGame =
+    !isBusy && isGamePaused && hasTeamAPlayer && hasTeamBPlayer;
+  const isInteractionDisabled = isBusy || isGameActive;
+  const isDeleteDisabled = isBusy || isGameStarted;
 
   return (
     <div className="relative w-full max-w-[520px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3 md:grid-cols-3">
@@ -236,8 +243,8 @@ export default function CourtCard({
               {court.name}
             </span>
             {court.startedAt && (
-              <span className="text-[12px] text-green-700">
-                Game in progress
+              <span className="text-[12px] text-background [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                {isGamePaused ? "Game paused" : "Game in progress"}
               </span>
             )}
           </div>
@@ -250,6 +257,31 @@ export default function CourtCard({
                 className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] text-white hover:bg-stone-700 disabled:cursor-wait disabled:opacity-70"
               >
                 Start game
+              </button>
+            )}
+            {isGameActive && (
+              <button
+                type="button"
+                onClick={() => onPauseCourtGame(court.id)}
+                disabled={isBusy}
+                className="cursor-pointer rounded-md bg-amber-500 px-2 py-1 text-[12px] font-medium text-white hover:bg-amber-600 disabled:cursor-wait disabled:opacity-70"
+              >
+                Pause
+              </button>
+            )}
+            {isGamePaused && (
+              <button
+                type="button"
+                onClick={() => onResumeCourtGame(court.id)}
+                disabled={!canResumeGame}
+                title={
+                  canResumeGame
+                    ? "Resume game"
+                    : "Add at least one player to Team A and Team B to resume"
+                }
+                className="cursor-pointer rounded-md bg-stone-800 px-2 py-1 text-[12px] font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Resume
               </button>
             )}
             <div
@@ -269,7 +301,7 @@ export default function CourtCard({
                   courtName={court.name}
                   onRename={(nextName) => onRenameCourt(court.id, nextName)}
                   onDelete={() => onDeleteCourt(court.id)}
-                  isDeleteDisabled={isInteractionDisabled}
+                  isDeleteDisabled={isDeleteDisabled}
                 />
               )}
             </div>
@@ -304,7 +336,6 @@ export default function CourtCard({
             position={slot.position}
             label={getSlotLabel(slot.position)}
             player={getAssignedPlayer(slot.position)}
-            isBusy={isBusy}
             isInteractionDisabled={isInteractionDisabled}
             onRemovePlayerFromCourt={onRemovePlayerFromCourt}
             activeCourtDropdown={activeDropdown}

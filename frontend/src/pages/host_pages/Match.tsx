@@ -109,6 +109,26 @@ const getStartedCourt = (currentCourts: CourtType[], courtId: string) =>
       : court,
   );
 
+const getPausedCourt = (currentCourts: CourtType[], courtId: string) =>
+  currentCourts.map((court) =>
+    court.id === courtId
+      ? {
+          ...court,
+          endedAt: new Date().toISOString(),
+        }
+      : court,
+  );
+
+const getResumedCourt = (currentCourts: CourtType[], courtId: string) =>
+  currentCourts.map((court) =>
+    court.id === courtId
+      ? {
+          ...court,
+          endedAt: null,
+        }
+      : court,
+  );
+
 const getEndedCourt = (currentCourts: CourtType[], courtId: string) =>
   currentCourts.map((court) =>
     court.id === courtId
@@ -120,6 +140,10 @@ const getEndedCourt = (currentCourts: CourtType[], courtId: string) =>
         }
       : court,
   );
+
+const isCourtActive = (
+  court?: Pick<CourtType, "startedAt" | "endedAt"> | null,
+) => Boolean(court?.startedAt && !court.endedAt);
 
 const getPlayersWithCourtAssignment = (
   currentPlayers: AcceptedPlayers[],
@@ -171,6 +195,20 @@ const getPlayersWithResetTimer = (
     };
   });
 };
+
+const getPlayersWithMatchStatus = (
+  currentPlayers: AcceptedPlayers[],
+  playerIds: string[],
+  nextStatus: MatchPlayerStatus,
+) =>
+  currentPlayers.map((player) =>
+    playerIds.includes(player.id)
+      ? {
+          ...player,
+          matchStatus: nextStatus,
+        }
+      : player,
+  );
 
 const getPlayersWithIncrementedGames = (
   currentPlayers: AcceptedPlayers[],
@@ -429,6 +467,52 @@ const PLAYER_STATUS_FILTERS: Array<{
 ];
 
 const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1023px)";
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const TWENTY_MINUTES_MS = 20 * 60 * 1000;
+
+const getWaitingMs = (player: AcceptedPlayers, now: number) => {
+  if (!player.timerStartedAt) return 0;
+
+  return Math.max(0, now - new Date(player.timerStartedAt).getTime());
+};
+
+const getAllPlayersSortPriority = (player: AcceptedPlayers, now: number) => {
+  if (player.matchStatus === "waiting") {
+    const waitingMs = getWaitingMs(player, now);
+
+    if (waitingMs >= TWENTY_MINUTES_MS) return 0;
+    if (waitingMs >= FIFTEEN_MINUTES_MS) return 1;
+    return 2;
+  }
+
+  if (player.matchStatus === "playing" && player.queueEntry) return 4;
+  if (player.queueEntry || player.matchStatus === "inQueue") return 3;
+  if (player.matchStatus === "playing") return 5;
+
+  return 6;
+};
+
+const sortAllPlayersByPriority = (
+  players: AcceptedPlayers[],
+  now: number,
+) =>
+  players
+    .map((player, index) => ({ player, index }))
+    .sort((left, right) => {
+      const leftPriority = getAllPlayersSortPriority(left.player, now);
+      const rightPriority = getAllPlayersSortPriority(right.player, now);
+
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+
+      if (leftPriority <= 2) {
+        return (
+          getWaitingMs(right.player, now) - getWaitingMs(left.player, now)
+        );
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ player }) => player);
 
 export default function Match() {
   const { communityId, hostId } = useParams();
@@ -446,7 +530,8 @@ export default function Match() {
     playerSearchTerm,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
-    useState<PlayerStatusFilter>("waiting");
+    useState<PlayerStatusFilter>("all");
+  const [playerSortNow, setPlayerSortNow] = useState(() => Date.now());
   const [isPlayersListHidden, setIsPlayersListHidden] = useState(false);
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
@@ -461,7 +546,7 @@ export default function Match() {
     string | null
   >(null);
   const [busyCourtActions, setBusyCourtActions] = useState<
-    Record<string, "starting" | "ending">
+    Record<string, "starting" | "pausing" | "resuming" | "ending">
   >({});
   const [busyQueueIds, setBusyQueueIds] = useState<string[]>([]);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
@@ -550,10 +635,21 @@ export default function Match() {
     }
   };
 
+  const waitForAllPendingPlayerOperations = async () => {
+    const pendingOperations = [
+      ...pendingCourtPlayerOperationsRef.current.values(),
+      ...pendingQueuePlayerOperationsRef.current.values(),
+    ];
+
+    if (pendingOperations.length > 0) {
+      await Promise.allSettled(pendingOperations);
+    }
+  };
+
   const setCourtBusy = (
     courtId: string,
     isBusy: boolean,
-    action: "starting" | "ending" = "starting",
+    action: "starting" | "pausing" | "resuming" | "ending" = "starting",
   ) => {
     setBusyCourtActions((currentActions) => {
       if (isBusy) return { ...currentActions, [courtId]: action };
@@ -600,6 +696,20 @@ export default function Match() {
   const startCourtGameAPI = async (courtId: string) => {
     await api.post(
       `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/start`,
+      {},
+    );
+  };
+
+  const pauseCourtGameAPI = async (courtId: string) => {
+    await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/pause`,
+      {},
+    );
+  };
+
+  const resumeCourtGameAPI = async (courtId: string) => {
+    await api.post(
+      `/api/community/${communityId}/hosts/${hostId}/courts/${courtId}/resume`,
       {},
     );
   };
@@ -746,7 +856,7 @@ export default function Match() {
         : null;
       const targetCourt = courts.find((court) => court.id === dropData.courtId);
 
-      if (sourceCourt?.startedAt || targetCourt?.startedAt) return;
+      if (isCourtActive(sourceCourt) || isCourtActive(targetCourt)) return;
 
       const hostedPlayerId =
         (active.data.current?.hostedPlayerId as string | undefined) ??
@@ -760,6 +870,12 @@ export default function Match() {
       const updatedTargetCourt = updatedCourts.find(
         (court) => court.id === dropData.courtId,
       );
+      const replacedAssignment = targetCourt?.assignments.find(
+        (assignment) =>
+          assignment.position === dropData.position &&
+          assignment.playerId !== hostedPlayerId,
+      );
+      const replacedPlayerId = replacedAssignment?.playerId;
 
       // Check if player is coming from a queue and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
@@ -776,11 +892,13 @@ export default function Match() {
       setQueues(updatedQueues);
       setPlayers(
         getPlayersWithCourtAssignment(
-          players,
+          replacedPlayerId
+            ? getPlayersWithoutCourtAssignment(players, replacedPlayerId)
+            : players,
           hostedPlayerId,
           dropData.courtId,
           dropData.position,
-          Boolean(updatedTargetCourt?.startedAt),
+          isCourtActive(updatedTargetCourt),
         ),
       );
 
@@ -822,7 +940,7 @@ export default function Match() {
       const sourceCourt = player?.courtAssignment
         ? courts.find((court) => court.id === player.courtAssignment?.courtId)
         : null;
-      const shouldKeepCourtAssignment = Boolean(sourceCourt?.startedAt);
+      const shouldKeepCourtAssignment = isCourtActive(sourceCourt);
       let updatedCourts = courts;
       if (player?.courtAssignment && !shouldKeepCourtAssignment) {
         updatedCourts = getCourtsWithoutPlayer(
@@ -1170,6 +1288,61 @@ export default function Match() {
     }
   };
 
+  const handlePauseCourtGame = async (courtId: string) => {
+    if (busyCourtActions[courtId]) return;
+
+    const previousCourts = courts;
+    const previousPlayers = players;
+    const pausedCourt = previousCourts.find((court) => court.id === courtId);
+    const playerIds =
+      pausedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
+
+    setCourtBusy(courtId, true, "pausing");
+    setCourts(getPausedCourt(previousCourts, courtId));
+    setPlayers(getPlayersWithMatchStatus(previousPlayers, playerIds, "inQueue"));
+
+    try {
+      await pauseCourtGameAPI(courtId);
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setCourtBusy(courtId, false);
+    }
+  };
+
+  const handleResumeCourtGame = async (courtId: string) => {
+    if (busyCourtActions[courtId]) return;
+
+    const previousCourts = courts;
+    const resumedCourt = previousCourts.find((court) => court.id === courtId);
+    const playerIds =
+      resumedCourt?.assignments.map((assignment) => assignment.playerId) ?? [];
+    const previousPlayers = players;
+
+    setCourtBusy(courtId, true, "resuming");
+    setCourts(getResumedCourt(previousCourts, courtId));
+    setPlayers(getPlayersWithResetTimer(previousPlayers, playerIds, "playing"));
+
+    try {
+      await waitForAllPendingPlayerOperations();
+      await resumeCourtGameAPI(courtId);
+    } catch (error) {
+      setCourts(previousCourts);
+      setPlayers(previousPlayers);
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setCourtBusy(courtId, false);
+    }
+  };
+
   const handleEndCourtGame = async (courtId: string, teamWinner: "A" | "B") => {
     if (busyCourtActions[courtId]) return;
 
@@ -1221,7 +1394,7 @@ export default function Match() {
     });
 
     try {
-      await waitForPendingPlayerOperations(playerIds);
+      await waitForAllPendingPlayerOperations();
       const response = await endCourtGameAPI(courtId, teamWinner);
       const endedPlayerIds =
         response.hostedPlayerIds ?? response.playerIds ?? [];
@@ -1369,6 +1542,14 @@ export default function Match() {
   }, []);
 
   useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setPlayerSortNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const dropdowns = document.querySelectorAll("[data-dropdown]");
@@ -1393,24 +1574,32 @@ export default function Match() {
       .filter((player) => player.paymentStatus === "paid")
       .map((player) => player.id),
   );
-  const filteredPlayers = players.filter((player) => {
-    const matchesStatus =
-      activePlayerStatus === "all" ||
-      (activePlayerStatus === "paid"
-        ? paidPlayerIds.has(player.id)
-        : activePlayerStatus === "waiting"
-          ? player.matchStatus === activePlayerStatus &&
-            !paidPlayerIds.has(player.id)
-          : activePlayerStatus === "inQueue"
-            ? player.matchStatus === activePlayerStatus ||
-              Boolean(player.queueEntry)
-        : player.matchStatus === activePlayerStatus);
-    const matchesSearch =
-      normalizedPlayerSearchTerm === "" ||
-      player.player.username.toLowerCase().includes(normalizedPlayerSearchTerm);
+  const filteredPlayers = (() => {
+    const matchingPlayers = players.filter((player) => {
+      const matchesStatus =
+        activePlayerStatus === "all" ||
+        (activePlayerStatus === "paid"
+          ? paidPlayerIds.has(player.id)
+          : activePlayerStatus === "waiting"
+            ? player.matchStatus === activePlayerStatus &&
+              !paidPlayerIds.has(player.id)
+            : activePlayerStatus === "inQueue"
+              ? player.matchStatus === activePlayerStatus ||
+                Boolean(player.queueEntry)
+          : player.matchStatus === activePlayerStatus);
+      const matchesSearch =
+        normalizedPlayerSearchTerm === "" ||
+        player.player.username
+          .toLowerCase()
+          .includes(normalizedPlayerSearchTerm);
 
-    return matchesStatus && matchesSearch;
-  });
+      return matchesStatus && matchesSearch;
+    });
+
+    return activePlayerStatus === "all"
+      ? sortAllPlayersByPriority(matchingPlayers, playerSortNow)
+      : matchingPlayers;
+  })();
 
   const isEmptyCourtAvailable = Boolean(getFirstAvailableEmptyCourt(courts));
 
@@ -1523,6 +1712,8 @@ export default function Match() {
                         players={players}
                         onRemovePlayerFromCourt={handleRemovePlayerFromCourt}
                         onStartCourtGame={handleStartCourtGame}
+                        onPauseCourtGame={handlePauseCourtGame}
+                        onResumeCourtGame={handleResumeCourtGame}
                         onEndCourtGame={handleEndCourtGame}
                         onRenameCourt={handleRenameCourt}
                         onDeleteCourt={handleDeleteCourt}

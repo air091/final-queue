@@ -34,6 +34,9 @@ const getAuthorizedHost = async (
   });
 };
 
+const isCourtActive = (court: { startedAt: Date | null; endedAt: Date | null }) =>
+  Boolean(court.startedAt && !court.endedAt);
+
 export const acceptPlayer = async (
   request: Request<HostedPlayerParams>,
   response: Response,
@@ -208,6 +211,7 @@ export const banPlayer = async (
             court: {
               select: {
                 startedAt: true,
+                endedAt: true,
               },
             },
           },
@@ -219,7 +223,10 @@ export const banPlayer = async (
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    if (existing.courtAssignment?.court.startedAt)
+    if (
+      existing.courtAssignment?.court &&
+      isCourtActive(existing.courtAssignment.court)
+    )
       return response.status(400).json({
         success: false,
         message: "Cannot ban a player while they are in an active game",
@@ -288,6 +295,7 @@ export const deletePlayer = async (
             court: {
               select: {
                 startedAt: true,
+                endedAt: true,
               },
             },
           },
@@ -300,7 +308,10 @@ export const deletePlayer = async (
         .status(404)
         .json({ success: false, message: "Player not found" });
 
-    if (existing.courtAssignment?.court.startedAt)
+    if (
+      existing.courtAssignment?.court &&
+      isCourtActive(existing.courtAssignment.court)
+    )
       return response.status(400).json({
         success: false,
         message: "Cannot delete a player while they are in an active game",
@@ -846,7 +857,7 @@ export const assignPlayerToCourt = async (
 
     const court = await prisma.court.findFirst({
       where: { id: courtId, hostId: host.id },
-      select: { id: true, startedAt: true },
+      select: { id: true, startedAt: true, endedAt: true },
     });
 
     if (!court)
@@ -854,7 +865,7 @@ export const assignPlayerToCourt = async (
         .status(404)
         .json({ success: false, message: "Court not found" });
 
-    if (court.startedAt)
+    if (isCourtActive(court))
       return response.status(400).json({
         success: false,
         message: "Cannot assign players to a game in progress",
@@ -867,12 +878,16 @@ export const assignPlayerToCourt = async (
         court: {
           select: {
             startedAt: true,
+            endedAt: true,
           },
         },
       },
     });
 
-    if (existingAssignment?.court.startedAt)
+    if (
+      existingAssignment?.court &&
+      isCourtActive(existingAssignment.court)
+    )
       return response.status(400).json({
         success: false,
         message: "Cannot move players from a game in progress",
@@ -883,26 +898,31 @@ export const assignPlayerToCourt = async (
         courtId: court.id,
         position,
       },
+      select: {
+        id: true,
+        playerId: true,
+      },
     });
 
-    if (occupied && occupied.playerId !== player.id) {
-      return response.status(400).json({
-        success: false,
-        message: "Position already occupied",
-      });
-    }
+    await prisma.$transaction(async (transaction) => {
+      if (occupied && occupied.playerId !== player.id) {
+        await transaction.courtAssignment.delete({
+          where: { id: occupied.id },
+        });
+      }
 
-    await prisma.courtAssignment.upsert({
-      where: { playerId: player.id },
-      update: {
-        courtId: court.id,
-        position,
-      },
-      create: {
-        playerId: player.id,
-        courtId: court.id,
-        position,
-      },
+      await transaction.courtAssignment.upsert({
+        where: { playerId: player.id },
+        update: {
+          courtId: court.id,
+          position,
+        },
+        create: {
+          playerId: player.id,
+          courtId: court.id,
+          position,
+        },
+      });
     });
 
     return response.status(200).json({
@@ -965,7 +985,7 @@ export const removePlayerFromCourt = async (
 
     const court = await prisma.court.findFirst({
       where: { id: courtId, hostId: host.id },
-      select: { id: true, startedAt: true },
+      select: { id: true, startedAt: true, endedAt: true },
     });
 
     if (!court)
@@ -973,7 +993,7 @@ export const removePlayerFromCourt = async (
         .status(404)
         .json({ success: false, message: "Court not found" });
 
-    if (court.startedAt)
+    if (isCourtActive(court))
       return response.status(400).json({
         success: false,
         message: "Cannot remove players while the game is in progress",
@@ -1118,6 +1138,7 @@ export const assignPlayerToQueue = async (
         court: {
           select: {
             startedAt: true,
+            endedAt: true,
           },
         },
       },
@@ -1151,7 +1172,10 @@ export const assignPlayerToQueue = async (
         },
       });
 
-      if (existingCourtAssignment && !existingCourtAssignment.court.startedAt) {
+      if (
+        existingCourtAssignment &&
+        !isCourtActive(existingCourtAssignment.court)
+      ) {
         await transaction.courtAssignment.delete({
           where: { id: existingCourtAssignment.id },
         });

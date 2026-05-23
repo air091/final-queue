@@ -16,10 +16,11 @@ const getMatchPlayerStatus = (player: {
   queueAssignment: { id: string } | null;
   courtAssignment: {
     id: string;
-    court: { startedAt: Date | null } | null;
+    court: { startedAt: Date | null; endedAt: Date | null } | null;
   } | null;
 }) => {
-  if (player.courtAssignment?.court?.startedAt) return "playing";
+  const court = player.courtAssignment?.court;
+  if (court?.startedAt && !court.endedAt) return "playing";
   if (player.courtAssignment) return "inQueue";
   if (player.queueAssignment) return "inQueue";
   return "waiting";
@@ -606,6 +607,7 @@ export const getHostWithPlayers = async (
               court: {
                 select: {
                   startedAt: true,
+                  endedAt: true,
                 },
               },
             },
@@ -971,6 +973,7 @@ const selectAcceptedPlayerForResponse = {
       court: {
         select: {
           startedAt: true,
+          endedAt: true,
         },
       },
     },
@@ -1008,6 +1011,7 @@ type AcceptedPlayerForResponse = {
     position: number;
     court: {
       startedAt: Date | null;
+      endedAt: Date | null;
     } | null;
   } | null;
   player: {
@@ -1237,6 +1241,7 @@ export const removeHostAsPlayer = async (
             court: {
               select: {
                 startedAt: true,
+                endedAt: true,
               },
             },
           },
@@ -1250,7 +1255,10 @@ export const removeHostAsPlayer = async (
         message: "Host is already hidden from players",
       });
 
-    if (hostedPlayer.courtAssignment?.court.startedAt)
+    if (
+      hostedPlayer.courtAssignment?.court.startedAt &&
+      !hostedPlayer.courtAssignment.court.endedAt
+    )
       return response.status(400).json({
         success: false,
         message: "Cannot hide the host while they are in an active game",
