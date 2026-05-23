@@ -62,7 +62,7 @@ export default function Header({
   }, []);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(180px,420px)_minmax(0,1fr)] items-center gap-4 border-b border-stone-200 px-6 py-3">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,420px)_minmax(0,1fr)] items-center gap-4 border-b border-stone-200 px-6 py-3">
       <div className="flex min-w-0 items-center gap-x-2">
         <div
           onClick={() => setOpenSidebar((prev) => !prev)}
@@ -79,14 +79,14 @@ export default function Header({
         </h1>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex min-w-0 justify-center">
         {centerSearch ? (
           <input
             type="text"
             placeholder={centerSearch.placeholder}
             value={centerSearch.value}
             onChange={(event) => centerSearch.onChange(event.target.value)}
-            className="w-full rounded-full border border-orange-200 px-4 py-2 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
+            className="w-[240px] min-[769px]:w-full rounded-full border border-orange-200 px-4 py-2 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
           />
         ) : null}
       </div>
