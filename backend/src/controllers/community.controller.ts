@@ -4,6 +4,7 @@ import prisma from "../lib/prisma.js";
 import type { Request, Response } from "express";
 import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 import {
+  MatchStatus,
   PlayerHostStatuses,
   SkillLevels,
   Sports,
@@ -377,6 +378,125 @@ export const getCommunityPlayers = async (
     });
   } catch (error) {
     console.error("Error getting community players:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const getCommunityPlayerWinPoints = async (
+  request: Request<CommunityPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const [communityPlayers, winParticipants] = await Promise.all([
+      prisma.communityPlayer.findMany({
+        where: { communityId: community.id },
+        select: {
+          id: true,
+          accountId: true,
+          account: {
+            select: {
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                where: { sport: Sports.badminton },
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.matchParticipant.findMany({
+        where: {
+          result: "win",
+          accountId: { not: null },
+          match: {
+            status: MatchStatus.finished,
+            host: {
+              communityId: community.id,
+            },
+          },
+        },
+        select: {
+          accountId: true,
+        },
+      }),
+    ]);
+
+    const winsByAccountId = winParticipants.reduce(
+      (wins, participant) => {
+        if (!participant.accountId) return wins;
+
+        wins.set(
+          participant.accountId,
+          (wins.get(participant.accountId) ?? 0) + 1,
+        );
+        return wins;
+      },
+      new Map<string, number>(),
+    );
+
+    const players = communityPlayers
+      .map((communityPlayer) => {
+        const winCount = winsByAccountId.get(communityPlayer.accountId) ?? 0;
+
+        return {
+          communityPlayerId: communityPlayer.id,
+          accountId: communityPlayer.accountId,
+          player: buildCommunityPlayerProfile({
+            id: communityPlayer.accountId,
+            ...communityPlayer.account,
+          }),
+          winCount,
+          points: winCount,
+        };
+      })
+      .sort((firstPlayer, secondPlayer) => {
+        if (secondPlayer.points !== firstPlayer.points) {
+          return secondPlayer.points - firstPlayer.points;
+        }
+
+        return firstPlayer.player.username.localeCompare(
+          secondPlayer.player.username,
+        );
+      });
+
+    return response.status(200).json({
+      success: true,
+      message: "Community player win points retrieved successfully",
+      players,
+    });
+  } catch (error) {
+    console.error("Error getting community player win points:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

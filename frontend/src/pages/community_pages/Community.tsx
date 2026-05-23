@@ -1,11 +1,12 @@
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import {
   EllipsisVertical,
   Plus,
   SquarePen,
+  Trophy,
   Trash,
   UsersRound,
   X,
@@ -58,6 +59,13 @@ type HostFormState = {
 type PlayerFormState = {
   names: string;
   skillLevel: SkillLevelType;
+};
+
+type CommunityPlayerWinPointsRecord = {
+  communityPlayerId: string;
+  accountId: string;
+  winCount: number;
+  points: number;
 };
 
 type CommunityPanel = "host" | "players" | null;
@@ -125,12 +133,16 @@ export default function Community() {
   const [communityPlayers, setCommunityPlayers] = useState<
     CommunityPlayerRecord[]
   >([]);
+  const [communityPlayerWinPoints, setCommunityPlayerWinPoints] = useState<
+    CommunityPlayerWinPointsRecord[]
+  >([]);
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
   const [playerForm, setPlayerForm] =
     useState<PlayerFormState>(INITIAL_PLAYER_FORM);
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
+  const [isLoadingWinPoints, setIsLoadingWinPoints] = useState(false);
   const [savingCommunityPlayerId, setSavingCommunityPlayerId] = useState<
     string | null
   >(null);
@@ -157,6 +169,34 @@ export default function Community() {
     string | null
   >(null);
   const navigate = useNavigate();
+
+  const winPointsByCommunityPlayerId = useMemo(
+    () =>
+      new Map(
+        communityPlayerWinPoints.map((playerPoints) => [
+          playerPoints.communityPlayerId,
+          playerPoints,
+        ]),
+      ),
+    [communityPlayerWinPoints],
+  );
+
+  const rankedCommunityPlayers = useMemo(
+    () =>
+      [...communityPlayers].sort((firstPlayer, secondPlayer) => {
+        const firstPoints =
+          winPointsByCommunityPlayerId.get(firstPlayer.id)?.points ?? 0;
+        const secondPoints =
+          winPointsByCommunityPlayerId.get(secondPlayer.id)?.points ?? 0;
+
+        if (secondPoints !== firstPoints) return secondPoints - firstPoints;
+
+        return firstPlayer.player.username.localeCompare(
+          secondPlayer.player.username,
+        );
+      }),
+    [communityPlayers, winPointsByCommunityPlayerId],
+  );
 
   const getCommunityAPI = async () => {
     try {
@@ -198,6 +238,23 @@ export default function Community() {
 
   useEffect(() => {
     void getCommunityPlayersAPI();
+  }, [id]);
+
+  const getCommunityPlayerWinPointsAPI = async () => {
+    try {
+      setIsLoadingWinPoints(true);
+      const response = await api.get(`/api/community/${id}/players/win-points`);
+      setCommunityPlayerWinPoints(response.data.players);
+    } catch (error) {
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error("Get community player win points api failed", error);
+    } finally {
+      setIsLoadingWinPoints(false);
+    }
+  };
+
+  useEffect(() => {
+    void getCommunityPlayerWinPointsAPI();
   }, [id]);
 
   const handleHostFormChange = (
@@ -468,6 +525,12 @@ export default function Community() {
       setCommunityPlayers((currentPlayers) =>
         currentPlayers.filter(
           (currentPlayer) => currentPlayer.id !== communityPlayer.id,
+        ),
+      );
+      setCommunityPlayerWinPoints((currentPlayers) =>
+        currentPlayers.filter(
+          (currentPlayer) =>
+            currentPlayer.communityPlayerId !== communityPlayer.id,
         ),
       );
     } catch (error) {
@@ -1049,7 +1112,7 @@ export default function Community() {
             </div>
 
             <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              {communityPlayers.length}
+              {isLoadingWinPoints ? "..." : `${communityPlayers.length}`}
             </div>
           </div>
 
@@ -1108,136 +1171,151 @@ export default function Community() {
 
             <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {communityPlayers.length > 0 ? (
-                communityPlayers.map((communityPlayer) => (
-                  <div
-                    key={communityPlayer.id}
-                    className="grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <img
-                        src={communityPlayer.player.profileUrl}
-                        alt={communityPlayer.player.username}
-                        className="h-11 w-11 rounded-full object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-text">
-                          {communityPlayer.player.username}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary">
-                            {communityPlayer.player.skillLevel}
-                          </span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${
-                              communityPlayer.status === "accepted"
-                                ? "bg-green-50 text-green-700"
-                                : communityPlayer.status === "requested"
-                                  ? "bg-yellow-50 text-yellow-700"
-                                  : communityPlayer.status === "banned"
-                                    ? "bg-red-50 text-red-700"
-                                    : "bg-stone-100 text-stone-600"
-                            }`}
-                          >
-                            {communityPlayer.player.isStatic
-                              ? "static"
-                              : communityPlayer.status}
-                          </span>
+                rankedCommunityPlayers.map((communityPlayer) => {
+                  const playerPoints =
+                    winPointsByCommunityPlayerId.get(communityPlayer.id)
+                      ?.points ?? 0;
+
+                  return (
+                    <div
+                      key={communityPlayer.id}
+                      className="grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <img
+                          src={communityPlayer.player.profileUrl}
+                          alt={communityPlayer.player.username}
+                          className="h-11 w-11 rounded-full object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-text">
+                            {communityPlayer.player.username}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary">
+                              {communityPlayer.player.skillLevel}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${
+                                communityPlayer.status === "accepted"
+                                  ? "bg-green-50 text-green-700"
+                                  : communityPlayer.status === "requested"
+                                    ? "bg-yellow-50 text-yellow-700"
+                                    : communityPlayer.status === "banned"
+                                      ? "bg-red-50 text-red-700"
+                                      : "bg-stone-100 text-stone-600"
+                              }`}
+                            >
+                              {communityPlayer.player.isStatic
+                                ? "static"
+                                : communityPlayer.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                          <Trophy size={13} />
+                          {playerPoints} pts
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {communityPlayer.player.isStatic ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEditCommunityPlayer(communityPlayer)}
-                            disabled={savingCommunityPlayerId === communityPlayer.id}
-                            className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void handleDeleteCommunityPlayer(communityPlayer)
-                            }
-                            disabled={savingCommunityPlayerId === communityPlayer.id}
-                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {communityPlayer.status !== "accepted" ? (
+                      <div className="flex flex-wrap gap-2">
+                        {communityPlayer.player.isStatic ? (
+                          <>
                             <button
                               type="button"
-                              onClick={() =>
-                                void handleUpdateCommunityPlayerStatus(
-                                  communityPlayer.id,
-                                  "accepted",
-                                )
-                              }
+                              onClick={() => openEditCommunityPlayer(communityPlayer)}
                               disabled={
                                 savingCommunityPlayerId === communityPlayer.id
                               }
-                              className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                              className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                             >
-                              Accept
+                              Edit
                             </button>
-                          ) : null}
-                          {communityPlayer.status === "requested" ? (
                             <button
                               type="button"
                               onClick={() =>
-                                void handleUpdateCommunityPlayerStatus(
-                                  communityPlayer.id,
-                                  "rejected",
-                                )
-                              }
-                              disabled={
-                                savingCommunityPlayerId === communityPlayer.id
-                              }
-                              className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                            >
-                              Reject
-                            </button>
-                          ) : null}
-                          {communityPlayer.status !== "banned" ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void handleUpdateCommunityPlayerStatus(
-                                  communityPlayer.id,
-                                  "banned",
-                                )
+                                void handleDeleteCommunityPlayer(communityPlayer)
                               }
                               disabled={
                                 savingCommunityPlayerId === communityPlayer.id
                               }
                               className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                             >
-                              Ban
+                              Delete
                             </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void handleDeleteCommunityPlayer(communityPlayer)
-                            }
-                            disabled={
-                              savingCommunityPlayerId === communityPlayer.id
-                            }
-                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                          >
-                            Kick
-                          </button>
-                        </>
-                      )}
+                          </>
+                        ) : (
+                          <>
+                            {communityPlayer.status !== "accepted" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleUpdateCommunityPlayerStatus(
+                                    communityPlayer.id,
+                                    "accepted",
+                                  )
+                                }
+                                disabled={
+                                  savingCommunityPlayerId === communityPlayer.id
+                                }
+                                className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                              >
+                                Accept
+                              </button>
+                            ) : null}
+                            {communityPlayer.status === "requested" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleUpdateCommunityPlayerStatus(
+                                    communityPlayer.id,
+                                    "rejected",
+                                  )
+                                }
+                                disabled={
+                                  savingCommunityPlayerId === communityPlayer.id
+                                }
+                                className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            ) : null}
+                            {communityPlayer.status !== "banned" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleUpdateCommunityPlayerStatus(
+                                    communityPlayer.id,
+                                    "banned",
+                                  )
+                                }
+                                disabled={
+                                  savingCommunityPlayerId === communityPlayer.id
+                                }
+                                className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                              >
+                                Ban
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleDeleteCommunityPlayer(communityPlayer)
+                              }
+                              disabled={
+                                savingCommunityPlayerId === communityPlayer.id
+                              }
+                              className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                            >
+                              Kick
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
                   No community players yet.
