@@ -514,6 +514,35 @@ const sortAllPlayersByPriority = (
     })
     .map(({ player }) => player);
 
+const sortPlayersByTimerBucket = (
+  players: AcceptedPlayers[],
+  now: number,
+) =>
+  players
+    .map((player, index) => ({ player, index }))
+    .sort((left, right) => {
+      const leftWaitingMs = getWaitingMs(left.player, now);
+      const rightWaitingMs = getWaitingMs(right.player, now);
+      const leftPriority =
+        leftWaitingMs >= TWENTY_MINUTES_MS
+          ? 0
+          : leftWaitingMs >= FIFTEEN_MINUTES_MS
+            ? 1
+            : 2;
+      const rightPriority =
+        rightWaitingMs >= TWENTY_MINUTES_MS
+          ? 0
+          : rightWaitingMs >= FIFTEEN_MINUTES_MS
+            ? 1
+            : 2;
+
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+      if (leftWaitingMs !== rightWaitingMs) return rightWaitingMs - leftWaitingMs;
+
+      return left.index - right.index;
+    })
+    .map(({ player }) => player);
+
 export default function Match() {
   const { communityId, hostId } = useParams();
   const {
@@ -1596,9 +1625,19 @@ export default function Match() {
       return matchesStatus && matchesSearch;
     });
 
-    return activePlayerStatus === "all"
-      ? sortAllPlayersByPriority(matchingPlayers, playerSortNow)
-      : matchingPlayers;
+    if (activePlayerStatus === "all") {
+      return sortAllPlayersByPriority(matchingPlayers, playerSortNow);
+    }
+
+    if (
+      activePlayerStatus === "waiting" ||
+      activePlayerStatus === "inQueue" ||
+      activePlayerStatus === "playing"
+    ) {
+      return sortPlayersByTimerBucket(matchingPlayers, playerSortNow);
+    }
+
+    return matchingPlayers;
   })();
 
   const isEmptyCourtAvailable = Boolean(getFirstAvailableEmptyCourt(courts));
