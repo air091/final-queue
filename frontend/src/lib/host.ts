@@ -13,6 +13,12 @@ export type PlayerType = {
   isAdmin: boolean;
 };
 
+export type CommunityPlayerRecord = {
+  id: string;
+  addedAt: string;
+  player: PlayerType;
+};
+
 export type HostPlayerStatus = "requested" | "accepted" | "rejected" | "banned";
 
 export type HostPlayerRecord = {

@@ -9,6 +9,7 @@ import {
   EMPTY_MATCH_HISTORY_SUMMARY,
   buildPaymentsSummary,
   type AcceptedPlayers,
+  type CommunityPlayerRecord,
   type HostPlayerRecord,
   type SkillLevelType,
 } from "../../lib/host";
@@ -605,21 +606,20 @@ export default function Players() {
     openPlayerHistory,
     playerSearchTerm,
   } = useHostData();
-  const [staticPlayerName, setStaticPlayerName] = useState("");
-  const [staticSkillLevel, setStaticSkillLevel] =
-    useState<SkillLevelType>("beginner");
+  const [communityPlayers, setCommunityPlayers] = useState<
+    CommunityPlayerRecord[]
+  >([]);
+  const [selectedCommunityPlayerIds, setSelectedCommunityPlayerIds] = useState<
+    string[]
+  >([]);
+  const [isAddingCommunityPlayers, setIsAddingCommunityPlayers] =
+    useState(false);
+  const [communityPlayerError, setCommunityPlayerError] = useState<
+    string | null
+  >(null);
   const [staticProfileUrlDrafts, setStaticProfileUrlDrafts] = useState<
     Record<string, string>
   >({});
-  const [isCreatingStaticPlayer, setIsCreatingStaticPlayer] = useState(false);
-  const [isBulkStaticPlayerModalOpen, setIsBulkStaticPlayerModalOpen] =
-    useState(false);
-  const [bulkStaticPlayerNames, setBulkStaticPlayerNames] = useState("");
-  const [isCreatingBulkStaticPlayers, setIsCreatingBulkStaticPlayers] =
-    useState(false);
-  const [bulkStaticPlayerError, setBulkStaticPlayerError] = useState<
-    string | null
-  >(null);
   const [savingStaticProfileUrlId, setSavingStaticProfileUrlId] = useState<
     string | null
   >(null);
@@ -666,6 +666,23 @@ export default function Players() {
       document.removeEventListener("click", handleDocumentClick);
     };
   }, []);
+
+  useEffect(() => {
+    if (!communityId) return;
+
+    void (async () => {
+      try {
+        const response = await api.get(`/api/community/${communityId}/players`);
+        setCommunityPlayers(response.data.players as CommunityPlayerRecord[]);
+      } catch (error) {
+        setCommunityPlayerError("Unable to load community players.");
+
+        if (axios.isAxiosError(error))
+          console.error(error.response?.data ?? error);
+        else console.error(error);
+      }
+    })();
+  }, [communityId]);
 
   const updateStaticPlayerInState = (updatedPlayer: AcceptedPlayers) => {
     setPlayersInHost((currentPlayers) =>
@@ -715,62 +732,82 @@ export default function Players() {
     }));
   };
 
-  const createStaticPlayerAPI = async (
-    username: string,
-    skillLevel: SkillLevelType,
+  const addCommunityPlayersToHostAPI = async (
+    communityPlayerIds: string[],
   ) => {
     const response = await api.post(
-      `/api/community/${communityId}/hosts/${hostId}/players/static`,
+      `/api/community/${communityId}/hosts/${hostId}/players/from-community`,
       {
-        username,
-        skillLevel,
+        communityPlayerIds,
       },
     );
 
-    return response.data.hostedPlayer as AcceptedPlayers;
+    return response.data.hostedPlayers as AcceptedPlayers[];
   };
 
-  const addStaticPlayerToState = (player: AcceptedPlayers) => {
-    const nextAcceptedPlayer: AcceptedPlayers = {
+  const addHostedPlayersToState = (hostedPlayers: AcceptedPlayers[]) => {
+    const normalizedHostedPlayers = hostedPlayers.map((player) => ({
       ...player,
       matchHistory: player.matchHistory ?? EMPTY_MATCH_HISTORY_SUMMARY,
-    };
-    const hostPlayerRecord: HostPlayerRecord = {
-      id: nextAcceptedPlayer.id,
-      status: nextAcceptedPlayer.hostStatus,
-      player: nextAcceptedPlayer.player,
-    };
+    }));
+    const hostPlayerRecords: HostPlayerRecord[] = normalizedHostedPlayers.map(
+      (player) => ({
+        id: player.id,
+        status: player.hostStatus,
+        player: player.player,
+      }),
+    );
 
-    setPlayersInHost((currentPlayers) => [hostPlayerRecord, ...currentPlayers]);
-    setAcceptedPlayers((currentPlayers) => [
-      nextAcceptedPlayer,
-      ...currentPlayers,
-    ]);
+    setPlayersInHost((currentPlayers) => {
+      const nextPlayersById = new Map(
+        currentPlayers.map((player) => [player.id, player]),
+      );
+      for (const player of hostPlayerRecords) nextPlayersById.set(player.id, player);
+      return Array.from(nextPlayersById.values());
+    });
+    setAcceptedPlayers((currentPlayers) => {
+      const nextPlayersById = new Map(
+        currentPlayers.map((player) => [player.id, player]),
+      );
+      for (const player of normalizedHostedPlayers)
+        nextPlayersById.set(player.id, player);
+      return Array.from(nextPlayersById.values());
+    });
     setPaymentsData((currentPaymentsData) => {
-      const newPaymentPlayer = {
-        id: nextAcceptedPlayer.id,
-        status: "accepted" as const,
-        paymentStatus: "unpaid" as const,
-        gamesPlayed: 0,
-        player: {
-          id: nextAcceptedPlayer.player.id,
-          username: nextAcceptedPlayer.player.username,
-          profileUrl: nextAcceptedPlayer.player.profileUrl,
-          isStatic: nextAcceptedPlayer.player.isStatic,
-          isAdmin: nextAcceptedPlayer.player.isAdmin,
-        },
-        payment: {
-          id: null,
-          amountExpected: currentPaymentsData.pricing.expectedFee,
-          amountPaid: 0,
-          balance: currentPaymentsData.pricing.expectedFee,
-          currency: currentPaymentsData.pricing.currency,
-          status: "unpaid" as const,
-          method: null,
-        },
-      };
+      const nextPaymentsById = new Map(
+        currentPaymentsData.players.map((player) => [player.id, player]),
+      );
 
-      const nextPlayers = [...currentPaymentsData.players, newPaymentPlayer];
+      for (const player of normalizedHostedPlayers) {
+        const amountExpected =
+          currentPaymentsData.pricing.entranceFee +
+          currentPaymentsData.pricing.perMatchFee * player.gamesPlayed;
+
+        nextPaymentsById.set(player.id, {
+          id: player.id,
+          status: "accepted" as const,
+          paymentStatus: "unpaid" as const,
+          gamesPlayed: player.gamesPlayed,
+          player: {
+            id: player.player.id,
+            username: player.player.username,
+            profileUrl: player.player.profileUrl,
+            isStatic: player.player.isStatic,
+            isAdmin: player.player.isAdmin,
+          },
+          payment: {
+            id: null,
+            amountExpected,
+            amountPaid: 0,
+            balance: amountExpected,
+            currency: currentPaymentsData.pricing.currency,
+            status: "unpaid" as const,
+            method: null,
+          },
+        });
+      }
+
+      const nextPlayers = Array.from(nextPaymentsById.values());
 
       return {
         ...currentPaymentsData,
@@ -780,85 +817,56 @@ export default function Players() {
     });
     setStaticProfileUrlDrafts((currentDrafts) => ({
       ...currentDrafts,
-      [nextAcceptedPlayer.id]: nextAcceptedPlayer.player.profileUrl,
+      ...Object.fromEntries(
+        normalizedHostedPlayers.map((player) => [
+          player.id,
+          player.player.profileUrl,
+        ]),
+      ),
     }));
   };
 
-  const handleCreateStaticPlayer = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    const cleanName = staticPlayerName.trim();
-    if (!communityId || !hostId || !cleanName) return;
-
-    setIsCreatingStaticPlayer(true);
-
-    const previousPaymentsData = paymentsData;
-
-    try {
-      const player = await createStaticPlayerAPI(cleanName, staticSkillLevel);
-      addStaticPlayerToState(player);
-      setStaticPlayerName("");
-      setStaticSkillLevel("beginner");
-    } catch (error) {
-      setPaymentsData(previousPaymentsData);
-
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data ?? error);
-      else console.error(error);
-    } finally {
-      setIsCreatingStaticPlayer(false);
-    }
+  const handleToggleCommunityPlayer = (communityPlayerId: string) => {
+    setSelectedCommunityPlayerIds((currentIds) =>
+      currentIds.includes(communityPlayerId)
+        ? currentIds.filter((currentId) => currentId !== communityPlayerId)
+        : [...currentIds, communityPlayerId],
+    );
   };
 
-  const handleCreateBulkStaticPlayers = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
+  const handleAddCommunityPlayers = async () => {
     if (!communityId || !hostId) return;
 
-    const names = bulkStaticPlayerNames
-      .split(/\r?\n/)
-      .map((name) => name.trim())
-      .filter(Boolean);
-    const uniqueNames = Array.from(new Set(names));
-
-    if (uniqueNames.length === 0) {
-      setBulkStaticPlayerError("Add at least one player name.");
+    if (selectedCommunityPlayerIds.length === 0) {
+      setCommunityPlayerError("Select at least one community player.");
       return;
     }
 
-    setIsCreatingBulkStaticPlayers(true);
-    setBulkStaticPlayerError(null);
-
+    setIsAddingCommunityPlayers(true);
+    setCommunityPlayerError(null);
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousPaymentsData = paymentsData;
     const previousDrafts = staticProfileUrlDrafts;
 
     try {
-      for (const name of uniqueNames) {
-        const player = await createStaticPlayerAPI(name, staticSkillLevel);
-        addStaticPlayerToState(player);
-      }
-
-      setBulkStaticPlayerNames("");
-      setBulkStaticPlayerError(null);
-      setIsBulkStaticPlayerModalOpen(false);
-      setStaticSkillLevel("beginner");
+      const hostedPlayers = await addCommunityPlayersToHostAPI(
+        selectedCommunityPlayerIds,
+      );
+      addHostedPlayersToState(hostedPlayers);
+      setSelectedCommunityPlayerIds([]);
     } catch (error) {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
       setPaymentsData(previousPaymentsData);
       setStaticProfileUrlDrafts(previousDrafts);
-      setBulkStaticPlayerError("Unable to add all static players.");
+      setCommunityPlayerError("Unable to add selected players.");
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
     } finally {
-      setIsCreatingBulkStaticPlayers(false);
+      setIsAddingCommunityPlayers(false);
     }
   };
 
@@ -1573,6 +1581,12 @@ export default function Players() {
       normalizedPlayerSearchTerm === "" ||
       player.player.username.toLowerCase().includes(normalizedPlayerSearchTerm),
   );
+  const hostedAccountIds = new Set(
+    players.map((player) => player.player.id).filter(Boolean),
+  );
+  const selectableCommunityPlayers = communityPlayers.filter(
+    (communityPlayer) => !hostedAccountIds.has(communityPlayer.player.id),
+  );
 
   const statusPriority: Record<string, number> = {
     accepted: 0,
@@ -1700,64 +1714,96 @@ export default function Players() {
               : "No players yet."
           }
           extraContent={
-            <form
-              onSubmit={(event) => void handleCreateStaticPlayer(event)}
-              className="flex flex-wrap items-end gap-3 rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
-            >
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-stone-700">
-                  Static player
-                </span>
+            <div className="grid gap-4 rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h5 className="text-sm font-semibold text-stone-800">
+                    Add from community
+                  </h5>
+                  <p className="text-sm text-stone-500">
+                    Select saved community players for this hosted match.
+                  </p>
+                </div>
 
-                <input
-                  type="text"
-                  value={staticPlayerName}
-                  onChange={(event) => setStaticPlayerName(event.target.value)}
-                  placeholder="Player name"
-                  className="block min-w-[220px] rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-stone-700">Skill level</span>
-
-                <select
-                  value={staticSkillLevel}
-                  onChange={(event) =>
-                    setStaticSkillLevel(event.target.value as SkillLevelType)
+                <button
+                  type="button"
+                  onClick={() => void handleAddCommunityPlayers()}
+                  disabled={
+                    isAddingCommunityPlayers ||
+                    selectedCommunityPlayerIds.length === 0
                   }
-                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
+                  className={`w-fit rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                    isAddingCommunityPlayers ||
+                    selectedCommunityPlayerIds.length === 0
+                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                      : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
+                  }`}
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="elite">Elite</option>
-                </select>
-              </label>
+                  {isAddingCommunityPlayers
+                    ? "Adding..."
+                    : `Add selected (${selectedCommunityPlayerIds.length})`}
+                </button>
+              </div>
 
-              <button
-                type="submit"
-                disabled={isCreatingStaticPlayer}
-                className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                  isCreatingStaticPlayer
-                    ? "cursor-not-allowed bg-stone-200 text-stone-400"
-                    : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
-                }`}
-              >
-                {isCreatingStaticPlayer ? "Adding..." : "Add player"}
-              </button>
+              {communityPlayerError ? (
+                <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {communityPlayerError}
+                </p>
+              ) : null}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setBulkStaticPlayerError(null);
-                  setIsBulkStaticPlayerModalOpen(true);
-                }}
-                className="rounded-xl border border-orange-200 bg-white px-5 py-2.5 text-sm font-semibold cursor-pointer text-[var(--color-primary)] transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-orange-50"
-              >
-                Add multiple players
-              </button>
-            </form>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {selectableCommunityPlayers.length > 0 ? (
+                  selectableCommunityPlayers.map((communityPlayer) => {
+                    const isSelected = selectedCommunityPlayerIds.includes(
+                      communityPlayer.id,
+                    );
+
+                    return (
+                      <button
+                        key={communityPlayer.id}
+                        type="button"
+                        onClick={() =>
+                          handleToggleCommunityPlayer(communityPlayer.id)
+                        }
+                        className={`flex min-w-0 items-center gap-3 rounded-2xl border p-3 text-left transition cursor-pointer ${
+                          isSelected
+                            ? "border-[var(--color-primary)] bg-white shadow-sm"
+                            : "border-orange-100 bg-white/80 hover:border-orange-200"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold ${
+                            isSelected
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                              : "border-stone-300 bg-white text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <img
+                          src={communityPlayer.player.profileUrl}
+                          alt={communityPlayer.player.username}
+                          className="h-9 w-9 shrink-0 rounded-full object-cover"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-stone-800">
+                            {communityPlayer.player.username}
+                          </span>
+                          <span className="block text-xs capitalize text-stone-500">
+                            {communityPlayer.player.skillLevel}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 px-4 py-6 text-center text-sm text-stone-500 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+                    All community players are already in this host, or no
+                    community players have been added yet.
+                  </div>
+                )}
+              </div>
+            </div>
           }
         />
       </div>
@@ -1891,95 +1937,6 @@ export default function Players() {
         </div>
       ) : null}
 
-      {isBulkStaticPlayerModalOpen ? (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl">
-            <header className="flex items-start justify-between gap-4">
-              <div>
-                <h4 className="text-lg font-semibold text-text">
-                  Add multiple static players
-                </h4>
-                <p className="mt-1 text-sm text-stone-500">
-                  Enter one player name per line.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsBulkStaticPlayerModalOpen(false)}
-                disabled={isCreatingBulkStaticPlayers}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                aria-label="Close modal"
-              >
-                X
-              </button>
-            </header>
-
-            <form
-              onSubmit={(event) => void handleCreateBulkStaticPlayers(event)}
-              className="mt-5 grid gap-4"
-            >
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-stone-700">Add players</span>
-                <textarea
-                  value={bulkStaticPlayerNames}
-                  onChange={(event) =>
-                    setBulkStaticPlayerNames(event.target.value)
-                  }
-                  placeholder={"John\nDoe\nJane\nRalph"}
-                  rows={8}
-                  className="min-h-[180px] resize-y rounded-2xl border border-orange-100 bg-white px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-stone-700">Skill level</span>
-                <select
-                  value={staticSkillLevel}
-                  onChange={(event) =>
-                    setStaticSkillLevel(event.target.value as SkillLevelType)
-                  }
-                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="elite">Elite</option>
-                </select>
-              </label>
-
-              {bulkStaticPlayerError ? (
-                <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-                  {bulkStaticPlayerError}
-                </p>
-              ) : null}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsBulkStaticPlayerModalOpen(false)}
-                  disabled={isCreatingBulkStaticPlayers}
-                  className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isCreatingBulkStaticPlayers}
-                  className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                    isCreatingBulkStaticPlayers
-                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
-                      : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
-                  }`}
-                >
-                  {isCreatingBulkStaticPlayers ? "Adding..." : "Add players"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -2,9 +2,19 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
-import { EllipsisVertical, SquarePen, Trash } from "lucide-react";
+import {
+  EllipsisVertical,
+  Plus,
+  SquarePen,
+  Trash,
+  UsersRound,
+} from "lucide-react";
 import { useCommunities } from "../../contexts/CommunitiesContext";
 import EditCommunityModal from "../../components/community_components/EditCommunityModal";
+import type {
+  CommunityPlayerRecord,
+  SkillLevelType,
+} from "../../lib/host";
 
 type MasterType = {
   id: string;
@@ -43,6 +53,13 @@ type HostFormState = {
   maxPlayers: string;
 };
 
+type PlayerFormState = {
+  names: string;
+  skillLevel: SkillLevelType;
+};
+
+type CommunityPanel = "host" | "players" | null;
+
 const DEFAULT_SPORT_OPTIONS = ["badminton"];
 
 const INITIAL_HOST_FORM: HostFormState = {
@@ -52,6 +69,11 @@ const INITIAL_HOST_FORM: HostFormState = {
   startTime: "",
   endTime: "",
   maxPlayers: "",
+};
+
+const INITIAL_PLAYER_FORM: PlayerFormState = {
+  names: "",
+  skillLevel: "beginner",
 };
 
 const formatHostDateTime = (value: string | null) => {
@@ -71,8 +93,15 @@ export default function Community() {
   const { refetchCommunities } = useCommunities();
   const [community, setCommunity] = useState<CommunityType | null>(null);
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
+  const [communityPlayers, setCommunityPlayers] = useState<
+    CommunityPlayerRecord[]
+  >([]);
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
+  const [playerForm, setPlayerForm] =
+    useState<PlayerFormState>(INITIAL_PLAYER_FORM);
+  const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
+  const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
@@ -82,6 +111,7 @@ export default function Community() {
     null,
   );
   const [hostError, setHostError] = useState<string | null>(null);
+  const [playerError, setPlayerError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const getCommunityAPI = async () => {
@@ -112,11 +142,32 @@ export default function Community() {
     void getCommunityHostsAPI();
   }, [id]);
 
+  const getCommunityPlayersAPI = async () => {
+    try {
+      const response = await api.get(`/api/community/${id}/players`);
+      setCommunityPlayers(response.data.players);
+    } catch (error) {
+      if (axios.isAxiosError(error)) console.error(error);
+      else console.error("Get community players api failed", error);
+    }
+  };
+
+  useEffect(() => {
+    void getCommunityPlayersAPI();
+  }, [id]);
+
   const handleHostFormChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target;
     setHostForm((currentForm) => ({ ...currentForm, [name]: value }));
+  };
+
+  const handlePlayerFormChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = event.target;
+    setPlayerForm((currentForm) => ({ ...currentForm, [name]: value }));
   };
 
   const handleCreateHost = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -160,6 +211,7 @@ export default function Community() {
       const newHost = response.data.data as HostsType;
       setCommunityHosts((currentHosts) => [...currentHosts, newHost]);
       setHostForm(INITIAL_HOST_FORM);
+      setActivePanel(null);
     } catch (error) {
       setHostError("Unable to create host.");
 
@@ -168,6 +220,53 @@ export default function Community() {
       else console.error("Create host api failed", error);
     } finally {
       setIsCreatingHost(false);
+    }
+  };
+
+  const handleCreatePlayers = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (!id) return;
+
+    const names = playerForm.names
+      .split(/\r?\n/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+    const uniqueNames = Array.from(new Set(names));
+
+    if (uniqueNames.length === 0) {
+      setPlayerError("Add at least one player name.");
+      return;
+    }
+
+    setIsCreatingPlayers(true);
+    setPlayerError(null);
+
+    try {
+      const createdPlayers: CommunityPlayerRecord[] = [];
+
+      for (const username of uniqueNames) {
+        const response = await api.post(`/api/community/${id}/players/static`, {
+          username,
+          skillLevel: playerForm.skillLevel,
+        });
+        createdPlayers.push(response.data.player as CommunityPlayerRecord);
+      }
+
+      setCommunityPlayers((currentPlayers) => [
+        ...createdPlayers,
+        ...currentPlayers,
+      ]);
+      setPlayerForm(INITIAL_PLAYER_FORM);
+    } catch (error) {
+      setPlayerError("Unable to add all community players.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Create community players api failed", error);
+    } finally {
+      setIsCreatingPlayers(false);
     }
   };
 
@@ -388,10 +487,98 @@ export default function Community() {
           </p>
         ) : null}
 
-        <form
-          onSubmit={handleCreateHost}
-          className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-        >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() =>
+              setActivePanel((currentPanel) =>
+                currentPanel === "host" ? null : "host",
+              )
+            }
+            aria-pressed={activePanel === "host"}
+            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition cursor-pointer ${
+              activePanel === "host"
+                ? "border-primary bg-primary text-white shadow-sm"
+                : "border-gray-200 bg-white text-text hover:border-primary/40 hover:bg-orange-50"
+            }`}
+          >
+            <span className="flex items-center gap-3">
+              <span
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                  activePanel === "host" ? "bg-white/15" : "bg-primary/10"
+                }`}
+              >
+                <Plus size={20} />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold">
+                  Host a Match
+                </span>
+                <span
+                  className={`block text-xs ${
+                    activePanel === "host" ? "text-white/75" : "text-gray-500"
+                  }`}
+                >
+                  Create a new hosted match.
+                </span>
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setActivePanel((currentPanel) =>
+                currentPanel === "players" ? null : "players",
+              )
+            }
+            aria-pressed={activePanel === "players"}
+            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition cursor-pointer ${
+              activePanel === "players"
+                ? "border-primary bg-primary text-white shadow-sm"
+                : "border-gray-200 bg-white text-text hover:border-primary/40 hover:bg-orange-50"
+            }`}
+          >
+            <span className="flex items-center gap-3">
+              <span
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                  activePanel === "players" ? "bg-white/15" : "bg-primary/10"
+                }`}
+              >
+                <UsersRound size={20} />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold">Players</span>
+                <span
+                  className={`block text-xs ${
+                    activePanel === "players"
+                      ? "text-white/75"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Manage the community roster.
+                </span>
+              </span>
+            </span>
+
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                activePanel === "players"
+                  ? "bg-white/15 text-white"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              {communityPlayers.length}
+            </span>
+          </button>
+        </div>
+
+        {activePanel === "host" ? (
+          <section className="rounded-3xl border border-gray-200 bg-white p-5">
+            <form
+              onSubmit={handleCreateHost}
+              className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+            >
           <label>
             <span className="mb-2 block text-sm font-medium text-text">
               Name
@@ -496,6 +683,110 @@ export default function Community() {
           <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {hostError}
           </p>
+        ) : null}
+          </section>
+        ) : null}
+
+        {activePanel === "players" ? (
+          <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+          <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-text">
+                Community Players
+              </h3>
+              <p className="text-sm text-gray-500">
+                Build a reusable roster for every hosted match.
+              </p>
+            </div>
+
+            <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              {communityPlayers.length}
+            </div>
+          </div>
+
+          <div className="grid gap-5 p-5 lg:grid-cols-[minmax(260px,360px)_1fr]">
+            <form
+              onSubmit={handleCreatePlayers}
+              className="grid gap-3 rounded-2xl border border-orange-100 bg-orange-50/40 p-4"
+            >
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">
+                  Player names
+                </span>
+                <textarea
+                  name="names"
+                  value={playerForm.names}
+                  onChange={handlePlayerFormChange}
+                  placeholder={"John\nDoe\nJane"}
+                  rows={6}
+                  className="min-h-[150px] resize-y rounded-2xl border border-orange-100 bg-white px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Skill level</span>
+                <select
+                  name="skillLevel"
+                  value={playerForm.skillLevel}
+                  onChange={handlePlayerFormChange}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="elite">Elite</option>
+                </select>
+              </label>
+
+              {playerError ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {playerError}
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isCreatingPlayers}
+                className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                  isCreatingPlayers
+                    ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                    : "bg-primary text-white hover:bg-accent"
+                }`}
+              >
+                {isCreatingPlayers ? "Adding..." : "Add to community"}
+              </button>
+            </form>
+
+            <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {communityPlayers.length > 0 ? (
+                communityPlayers.map((communityPlayer) => (
+                  <div
+                    key={communityPlayer.id}
+                    className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3"
+                  >
+                    <img
+                      src={communityPlayer.player.profileUrl}
+                      alt={communityPlayer.player.username}
+                      className="h-11 w-11 rounded-full object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text">
+                        {communityPlayer.player.username}
+                      </p>
+                      <p className="text-xs capitalize text-gray-500">
+                        {communityPlayer.player.skillLevel}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
+                  No community players yet.
+                </div>
+              )}
+            </div>
+          </div>
+          </section>
         ) : null}
 
         <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">

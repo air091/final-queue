@@ -1,7 +1,10 @@
 import express, { Router } from "express";
 import {
   createCommunity,
+  createCommunityStaticPlayer,
+  addCommunityPlayersToHost,
   getCommunities,
+  getCommunityPlayers,
   updateCommunity,
   deleteCommunity,
   getCommunityById,
@@ -49,6 +52,8 @@ router.get("/", authenticate, getCommunities);
 router.get("/:communityId", authenticate, getCommunityById);
 router.patch("/:communityId", authenticate, updateCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
+router.get("/:communityId/players", authenticate, getCommunityPlayers);
+router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
 
 // COMMUNITY HOST
 
@@ -79,6 +84,11 @@ router.get(
   "/:communityId/hosts/:hostId/players",
   authenticate,
   getHostWithPlayers,
+);
+router.post(
+  "/:communityId/hosts/:hostId/players/from-community",
+  authenticate,
+  addCommunityPlayersToHost,
 );
 router.get(
   "/:communityId/hosts/:hostId/players/:playerId/history",

@@ -18,6 +18,7 @@ model Account {
   role              UserRoles          @default(player)
   status            AccountStatuses    @default(active)
   communities       Community[]
+  communityPlayers  CommunityPlayer[]
   matchParticipants MatchParticipant[]
   hostedPlayers     Player[]
   sports            UserSport[]
@@ -43,8 +44,22 @@ model Community {
   masterId      String
   master        Account  @relation(fields: [masterId], references: [id], onDelete: Cascade)
   hosts         Host[]
+  players       CommunityPlayer[]
 
   @@index([masterId])
+}
+
+model CommunityPlayer {
+  id          String    @id @default(uuid())
+  communityId String
+  accountId   String
+  addedAt     DateTime  @default(now())
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, accountId])
+  @@index([communityId])
+  @@index([accountId])
 }
 
 model Host {
