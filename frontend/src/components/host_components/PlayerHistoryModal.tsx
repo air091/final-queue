@@ -106,12 +106,12 @@ export default function PlayerHistoryModal({
         <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">
           Team {teamName}
         </div>
-        <div className="mt-2 grid gap-2">
+        <div className="mt-2 flex items-center gap-x-3">
           {teamPlayers.length > 0 ? (
             teamPlayers.map((participant) => (
               <div
                 key={participant.id}
-                className="flex min-w-0 items-center gap-2"
+                className="flex min-w-0 items-center gap-2 bg-orange-100 px-2 py-1 rounded-full"
               >
                 {participant.player?.profileUrl ? (
                   <img
