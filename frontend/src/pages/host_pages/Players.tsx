@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
-import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../lib/api";
 import {
   EMPTY_MATCH_HISTORY_SUMMARY,
@@ -605,7 +604,6 @@ function PlayerSection({
 
 export default function Players() {
   const { communityId, hostId } = useParams();
-  const { user } = useAuth();
   const {
     playersInHost: players,
     setPlayersInHost,
@@ -1589,12 +1587,7 @@ export default function Players() {
   };
 
   const visiblePlayers = players.filter(
-    (player) =>
-      !(player.player.id === user?.id && player.status !== "accepted"),
-  );
-
-  const requestedPlayers = visiblePlayers.filter(
-    (player) => player.status === "requested",
+    (player) => player.status !== "requested",
   );
   const normalizedPlayerSearchTerm = playerSearchTerm.trim().toLowerCase();
   const searchedPlayers = visiblePlayers.filter(
@@ -1703,8 +1696,7 @@ export default function Players() {
         </div>
 
         <p className="text-sm text-stone-500">
-          Manage player requests, queue participation, and walk-in badminton
-          players.
+          Manage queue participation and walk-in badminton players.
         </p>
         {staticProfileImageError ? (
           <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
@@ -1712,46 +1704,6 @@ export default function Players() {
           </p>
         ) : null}
       </header>
-
-      {requestedPlayers.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
-          <h4 className="text-sm font-semibold text-yellow-700">
-            Pending Requests ({requestedPlayers.length})
-          </h4>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {requestedPlayers.map((player) => (
-              <div
-                key={player.id}
-                className="flex items-center gap-2 rounded-xl border border-yellow-200 bg-white px-3 py-2"
-              >
-                <img
-                  src={player.player.profileUrl}
-                  alt={player.player.username}
-                  className="h-6 w-6 rounded-full object-cover"
-                />
-                <span className="text-sm font-medium text-stone-700">
-                  {player.player.username}
-                </span>
-
-                <button
-                  onClick={() => handleAcceptPlayer(player.id)}
-                  className="ml-2 rounded-lg bg-green-100 px-2 py-1 text-xs font-medium text-green-700"
-                >
-                  Accept
-                </button>
-
-                <button
-                  onClick={() => handleRejectPlayer(player.id)}
-                  className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-700"
-                >
-                  Reject
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="grid gap-5">
         <PlayerSection

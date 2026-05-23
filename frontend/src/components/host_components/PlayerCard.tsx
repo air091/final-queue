@@ -5,7 +5,7 @@ import PlayerSettingsDropdown from "./PlayerDropdown";
 import { useEffect, useRef, useState } from "react";
 import { TbArrowBack } from "react-icons/tb";
 import type { AcceptedPlayers } from "../../lib/host";
-import { Gamepad } from "lucide-react";
+import { Gamepad, TriangleAlert } from "lucide-react";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
@@ -123,7 +123,7 @@ export default function PlayerCard({
     playing: "border-red-500",
   }[player.matchStatus];
   const cardStateClasses = isOverWaitThreshold
-    ? "border-red-500 bg-red-200 shadow-red-100"
+    ? `${statusClasses} bg-red-200 shadow-red-100`
     : `${statusClasses} bg-white`;
   const gamesPlayed = player.gamesPlayed ?? 0;
   const skillLevel = player.player.skillLevel
@@ -150,7 +150,7 @@ export default function PlayerCard({
         activeDropdown === player.id
           ? " border-primary"
           : isOverWaitThreshold
-            ? "hover:border-red-600"
+            ? ""
             : "border-gray-200 hover:border-primary/30"
       }
     `}
@@ -200,6 +200,14 @@ export default function PlayerCard({
 
       {/* ================= ACTIONS ================= */}
       <div className="flex items-center gap-1 shrink-0">
+        {isOverWaitThreshold && !isInSlot && (
+          <TriangleAlert
+            size={16}
+            className="shrink-0 text-red-500"
+            aria-label="Waiting over 20 minutes"
+          />
+        )}
+
         {/* REMOVE */}
         {isInSlot && (canRemoveFromCourt || canRemoveFromQueue) && (
           <button

@@ -453,8 +453,9 @@ export default function Community() {
   ) => {
     if (!id || savingCommunityPlayerId) return;
 
+    const actionLabel = communityPlayer.player.isStatic ? "Delete" : "Kick";
     const confirmed = window.confirm(
-      `Delete "${communityPlayer.player.username}" from the community roster?`,
+      `${actionLabel} "${communityPlayer.player.username}" from the community roster?`,
     );
 
     if (!confirmed) return;
@@ -470,7 +471,11 @@ export default function Community() {
         ),
       );
     } catch (error) {
-      setPlayerError("Unable to delete this player.");
+      setPlayerError(
+        communityPlayer.player.isStatic
+          ? "Unable to delete this player."
+          : "Unable to kick this player.",
+      );
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -1216,6 +1221,18 @@ export default function Community() {
                               Ban
                             </button>
                           ) : null}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleDeleteCommunityPlayer(communityPlayer)
+                            }
+                            disabled={
+                              savingCommunityPlayerId === communityPlayer.id
+                            }
+                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Kick
+                          </button>
                         </>
                       )}
                     </div>

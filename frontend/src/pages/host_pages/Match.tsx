@@ -1606,16 +1606,17 @@ export default function Match() {
   const filteredPlayers = (() => {
     const matchingPlayers = players.filter((player) => {
       const matchesStatus =
-        activePlayerStatus === "all" ||
-        (activePlayerStatus === "paid"
-          ? paidPlayerIds.has(player.id)
-          : activePlayerStatus === "waiting"
-            ? player.matchStatus === activePlayerStatus &&
-              !paidPlayerIds.has(player.id)
-            : activePlayerStatus === "inQueue"
-              ? player.matchStatus === activePlayerStatus ||
-                Boolean(player.queueEntry)
-          : player.matchStatus === activePlayerStatus);
+        activePlayerStatus === "all"
+          ? !paidPlayerIds.has(player.id)
+          : activePlayerStatus === "paid"
+            ? paidPlayerIds.has(player.id)
+            : activePlayerStatus === "waiting"
+              ? player.matchStatus === activePlayerStatus &&
+                !paidPlayerIds.has(player.id)
+              : activePlayerStatus === "inQueue"
+                ? player.matchStatus === activePlayerStatus ||
+                  Boolean(player.queueEntry)
+                : player.matchStatus === activePlayerStatus;
       const matchesSearch =
         normalizedPlayerSearchTerm === "" ||
         player.player.username

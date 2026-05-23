@@ -880,6 +880,7 @@ export const deleteCommunityPlayer = async (
         id: true,
         account: {
           select: {
+            id: true,
             role: true,
           },
         },
@@ -891,20 +892,30 @@ export const deleteCommunityPlayer = async (
         .status(404)
         .json({ success: false, message: "Community player not found" });
 
-    if (communityPlayer.account.role !== UserRoles.static) {
+    if (communityPlayer.account.role === UserRoles.master) {
       return response.status(400).json({
         success: false,
-        message: "Only static players can be deleted from the community roster",
+        message: "Community admins cannot be removed from the roster",
       });
     }
 
-    await prisma.communityPlayer.delete({
-      where: { id: communityPlayer.id },
-    });
+    await prisma.$transaction([
+      prisma.player.deleteMany({
+        where: {
+          playerId: communityPlayer.account.id,
+          host: {
+            communityId,
+          },
+        },
+      }),
+      prisma.communityPlayer.delete({
+        where: { id: communityPlayer.id },
+      }),
+    ]);
 
     return response.status(200).json({
       success: true,
-      message: "Community player deleted successfully",
+      message: "Community player removed successfully",
     });
   } catch (error) {
     console.error("Error deleting community player:", error);
