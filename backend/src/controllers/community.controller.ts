@@ -299,6 +299,62 @@ type CommunityPlayerParams = {
   hostId?: string;
 };
 
+const MONTH_FILTER_PATTERN = /^\d{4}-\d{2}$/;
+const DAY_FILTER_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const getStringQueryValue = (value: unknown) =>
+  typeof value === "string" ? value : undefined;
+
+const getMonthDateRange = (month: string) => {
+  if (!MONTH_FILTER_PATTERN.test(month)) return null;
+
+  const [yearText, monthText] = month.split("-");
+  if (!yearText || !monthText) return null;
+
+  const year = Number(yearText);
+  const monthNumber = Number(monthText);
+  if (!Number.isInteger(year) || !Number.isInteger(monthNumber)) return null;
+  if (monthNumber < 1 || monthNumber > 12) return null;
+
+  return {
+    gte: new Date(Date.UTC(year, monthNumber - 1, 1)),
+    lt: new Date(Date.UTC(year, monthNumber, 1)),
+  };
+};
+
+const getDayDateRange = (day: string) => {
+  if (!DAY_FILTER_PATTERN.test(day)) return null;
+
+  const [yearText, monthText, dayText] = day.split("-");
+  if (!yearText || !monthText || !dayText) return null;
+
+  const year = Number(yearText);
+  const monthNumber = Number(monthText);
+  const dayNumber = Number(dayText);
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(monthNumber) ||
+    !Number.isInteger(dayNumber)
+  ) {
+    return null;
+  }
+
+  const start = new Date(Date.UTC(year, monthNumber - 1, dayNumber));
+
+  if (
+    start.getUTCFullYear() !== year ||
+    start.getUTCMonth() !== monthNumber - 1 ||
+    start.getUTCDate() !== dayNumber
+  ) {
+    return null;
+  }
+
+  return {
+    gte: start,
+    lt: new Date(Date.UTC(year, monthNumber - 1, dayNumber + 1)),
+  };
+};
+
 type CreateCommunityStaticPlayerBody = {
   username?: string;
   skillLevel?: SkillLevels;
@@ -392,6 +448,13 @@ export const getCommunityPlayerWinPoints = async (
   try {
     const { communityId } = request.params;
     const user = request.user;
+    const filter = getStringQueryValue(request.query.filter) ?? "all";
+    const month = getStringQueryValue(request.query.month);
+    const day = getStringQueryValue(request.query.day);
+    const filterMode =
+      filter === "month" || filter === "day" || filter === "all"
+        ? filter
+        : "all";
 
     if (!user)
       return response
@@ -412,6 +475,25 @@ export const getCommunityPlayerWinPoints = async (
       return response
         .status(404)
         .json({ success: false, message: "Community not found" });
+
+    const pointDateRange =
+      filterMode === "month" && month
+        ? getMonthDateRange(month)
+        : filterMode === "day" && day
+          ? getDayDateRange(day)
+          : null;
+
+    if (filterMode === "month" && !pointDateRange) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid month filter" });
+    }
+
+    if (filterMode === "day" && !pointDateRange) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid day filter" });
+    }
 
     const [communityPlayers, winParticipants] = await Promise.all([
       prisma.communityPlayer.findMany({
@@ -441,16 +523,96 @@ export const getCommunityPlayerWinPoints = async (
           accountId: { not: null },
           match: {
             status: MatchStatus.finished,
+            ...(pointDateRange ? { endedAt: pointDateRange } : {}),
             host: {
               communityId: community.id,
             },
           },
         },
+        orderBy: {
+          joinedAt: "desc",
+        },
         select: {
+          id: true,
           accountId: true,
+          team: true,
+          joinedAt: true,
+          match: {
+            select: {
+              id: true,
+              startedAt: true,
+              endedAt: true,
+              teamWinner: true,
+              court: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              host: {
+                select: {
+                  id: true,
+                  hostName: true,
+                  startTime: true,
+                },
+              },
+            },
+          },
         },
       }),
     ]);
+
+    const pointHistoryByAccountId = winParticipants.reduce(
+      (historyByAccountId, participant) => {
+        if (!participant.accountId) return historyByAccountId;
+
+        const currentHistory =
+          historyByAccountId.get(participant.accountId) ?? [];
+
+        currentHistory.push({
+          id: participant.id,
+          points: 1,
+          reason: "win",
+          team: participant.team,
+          joinedAt: participant.joinedAt,
+          match: {
+            id: participant.match.id,
+            startedAt: participant.match.startedAt,
+            endedAt: participant.match.endedAt,
+            teamWinner: participant.match.teamWinner,
+            court: participant.match.court,
+            host: participant.match.host,
+          },
+        });
+
+        historyByAccountId.set(participant.accountId, currentHistory);
+        return historyByAccountId;
+      },
+      new Map<
+        string,
+        Array<{
+          id: string;
+          points: number;
+          reason: string;
+          team: string | null;
+          joinedAt: Date;
+          match: {
+            id: string;
+            startedAt: Date | null;
+            endedAt: Date | null;
+            teamWinner: string;
+            court: {
+              id: string;
+              name: string;
+            } | null;
+            host: {
+              id: string;
+              hostName: string;
+              startTime: Date | null;
+            };
+          };
+        }>>(),
+    );
 
     const winsByAccountId = winParticipants.reduce(
       (wins, participant) => {
@@ -468,6 +630,8 @@ export const getCommunityPlayerWinPoints = async (
     const players = communityPlayers
       .map((communityPlayer) => {
         const winCount = winsByAccountId.get(communityPlayer.accountId) ?? 0;
+        const pointsHistory =
+          pointHistoryByAccountId.get(communityPlayer.accountId) ?? [];
 
         return {
           communityPlayerId: communityPlayer.id,
@@ -478,6 +642,7 @@ export const getCommunityPlayerWinPoints = async (
           }),
           winCount,
           points: winCount,
+          pointsHistory,
         };
       })
       .sort((firstPlayer, secondPlayer) => {
@@ -493,10 +658,158 @@ export const getCommunityPlayerWinPoints = async (
     return response.status(200).json({
       success: true,
       message: "Community player win points retrieved successfully",
+      filter: {
+        mode: filterMode,
+        month: filterMode === "month" ? month : null,
+        day: filterMode === "day" ? day : null,
+      },
       players,
     });
   } catch (error) {
     console.error("Error getting community player win points:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const includeCommunityAdminAsPlayer = async (
+  request: Request<CommunityPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const communityPlayer = await prisma.communityPlayer.upsert({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId: user.sub,
+        },
+      },
+      update: {
+        status: PlayerHostStatuses.accepted,
+      },
+      create: {
+        communityId: community.id,
+        accountId: user.sub,
+        status: PlayerHostStatuses.accepted,
+      },
+      select: {
+        id: true,
+        status: true,
+        addedAt: true,
+        account: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+            role: true,
+            sports: {
+              where: { sport: Sports.badminton },
+              select: {
+                sport: true,
+                skillLevel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Admin added as community player",
+      player: mapCommunityPlayerRecord(communityPlayer),
+    });
+  } catch (error) {
+    console.error("Error adding admin as community player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const removeCommunityAdminAsPlayer = async (
+  request: Request<CommunityPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const communityPlayer = await prisma.communityPlayer.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!communityPlayer)
+      return response.status(200).json({
+        success: true,
+        message: "Admin is already removed from community players",
+      });
+
+    await prisma.communityPlayer.delete({
+      where: { id: communityPlayer.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Admin removed from community players",
+      communityPlayerId: communityPlayer.id,
+    });
+  } catch (error) {
+    console.error("Error removing admin as community player:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

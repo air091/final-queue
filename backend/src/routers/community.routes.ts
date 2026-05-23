@@ -7,6 +7,8 @@ import {
   getCommunities,
   getCommunityPlayers,
   getCommunityPlayerWinPoints,
+  includeCommunityAdminAsPlayer,
+  removeCommunityAdminAsPlayer,
   updateCommunity,
   updateCommunityPlayer,
   deleteCommunity,
@@ -62,6 +64,16 @@ router.get(
   "/:communityId/players/win-points",
   authenticate,
   getCommunityPlayerWinPoints,
+);
+router.post(
+  "/:communityId/players/admin",
+  authenticate,
+  includeCommunityAdminAsPlayer,
+);
+router.delete(
+  "/:communityId/players/admin",
+  authenticate,
+  removeCommunityAdminAsPlayer,
 );
 router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
 router.patch(
