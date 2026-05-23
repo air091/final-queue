@@ -172,6 +172,27 @@ export const playerRequestToJoinHost = async (
       });
     }
 
+    const communityPlayer = await prisma.communityPlayer.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId: user.sub,
+        },
+      },
+      select: { status: true },
+    });
+
+    if (communityPlayer?.status === PlayerHostStatuses.banned) {
+      return response.status(403).json({
+        success: false,
+        message: "You are banned from this community",
+      });
+    }
+    const nextCommunityPlayerStatus =
+      communityPlayer?.status === PlayerHostStatuses.accepted
+        ? PlayerHostStatuses.accepted
+        : PlayerHostStatuses.requested;
+
     const host = await prisma.host.findFirst({
       where: { id: hostId, communityId: community.id },
     });
@@ -220,16 +241,34 @@ export const playerRequestToJoinHost = async (
       }
     }
 
-    const player = await prisma.player.create({
-      data: {
-        hostId: host.id,
-        playerId: user.sub,
-      },
-      select: {
-        id: true,
-        hostStatus: true,
-      },
-    });
+    const [, player] = await prisma.$transaction([
+      prisma.communityPlayer.upsert({
+        where: {
+          communityId_accountId: {
+            communityId: community.id,
+            accountId: user.sub,
+          },
+        },
+        update: {
+          status: nextCommunityPlayerStatus,
+        },
+        create: {
+          communityId: community.id,
+          accountId: user.sub,
+          status: nextCommunityPlayerStatus,
+        },
+      }),
+      prisma.player.create({
+        data: {
+          hostId: host.id,
+          playerId: user.sub,
+        },
+        select: {
+          id: true,
+          hostStatus: true,
+        },
+      }),
+    ]);
 
     return response.status(201).json({
       success: true,

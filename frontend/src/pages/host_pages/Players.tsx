@@ -13,9 +13,18 @@ import {
   type HostPlayerRecord,
   type SkillLevelType,
 } from "../../lib/host";
-import { X } from "lucide-react";
+import {
+  AArrowDown,
+  AArrowUp,
+  Gamepad,
+  MoveDown,
+  MoveUp,
+  X,
+} from "lucide-react";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+type SortDirection = "asc" | "desc";
+type PlayerSortField = "name" | "games";
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -74,6 +83,7 @@ type PlayerSectionProps = {
   onEditStaticPlayer?: (player: HostPlayerRecord) => void;
   emptyMessage: string;
   extraContent?: ReactNode;
+  headerActions?: ReactNode;
 };
 
 function PlayerSection({
@@ -93,6 +103,7 @@ function PlayerSection({
   onEditStaticPlayer,
   emptyMessage,
   extraContent,
+  headerActions,
 }: PlayerSectionProps) {
   return (
     <section className="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-visible">
@@ -103,9 +114,13 @@ function PlayerSection({
           <p className="mt-1 text-sm text-gray-500">{description}</p>
         </div>
 
-        <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/10 px-3 text-xs font-semibold text-primary">
-          {players.length}
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {headerActions}
+
+          <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-primary/10 px-3 text-xs font-semibold text-primary">
+            {players.length}
+          </span>
+        </div>
       </header>
 
       {/* EXTRA CONTENT */}
@@ -617,6 +632,12 @@ export default function Players() {
   const [communityPlayerError, setCommunityPlayerError] = useState<
     string | null
   >(null);
+  const [nameSortDirection, setNameSortDirection] =
+    useState<SortDirection>("asc");
+  const [gamesSortDirection, setGamesSortDirection] =
+    useState<SortDirection>("desc");
+  const [primarySortField, setPrimarySortField] =
+    useState<PlayerSortField>("name");
   const [staticProfileUrlDrafts, setStaticProfileUrlDrafts] = useState<
     Record<string, string>
   >({});
@@ -1585,7 +1606,9 @@ export default function Players() {
     players.map((player) => player.player.id).filter(Boolean),
   );
   const selectableCommunityPlayers = communityPlayers.filter(
-    (communityPlayer) => !hostedAccountIds.has(communityPlayer.player.id),
+    (communityPlayer) =>
+      communityPlayer.status === "accepted" &&
+      !hostedAccountIds.has(communityPlayer.player.id),
   );
 
   const statusPriority: Record<string, number> = {
@@ -1595,15 +1618,64 @@ export default function Players() {
     banned: 2,
   };
 
+  const togglePlayerSort = (field: PlayerSortField) => {
+    setPrimarySortField(field);
+
+    if (field === "name") {
+      setNameSortDirection((currentDirection) =>
+        currentDirection === "asc" ? "desc" : "asc",
+      );
+      return;
+    }
+
+    setGamesSortDirection((currentDirection) =>
+      currentDirection === "asc" ? "desc" : "asc",
+    );
+  };
+
+  const getPlayerGames = (playerRecord: HostPlayerRecord) =>
+    acceptedPlayers.find((player) => player.id === playerRecord.id)
+      ?.gamesPlayed ?? 0;
+
+  const comparePlayers = (
+    firstPlayer: HostPlayerRecord,
+    secondPlayer: HostPlayerRecord,
+    field: PlayerSortField,
+  ) => {
+    if (field === "games") {
+      const gamesMultiplier = gamesSortDirection === "asc" ? 1 : -1;
+      return (
+        (getPlayerGames(firstPlayer) - getPlayerGames(secondPlayer)) *
+        gamesMultiplier
+      );
+    }
+
+    const nameMultiplier = nameSortDirection === "asc" ? 1 : -1;
+    return (
+      firstPlayer.player.username.localeCompare(
+        secondPlayer.player.username,
+        undefined,
+        { sensitivity: "base" },
+      ) * nameMultiplier
+    );
+  };
+
   const sortPlayers = (list: HostPlayerRecord[]) => {
     return [...list].sort((a, b) => {
-      // 1. Sort by status priority (accepted/requested first, then rejected, then banned)
+      const secondarySortField = primarySortField === "name" ? "games" : "name";
+      const primaryResult = comparePlayers(a, b, primarySortField);
+
+      if (primaryResult !== 0) return primaryResult;
+
+      const secondaryResult = comparePlayers(a, b, secondarySortField);
+
+      if (secondaryResult !== 0) return secondaryResult;
+
       const statusDiff =
         (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
 
       if (statusDiff !== 0) return statusDiff;
 
-      // 2. Within same status, sort by requestedAt (most recent first)
       const aTime = a.requestedAt ? new Date(a.requestedAt).getTime() : 0;
       const bTime = b.requestedAt ? new Date(b.requestedAt).getTime() : 0;
 
@@ -1708,6 +1780,42 @@ export default function Players() {
           }
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           onEditStaticPlayer={openEditStaticPlayerModal}
+          headerActions={
+            <div className="flex items-center gap-x-2">
+              <button
+                type="button"
+                title="Sort by player name"
+                aria-pressed={primarySortField === "name"}
+                onClick={() => togglePlayerSort("name")}
+                className={`flex items-center rounded-full border border-orange-100 px-3 py-1 outline-orange-100 transition hover:bg-orange-50 cursor-pointer ${
+                  primarySortField === "name" ? "bg-orange-50" : "bg-white"
+                }`}
+              >
+                {nameSortDirection === "desc" ? (
+                  <AArrowDown size={22} />
+                ) : (
+                  <AArrowUp size={22} />
+                )}
+              </button>
+
+              <button
+                type="button"
+                title="Sort by games played"
+                aria-pressed={primarySortField === "games"}
+                onClick={() => togglePlayerSort("games")}
+                className={`flex items-center rounded-full border border-orange-100 px-3 py-1 outline-orange-100 transition hover:bg-orange-50 cursor-pointer ${
+                  primarySortField === "games" ? "bg-orange-50" : "bg-white"
+                }`}
+              >
+                <Gamepad size={22} />
+                {gamesSortDirection === "desc" ? (
+                  <MoveUp size={14} />
+                ) : (
+                  <MoveDown size={14} />
+                )}
+              </button>
+            </div>
+          }
           emptyMessage={
             normalizedPlayerSearchTerm
               ? "No players match your search."

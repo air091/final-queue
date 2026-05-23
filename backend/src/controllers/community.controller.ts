@@ -61,6 +61,7 @@ const buildCommunityPlayerProfile = (
 
 const mapCommunityPlayerRecord = (communityPlayer: {
   id: string;
+  status: PlayerHostStatuses;
   addedAt: Date;
   account: {
     id: string;
@@ -71,6 +72,7 @@ const mapCommunityPlayerRecord = (communityPlayer: {
   };
 }) => ({
   id: communityPlayer.id,
+  status: communityPlayer.status,
   addedAt: communityPlayer.addedAt,
   player: buildCommunityPlayerProfile(communityPlayer.account),
 });
@@ -298,10 +300,19 @@ type CreateCommunityStaticPlayerBody = {
   username?: string;
   skillLevel?: SkillLevels;
   profileUrl?: string;
+  imageData?: string;
 };
 
 type AddCommunityPlayersToHostBody = {
   communityPlayerIds?: string[];
+};
+
+type UpdateCommunityPlayerBody = {
+  username?: string;
+  skillLevel?: SkillLevels;
+  profileUrl?: string | null;
+  imageData?: string;
+  status?: PlayerHostStatuses;
 };
 
 export const getCommunityPlayers = async (
@@ -337,6 +348,7 @@ export const getCommunityPlayers = async (
       orderBy: { addedAt: "desc" },
       select: {
         id: true,
+        status: true,
         addedAt: true,
         account: {
           select: {
@@ -438,9 +450,11 @@ export const createCommunityStaticPlayer = async (
         data: {
           communityId: community.id,
           accountId: account.id,
+          status: PlayerHostStatuses.accepted,
         },
         select: {
           id: true,
+          status: true,
           addedAt: true,
           account: {
             select: {
@@ -523,6 +537,7 @@ export const addCommunityPlayersToHost = async (
       where: {
         id: { in: communityPlayerIds },
         communityId,
+        status: PlayerHostStatuses.accepted,
       },
       select: {
         accountId: true,
@@ -616,6 +631,280 @@ export const addCommunityPlayersToHost = async (
     });
   } catch (error) {
     console.error("Error adding community players to host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const updateCommunityPlayer = async (
+  request: Request<
+    CommunityPlayerParams & { communityPlayerId: string },
+    unknown,
+    UpdateCommunityPlayerBody
+  >,
+  response: Response,
+) => {
+  try {
+    const { communityId, communityPlayerId } = request.params;
+    const { username, skillLevel, profileUrl, imageData, status } =
+      request.body;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !communityPlayerId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const communityPlayer = await prisma.communityPlayer.findFirst({
+      where: {
+        id: communityPlayerId,
+        community: {
+          id: communityId,
+          masterId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        addedAt: true,
+        account: {
+          select: {
+            id: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!communityPlayer)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community player not found" });
+
+    const isStaticPlayer = communityPlayer.account.role === UserRoles.static;
+
+    if (status !== undefined) {
+      if (!Object.values(PlayerHostStatuses).includes(status)) {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid player status" });
+      }
+
+      if (isStaticPlayer) {
+        return response.status(400).json({
+          success: false,
+          message: "Static players do not use moderation status",
+        });
+      }
+    }
+
+    if (skillLevel !== undefined && !Object.values(SkillLevels).includes(skillLevel)) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
+    }
+
+    if ((username !== undefined || profileUrl !== undefined || imageData || skillLevel) && !isStaticPlayer) {
+      return response.status(400).json({
+        success: false,
+        message: "Only static players can be edited",
+      });
+    }
+
+    const cleanUsername = username?.trim();
+    if (username !== undefined && !cleanUsername) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Player name is required" });
+    }
+
+    const cleanedProfileUrl = profileUrl?.trim() ?? "";
+    const cleanedImageData = imageData?.trim() ?? "";
+
+    if (cleanedProfileUrl && cleanedImageData) {
+      return response.status(400).json({
+        success: false,
+        message: "Choose either image upload or profile URL",
+      });
+    }
+
+    if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
+      try {
+        const parsedUrl = new URL(cleanedProfileUrl);
+
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          return response.status(400).json({
+            success: false,
+            message: "Profile URL must use http or https",
+          });
+        }
+      } catch {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid profile URL" });
+      }
+    }
+
+    const uploadedProfileUrl = cleanedImageData
+      ? await uploadImageToCloudinary({
+          dataUri: cleanedImageData,
+          publicId: `queue-system/static-player-images/${communityPlayer.account.id}`,
+        })
+      : null;
+    const nextProfileUrl = uploadedProfileUrl ?? cleanedProfileUrl;
+
+    await prisma.$transaction(async (transaction) => {
+      if (status !== undefined) {
+        await transaction.communityPlayer.update({
+          where: { id: communityPlayer.id },
+          data: { status },
+        });
+      }
+
+      if (isStaticPlayer) {
+        await transaction.account.update({
+          where: { id: communityPlayer.account.id },
+          data: {
+            ...(cleanUsername ? { username: cleanUsername } : {}),
+            ...(nextProfileUrl ? { profileUrl: nextProfileUrl } : {}),
+          },
+        });
+
+        if (skillLevel !== undefined) {
+          const sportRecord = await transaction.userSport.findFirst({
+            where: {
+              accountId: communityPlayer.account.id,
+              sport: Sports.badminton,
+            },
+            select: { id: true },
+          });
+
+          if (sportRecord) {
+            await transaction.userSport.update({
+              where: { id: sportRecord.id },
+              data: { skillLevel },
+            });
+          } else {
+            await transaction.userSport.create({
+              data: {
+                accountId: communityPlayer.account.id,
+                sport: Sports.badminton,
+                skillLevel,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    const updatedCommunityPlayer = await prisma.communityPlayer.findUnique({
+      where: { id: communityPlayer.id },
+      select: {
+        id: true,
+        status: true,
+        addedAt: true,
+        account: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+            role: true,
+            sports: {
+              where: { sport: Sports.badminton },
+              select: {
+                sport: true,
+                skillLevel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!updatedCommunityPlayer)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community player not found" });
+
+    return response.status(200).json({
+      success: true,
+      message: "Community player updated successfully",
+      player: mapCommunityPlayerRecord(updatedCommunityPlayer),
+    });
+  } catch (error) {
+    console.error("Error updating community player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const deleteCommunityPlayer = async (
+  request: Request<CommunityPlayerParams & { communityPlayerId: string }>,
+  response: Response,
+) => {
+  try {
+    const { communityId, communityPlayerId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !communityPlayerId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const communityPlayer = await prisma.communityPlayer.findFirst({
+      where: {
+        id: communityPlayerId,
+        community: {
+          id: communityId,
+          masterId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+        account: {
+          select: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!communityPlayer)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community player not found" });
+
+    if (communityPlayer.account.role !== UserRoles.static) {
+      return response.status(400).json({
+        success: false,
+        message: "Only static players can be deleted from the community roster",
+      });
+    }
+
+    await prisma.communityPlayer.delete({
+      where: { id: communityPlayer.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Community player deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting community player:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

@@ -3,9 +3,11 @@ import {
   createCommunity,
   createCommunityStaticPlayer,
   addCommunityPlayersToHost,
+  deleteCommunityPlayer,
   getCommunities,
   getCommunityPlayers,
   updateCommunity,
+  updateCommunityPlayer,
   deleteCommunity,
   getCommunityById,
 } from "../controllers/community.controller.js";
@@ -54,6 +56,16 @@ router.patch("/:communityId", authenticate, updateCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
 router.get("/:communityId/players", authenticate, getCommunityPlayers);
 router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
+router.patch(
+  "/:communityId/players/:communityPlayerId",
+  authenticate,
+  updateCommunityPlayer,
+);
+router.delete(
+  "/:communityId/players/:communityPlayerId",
+  authenticate,
+  deleteCommunityPlayer,
+);
 
 // COMMUNITY HOST
 

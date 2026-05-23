@@ -15,6 +15,7 @@ export type PlayerType = {
 
 export type CommunityPlayerRecord = {
   id: string;
+  status: HostPlayerStatus;
   addedAt: string;
   player: PlayerType;
 };

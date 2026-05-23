@@ -53,6 +53,7 @@ model CommunityPlayer {
   id          String    @id @default(uuid())
   communityId String
   accountId   String
+  status      PlayerHostStatuses @default(accepted)
   addedAt     DateTime  @default(now())
   account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)

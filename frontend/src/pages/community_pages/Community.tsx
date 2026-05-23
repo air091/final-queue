@@ -8,11 +8,13 @@ import {
   SquarePen,
   Trash,
   UsersRound,
+  X,
 } from "lucide-react";
 import { useCommunities } from "../../contexts/CommunitiesContext";
 import EditCommunityModal from "../../components/community_components/EditCommunityModal";
 import type {
   CommunityPlayerRecord,
+  HostPlayerStatus,
   SkillLevelType,
 } from "../../lib/host";
 
@@ -59,8 +61,15 @@ type PlayerFormState = {
 };
 
 type CommunityPanel = "host" | "players" | null;
+type CommunityPlayerEditForm = {
+  username: string;
+  skillLevel: SkillLevelType;
+  imageFile: File | null;
+  imagePreview: string | null;
+};
 
 const DEFAULT_SPORT_OPTIONS = ["badminton"];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const INITIAL_HOST_FORM: HostFormState = {
   hostName: "",
@@ -75,6 +84,26 @@ const INITIAL_PLAYER_FORM: PlayerFormState = {
   names: "",
   skillLevel: "beginner",
 };
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image file."));
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Failed to read image file."));
+    };
+
+    reader.readAsDataURL(file);
+  });
 
 const formatHostDateTime = (value: string | null) => {
   if (!value) return "Any time";
@@ -102,6 +131,9 @@ export default function Community() {
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
+  const [savingCommunityPlayerId, setSavingCommunityPlayerId] = useState<
+    string | null
+  >(null);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
@@ -112,6 +144,18 @@ export default function Community() {
   );
   const [hostError, setHostError] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
+  const [editingCommunityPlayer, setEditingCommunityPlayer] =
+    useState<CommunityPlayerRecord | null>(null);
+  const [communityPlayerEditForm, setCommunityPlayerEditForm] =
+    useState<CommunityPlayerEditForm>({
+      username: "",
+      skillLevel: "beginner",
+      imageFile: null,
+      imagePreview: null,
+    });
+  const [communityPlayerEditError, setCommunityPlayerEditError] = useState<
+    string | null
+  >(null);
   const navigate = useNavigate();
 
   const getCommunityAPI = async () => {
@@ -270,6 +314,172 @@ export default function Community() {
     }
   };
 
+  const updateCommunityPlayerInState = (player: CommunityPlayerRecord) => {
+    setCommunityPlayers((currentPlayers) =>
+      currentPlayers.map((currentPlayer) =>
+        currentPlayer.id === player.id ? player : currentPlayer,
+      ),
+    );
+  };
+
+  const handleUpdateCommunityPlayerStatus = async (
+    communityPlayerId: string,
+    status: HostPlayerStatus,
+  ) => {
+    if (!id || savingCommunityPlayerId) return;
+
+    setSavingCommunityPlayerId(communityPlayerId);
+    setPlayerError(null);
+
+    try {
+      const response = await api.patch(
+        `/api/community/${id}/players/${communityPlayerId}`,
+        { status },
+      );
+      updateCommunityPlayerInState(
+        response.data.player as CommunityPlayerRecord,
+      );
+    } catch (error) {
+      setPlayerError("Unable to update player status.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Update community player status api failed", error);
+    } finally {
+      setSavingCommunityPlayerId(null);
+    }
+  };
+
+  const openEditCommunityPlayer = (communityPlayer: CommunityPlayerRecord) => {
+    setEditingCommunityPlayer(communityPlayer);
+    setCommunityPlayerEditForm({
+      username: communityPlayer.player.username,
+      skillLevel: communityPlayer.player.skillLevel,
+      imageFile: null,
+      imagePreview: null,
+    });
+    setCommunityPlayerEditError(null);
+  };
+
+  const closeEditCommunityPlayer = () => {
+    if (savingCommunityPlayerId) return;
+    setEditingCommunityPlayer(null);
+    setCommunityPlayerEditError(null);
+    setCommunityPlayerEditForm({
+      username: "",
+      skillLevel: "beginner",
+      imageFile: null,
+      imagePreview: null,
+    });
+  };
+
+  const handleCommunityPlayerImageChange = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setCommunityPlayerEditError("Choose an image file.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setCommunityPlayerEditError("Image must be 5MB or smaller.");
+      return;
+    }
+
+    try {
+      const imagePreview = await readFileAsDataUrl(file);
+      setCommunityPlayerEditForm((currentForm) => ({
+        ...currentForm,
+        imageFile: file,
+        imagePreview,
+      }));
+      setCommunityPlayerEditError(null);
+    } catch {
+      setCommunityPlayerEditError("Unable to read image file.");
+    }
+  };
+
+  const handleSaveCommunityPlayerEdit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!id || !editingCommunityPlayer || savingCommunityPlayerId) return;
+
+    const cleanUsername = communityPlayerEditForm.username.trim();
+    if (!cleanUsername) {
+      setCommunityPlayerEditError("Player name is required.");
+      return;
+    }
+
+    setSavingCommunityPlayerId(editingCommunityPlayer.id);
+    setCommunityPlayerEditError(null);
+
+    try {
+      const imageData = communityPlayerEditForm.imageFile
+        ? await readFileAsDataUrl(communityPlayerEditForm.imageFile)
+        : undefined;
+      const response = await api.patch(
+        `/api/community/${id}/players/${editingCommunityPlayer.id}`,
+        {
+          username: cleanUsername,
+          skillLevel: communityPlayerEditForm.skillLevel,
+          imageData,
+        },
+      );
+
+      updateCommunityPlayerInState(
+        response.data.player as CommunityPlayerRecord,
+      );
+      setEditingCommunityPlayer(null);
+      setCommunityPlayerEditError(null);
+      setCommunityPlayerEditForm({
+        username: "",
+        skillLevel: "beginner",
+        imageFile: null,
+        imagePreview: null,
+      });
+    } catch (error) {
+      setCommunityPlayerEditError("Unable to update this player.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Update community player api failed", error);
+    } finally {
+      setSavingCommunityPlayerId(null);
+    }
+  };
+
+  const handleDeleteCommunityPlayer = async (
+    communityPlayer: CommunityPlayerRecord,
+  ) => {
+    if (!id || savingCommunityPlayerId) return;
+
+    const confirmed = window.confirm(
+      `Delete "${communityPlayer.player.username}" from the community roster?`,
+    );
+
+    if (!confirmed) return;
+
+    setSavingCommunityPlayerId(communityPlayer.id);
+    setPlayerError(null);
+
+    try {
+      await api.delete(`/api/community/${id}/players/${communityPlayer.id}`);
+      setCommunityPlayers((currentPlayers) =>
+        currentPlayers.filter(
+          (currentPlayer) => currentPlayer.id !== communityPlayer.id,
+        ),
+      );
+    } catch (error) {
+      setPlayerError("Unable to delete this player.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Delete community player api failed", error);
+    } finally {
+      setSavingCommunityPlayerId(null);
+    }
+  };
+
   const handleDeleteHost = async (
     event: React.MouseEvent<HTMLButtonElement>,
     host: HostsType,
@@ -412,6 +622,140 @@ export default function Community() {
           }}
           onSave={handleEditCommunity}
         />
+      ) : null}
+      {editingCommunityPlayer ? (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeEditCommunityPlayer}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
+          >
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-lg font-semibold text-text">
+                  Edit player
+                </h4>
+                <p className="mt-1 text-sm text-stone-500">
+                  Update this static community player.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditCommunityPlayer}
+                disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <form
+              onSubmit={(event) => void handleSaveCommunityPlayerEdit(event)}
+              className="mt-5 grid gap-5"
+            >
+              <div className="flex justify-center">
+                <label
+                  className="group relative h-24 w-24 cursor-pointer overflow-hidden rounded-full border border-orange-100 bg-orange-50"
+                  title="Change player photo"
+                >
+                  <img
+                    src={
+                      communityPlayerEditForm.imagePreview ??
+                      editingCommunityPlayer.player.profileUrl
+                    }
+                    alt={editingCommunityPlayer.player.username}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-xs font-semibold text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
+                    Change
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void handleCommunityPlayerImageChange(file);
+                    }}
+                  />
+                </label>
+              </div>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Player name</span>
+                <input
+                  type="text"
+                  value={communityPlayerEditForm.username}
+                  onChange={(event) =>
+                    setCommunityPlayerEditForm((currentForm) => ({
+                      ...currentForm,
+                      username: event.target.value,
+                    }))
+                  }
+                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-stone-50"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Skill level</span>
+                <select
+                  value={communityPlayerEditForm.skillLevel}
+                  onChange={(event) =>
+                    setCommunityPlayerEditForm((currentForm) => ({
+                      ...currentForm,
+                      skillLevel: event.target.value as SkillLevelType,
+                    }))
+                  }
+                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-stone-50"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                  <option value="elite">Elite</option>
+                </select>
+              </label>
+
+              {communityPlayerEditError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {communityPlayerEditError}
+                </p>
+              ) : null}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditCommunityPlayer}
+                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                    savingCommunityPlayerId === editingCommunityPlayer.id
+                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                      : "bg-primary text-white hover:bg-accent"
+                  }`}
+                >
+                  {savingCommunityPlayerId === editingCommunityPlayer.id
+                    ? "Saving..."
+                    : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
       <header className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -762,20 +1106,118 @@ export default function Community() {
                 communityPlayers.map((communityPlayer) => (
                   <div
                     key={communityPlayer.id}
-                    className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3"
+                    className="grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-3"
                   >
-                    <img
-                      src={communityPlayer.player.profileUrl}
-                      alt={communityPlayer.player.username}
-                      className="h-11 w-11 rounded-full object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-text">
-                        {communityPlayer.player.username}
-                      </p>
-                      <p className="text-xs capitalize text-gray-500">
-                        {communityPlayer.player.skillLevel}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <img
+                        src={communityPlayer.player.profileUrl}
+                        alt={communityPlayer.player.username}
+                        className="h-11 w-11 rounded-full object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-text">
+                          {communityPlayer.player.username}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary">
+                            {communityPlayer.player.skillLevel}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${
+                              communityPlayer.status === "accepted"
+                                ? "bg-green-50 text-green-700"
+                                : communityPlayer.status === "requested"
+                                  ? "bg-yellow-50 text-yellow-700"
+                                  : communityPlayer.status === "banned"
+                                    ? "bg-red-50 text-red-700"
+                                    : "bg-stone-100 text-stone-600"
+                            }`}
+                          >
+                            {communityPlayer.player.isStatic
+                              ? "static"
+                              : communityPlayer.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {communityPlayer.player.isStatic ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEditCommunityPlayer(communityPlayer)}
+                            disabled={savingCommunityPlayerId === communityPlayer.id}
+                            className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleDeleteCommunityPlayer(communityPlayer)
+                            }
+                            disabled={savingCommunityPlayerId === communityPlayer.id}
+                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {communityPlayer.status !== "accepted" ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleUpdateCommunityPlayerStatus(
+                                  communityPlayer.id,
+                                  "accepted",
+                                )
+                              }
+                              disabled={
+                                savingCommunityPlayerId === communityPlayer.id
+                              }
+                              className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                            >
+                              Accept
+                            </button>
+                          ) : null}
+                          {communityPlayer.status === "requested" ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleUpdateCommunityPlayerStatus(
+                                  communityPlayer.id,
+                                  "rejected",
+                                )
+                              }
+                              disabled={
+                                savingCommunityPlayerId === communityPlayer.id
+                              }
+                              className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                            >
+                              Reject
+                            </button>
+                          ) : null}
+                          {communityPlayer.status !== "banned" ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleUpdateCommunityPlayerStatus(
+                                  communityPlayer.id,
+                                  "banned",
+                                )
+                              }
+                              disabled={
+                                savingCommunityPlayerId === communityPlayer.id
+                              }
+                              className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                            >
+                              Ban
+                            </button>
+                          ) : null}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
