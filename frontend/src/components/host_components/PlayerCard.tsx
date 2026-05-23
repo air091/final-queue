@@ -74,11 +74,12 @@ export default function PlayerCard({
     return () => window.clearInterval(intervalId);
   }, []);
 
-  const { formattedTimer, timerStyle } = (() => {
+  const { formattedTimer, timerStyle, isOverWaitThreshold } = (() => {
     if (!player.timerStartedAt) {
       return {
         formattedTimer: "00:00:00",
         timerStyle: "text-gray-500",
+        isOverWaitThreshold: false,
       };
     }
 
@@ -98,19 +99,21 @@ export default function PlayerCard({
 
     let timerStyle = "text-gray-500";
 
-    // >= 1 hour
-    if (totalSeconds >= 3600) {
-      timerStyle = "text-red-500 font-bold";
+    // >= 20 minutes
+    if (totalSeconds >= 1200) {
+      timerStyle = "text-red-500 font-bold text-[11px]";
     }
 
-    // >= 30 minutes
-    else if (totalSeconds >= 1800) {
+    // >= 15 minutes
+    else if (totalSeconds >= 900) {
       timerStyle = "text-yellow-500 font-medium";
     }
 
     return {
       formattedTimer: `${hours}:${minutes}:${seconds}`,
       timerStyle,
+      isOverWaitThreshold:
+        player.matchStatus !== "playing" && totalSeconds >= 1200,
     };
   })();
 
@@ -119,6 +122,9 @@ export default function PlayerCard({
     inQueue: "border-yellow-500",
     playing: "border-red-500",
   }[player.matchStatus];
+  const cardStateClasses = isOverWaitThreshold
+    ? "border-red-500 bg-red-200 shadow-red-100"
+    : `${statusClasses} bg-white`;
   const gamesPlayed = player.gamesPlayed ?? 0;
   const skillLevel = player.player.skillLevel
     ? formatSkillLevel(player.player.skillLevel)
@@ -133,17 +139,19 @@ export default function PlayerCard({
       }}
       className={`
       relative flex items-center justify-between
-      gap-1 rounded-2xl border-2 bg-white w-full
+      gap-1 rounded-2xl border-2 w-full
       px-1 py-2 shadow-sm transition-all duration-200
 
-      ${statusClasses}
+      ${cardStateClasses}
 
       ${canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
 
       ${
         activeDropdown === player.id
           ? " border-primary"
-          : "border-gray-200 hover:border-primary/30"
+          : isOverWaitThreshold
+            ? "hover:border-red-600"
+            : "border-gray-200 hover:border-primary/30"
       }
     `}
     >
