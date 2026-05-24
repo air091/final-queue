@@ -67,7 +67,7 @@ type PointsFilterMode = "all" | "month" | "day";
 type CommunityPlayerPointHistoryItem = {
   id: string;
   points: number;
-  reason: string;
+  reason: "win" | "payment" | string;
   team: string | null;
   joinedAt: string;
   match: {
@@ -1188,29 +1188,40 @@ export default function Community() {
                             {historyItem.match.host.hostName}
                           </p>
                           <p className="mt-1 text-xs text-stone-500">
-                            {historyItem.match.court?.name ?? "Court"} • Team{" "}
-                            {historyItem.team ?? "-"}
+                            {historyItem.reason === "payment"
+                              ? "Payment completed"
+                              : `${historyItem.match.court?.name ?? "Court"} - Team ${
+                                  historyItem.team ?? "-"
+                                }`}
                           </p>
                         </div>
 
-                        <span className="shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            historyItem.reason === "payment"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-green-50 text-green-700"
+                          }`}
+                        >
                           +{historyItem.points}
                         </span>
                       </div>
 
                       <div className="mt-3 grid gap-1 text-xs text-stone-500">
                         <p>
-                          Result:{" "}
+                          Reason:{" "}
                           <span className="font-medium text-stone-700">
-                            Win
+                            {historyItem.reason === "payment" ? "Paid" : "Win"}
                           </span>
                         </p>
-                        <p>
-                          Winner: Team{" "}
-                          <span className="font-medium text-stone-700">
-                            {historyItem.match.teamWinner}
-                          </span>
-                        </p>
+                        {historyItem.reason === "win" ? (
+                          <p>
+                            Winner: Team{" "}
+                            <span className="font-medium text-stone-700">
+                              {historyItem.match.teamWinner}
+                            </span>
+                          </p>
+                        ) : null}
                         <p>
                           Date:{" "}
                           <span className="font-medium text-stone-700">

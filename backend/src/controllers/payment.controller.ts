@@ -23,6 +23,7 @@ type UpdateHostPricingBody = {
 
 type UpsertPlayerPaymentBody = {
   amountPaid?: number;
+  paymentStatus?: PaymentStatuses;
 };
 
 const isNonNegativeNumber = (value: unknown): value is number =>
@@ -375,7 +376,7 @@ export const upsertPlayerPayment = async (
 ) => {
   try {
     const { communityId, hostId, playerId } = request.params;
-    const { amountPaid } = request.body;
+    const { amountPaid, paymentStatus } = request.body;
     const user = request.user as { sub?: string } | undefined;
 
     if (!user?.sub)
@@ -392,6 +393,15 @@ export const upsertPlayerPayment = async (
       return response
         .status(400)
         .json({ success: false, message: "Invalid paid amount" });
+
+    if (
+      paymentStatus !== undefined &&
+      !Object.values(PaymentStatuses).includes(paymentStatus)
+    ) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid payment status" });
+    }
 
     const host = await getAuthorizedHost(communityId, hostId, user.sub);
 
@@ -425,9 +435,10 @@ export const upsertPlayerPayment = async (
     });
 
     const nextStatus =
-      amountPaid && amountPaid > 0
+      paymentStatus ??
+      (amountPaid && amountPaid > 0
         ? PaymentStatuses.paid
-        : PaymentStatuses.unpaid;
+        : PaymentStatuses.unpaid);
 
     await prisma.player.update({
       where: { id: player.id },

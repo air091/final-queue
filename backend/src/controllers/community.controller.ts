@@ -5,6 +5,7 @@ import type { Request, Response } from "express";
 import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 import {
   MatchStatus,
+  PaymentStatuses,
   PlayerHostStatuses,
   SkillLevels,
   Sports,
@@ -301,6 +302,8 @@ type CommunityPlayerParams = {
 
 const MONTH_FILTER_PATTERN = /^\d{4}-\d{2}$/;
 const DAY_FILTER_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const WIN_POINTS = 1;
+const PAID_PAYMENT_POINTS = 3;
 
 const getStringQueryValue = (value: unknown) =>
   typeof value === "string" ? value : undefined;
@@ -515,7 +518,17 @@ export const getCommunityPlayerWinPoints = async (
         .json({ success: false, message: "Invalid day filter" });
     }
 
-    const [communityPlayers, winParticipants] = await Promise.all([
+    const hostDateFilter = pointDateRange
+      ? {
+          OR: [
+            { startTime: pointDateRange },
+            { startTime: null, createdAt: pointDateRange },
+          ],
+        }
+      : {};
+
+    const [communityPlayers, winParticipants, paidHostedPlayers] =
+      await Promise.all([
       prisma.communityPlayer.findMany({
         where: { communityId: community.id },
         select: {
@@ -580,6 +593,47 @@ export const getCommunityPlayerWinPoints = async (
           },
         },
       }),
+      prisma.player.findMany({
+        where: {
+          paymentStatus: PaymentStatuses.paid,
+          host: {
+            communityId: community.id,
+            ...hostDateFilter,
+          },
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        select: {
+          id: true,
+          playerId: true,
+          updatedAt: true,
+          payments: {
+            where: {
+              amountPaid: {
+                gt: 0,
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+            select: {
+              id: true,
+              amountPaid: true,
+              createdAt: true,
+            },
+          },
+          host: {
+            select: {
+              id: true,
+              hostName: true,
+              startTime: true,
+              createdAt: true,
+            },
+          },
+        },
+      }),
     ]);
 
     const pointHistoryByAccountId = winParticipants.reduce(
@@ -591,7 +645,7 @@ export const getCommunityPlayerWinPoints = async (
 
         currentHistory.push({
           id: participant.id,
-          points: 1,
+          points: WIN_POINTS,
           reason: "win",
           team: participant.team,
           joinedAt: participant.joinedAt,
@@ -634,6 +688,43 @@ export const getCommunityPlayerWinPoints = async (
         }>>(),
     );
 
+    paidHostedPlayers.forEach((hostedPlayer) => {
+      const payment = hostedPlayer.payments[0] ?? null;
+      const pointDate =
+        hostedPlayer.host.startTime ??
+        payment?.createdAt ??
+        hostedPlayer.host.createdAt ??
+        hostedPlayer.updatedAt;
+      const currentHistory =
+        pointHistoryByAccountId.get(hostedPlayer.playerId) ?? [];
+
+      currentHistory.push({
+        id: payment?.id ?? hostedPlayer.id,
+        points: PAID_PAYMENT_POINTS,
+        reason: "payment",
+        team: null,
+        joinedAt: pointDate,
+        match: {
+          id: hostedPlayer.host.id,
+          startedAt: hostedPlayer.host.startTime,
+          endedAt: pointDate,
+          teamWinner: "",
+          court: null,
+          host: {
+            id: hostedPlayer.host.id,
+            hostName: hostedPlayer.host.hostName,
+            startTime: hostedPlayer.host.startTime,
+          },
+        },
+      });
+
+      currentHistory.sort(
+        (firstItem, secondItem) =>
+          secondItem.joinedAt.getTime() - firstItem.joinedAt.getTime(),
+      );
+      pointHistoryByAccountId.set(hostedPlayer.playerId, currentHistory);
+    });
+
     const winsByAccountId = winParticipants.reduce(
       (wins, participant) => {
         if (!participant.accountId) return wins;
@@ -647,9 +738,24 @@ export const getCommunityPlayerWinPoints = async (
       new Map<string, number>(),
     );
 
+    const paidPointsByAccountId = paidHostedPlayers.reduce(
+      (pointsByAccountId, hostedPlayer) => {
+        pointsByAccountId.set(
+          hostedPlayer.playerId,
+          (pointsByAccountId.get(hostedPlayer.playerId) ?? 0) +
+            PAID_PAYMENT_POINTS,
+        );
+        return pointsByAccountId;
+      },
+      new Map<string, number>(),
+    );
+
     const players = communityPlayers
       .map((communityPlayer) => {
         const winCount = winsByAccountId.get(communityPlayer.accountId) ?? 0;
+        const winPoints = winCount * WIN_POINTS;
+        const paidPoints =
+          paidPointsByAccountId.get(communityPlayer.accountId) ?? 0;
         const pointsHistory =
           pointHistoryByAccountId.get(communityPlayer.accountId) ?? [];
 
@@ -661,7 +767,7 @@ export const getCommunityPlayerWinPoints = async (
             ...communityPlayer.account,
           }),
           winCount,
-          points: winCount,
+          points: winPoints + paidPoints,
           pointsHistory,
         };
       })

@@ -201,6 +201,7 @@ export default function Payments() {
         `/api/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}/payment`,
         {
           amountPaid: nextAmountPaid,
+          paymentStatus: nextStatus,
         },
       );
 
