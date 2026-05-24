@@ -128,6 +128,51 @@ const getLocalDateInputValue = (date = new Date()) => {
 const getLocalMonthInputValue = (date = new Date()) =>
   getLocalDateInputValue(date).slice(0, 7);
 
+const getDatePartsFromInput = (value: string) => {
+  const parts = value.split("-").map(Number);
+  if (parts.some((part) => !Number.isInteger(part))) return null;
+
+  return parts;
+};
+
+const getPointFilterDateRangeParams = (
+  mode: PointsFilterMode,
+  month: string,
+  day: string,
+) => {
+  if (mode === "day") {
+    const parts = getDatePartsFromInput(day);
+    if (!parts || parts.length !== 3) return {};
+
+    const [year, monthNumber, dayNumber] = parts;
+    const startDate = new Date(year, monthNumber - 1, dayNumber);
+    const endDate = new Date(year, monthNumber - 1, dayNumber + 1);
+
+    return {
+      day,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+  }
+
+  if (mode === "month") {
+    const parts = getDatePartsFromInput(month);
+    if (!parts || parts.length !== 2) return {};
+
+    const [year, monthNumber] = parts;
+    const startDate = new Date(year, monthNumber - 1, 1);
+    const endDate = new Date(year, monthNumber, 1);
+
+    return {
+      month,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+  }
+
+  return {};
+};
+
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -246,6 +291,17 @@ export default function Community() {
     [communityPlayers, winPointsByCommunityPlayerId],
   );
 
+  const highestCommunityPlayerPoints = useMemo(
+    () =>
+      communityPlayers.reduce((highestPoints, communityPlayer) => {
+        const playerPoints =
+          winPointsByCommunityPlayerId.get(communityPlayer.id)?.points ?? 0;
+
+        return Math.max(highestPoints, playerPoints);
+      }, 0),
+    [communityPlayers, winPointsByCommunityPlayerId],
+  );
+
   const isAdminIncludedAsCommunityPlayer = communityPlayers.some(
     (communityPlayer) => communityPlayer.player.id === community?.master.id,
   );
@@ -318,10 +374,11 @@ export default function Community() {
       const response = await api.get(`/api/community/${id}/players/win-points`, {
         params: {
           filter: pointsFilterMode,
-          ...(pointsFilterMode === "month"
-            ? { month: pointsFilterMonth }
-            : {}),
-          ...(pointsFilterMode === "day" ? { day: pointsFilterDay } : {}),
+          ...getPointFilterDateRangeParams(
+            pointsFilterMode,
+            pointsFilterMonth,
+            pointsFilterDay,
+          ),
         },
       });
       setCommunityPlayerWinPoints(response.data.players);
@@ -1558,6 +1615,9 @@ export default function Community() {
                   const playerPoints =
                     winPointsByCommunityPlayerId.get(communityPlayer.id)
                       ?.points ?? 0;
+                  const hasMostPoints =
+                    highestCommunityPlayerPoints > 0 &&
+                    playerPoints === highestCommunityPlayerPoints;
 
                   return (
                     <div
@@ -1596,7 +1656,13 @@ export default function Community() {
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        <div
+                          className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            hasMostPoints
+                              ? "border-yellow-400 bg-yellow-300 text-yellow-950 shadow-sm"
+                              : "border-amber-200 bg-amber-50 text-amber-700"
+                          }`}
+                        >
                           <Trophy size={13} />
                           {playerPoints} pts
                         </div>

@@ -305,6 +305,22 @@ const DAY_FILTER_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const getStringQueryValue = (value: unknown) =>
   typeof value === "string" ? value : undefined;
 
+const getIsoDateRange = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+
+  if (start >= end) return null;
+
+  return {
+    gte: start,
+    lt: end,
+  };
+};
+
 const getMonthDateRange = (month: string) => {
   if (!MONTH_FILTER_PATTERN.test(month)) return null;
 
@@ -451,6 +467,8 @@ export const getCommunityPlayerWinPoints = async (
     const filter = getStringQueryValue(request.query.filter) ?? "all";
     const month = getStringQueryValue(request.query.month);
     const day = getStringQueryValue(request.query.day);
+    const startDate = getStringQueryValue(request.query.startDate);
+    const endDate = getStringQueryValue(request.query.endDate);
     const filterMode =
       filter === "month" || filter === "day" || filter === "all"
         ? filter
@@ -477,11 +495,13 @@ export const getCommunityPlayerWinPoints = async (
         .json({ success: false, message: "Community not found" });
 
     const pointDateRange =
-      filterMode === "month" && month
-        ? getMonthDateRange(month)
-        : filterMode === "day" && day
-          ? getDayDateRange(day)
-          : null;
+      filterMode !== "all" && startDate && endDate
+        ? getIsoDateRange(startDate, endDate)
+        : filterMode === "month" && month
+          ? getMonthDateRange(month)
+          : filterMode === "day" && day
+            ? getDayDateRange(day)
+            : null;
 
     if (filterMode === "month" && !pointDateRange) {
       return response
