@@ -59,6 +59,10 @@ app.use("/api/private/actions", privateActionRoutes);
 if (existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
 
+  app.get(/^\/assets?\//, (_request, response) => {
+    response.status(404).type("text/plain").send("Asset not found");
+  });
+
   app.get(/^\/(?!api(?:\/|$)).*/, (_request, response) => {
     response.sendFile(frontendIndexPath);
   });

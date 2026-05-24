@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/auth/Login"));
@@ -32,14 +33,17 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: withSuspense(<Landing />),
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/login",
     element: withSuspense(<Login />),
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: "/register",
     element: withSuspense(<Register />),
+    errorElement: <RouteErrorBoundary />,
   },
 
   // =========================
@@ -48,6 +52,7 @@ const router = createBrowserRouter([
 
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         path: "/home",
@@ -120,6 +125,7 @@ const router = createBrowserRouter([
   {
     path: "*",
     element: withSuspense(<NotFound />),
+    errorElement: <RouteErrorBoundary />,
   },
 ]);
 
