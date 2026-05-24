@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { TbArrowBack } from "react-icons/tb";
 import type { AcceptedPlayers } from "../../lib/host";
 import { Gamepad, TriangleAlert } from "lucide-react";
+import { SkillLevelBadge } from "../../lib/skillLevels";
 
 type PlayerCardProps = {
   player: AcceptedPlayers;
@@ -21,9 +22,6 @@ type PlayerCardProps = {
   queueId?: string;
   onRemoveFromQueue?: (hostedPlayerId: string, queueId: string) => void;
 };
-
-const formatSkillLevel = (skillLevel: string) =>
-  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
 export default function PlayerCard({
   player,
@@ -126,9 +124,6 @@ export default function PlayerCard({
     ? `${statusClasses} bg-red-200 shadow-red-100`
     : `${statusClasses} bg-white`;
   const gamesPlayed = player.gamesPlayed ?? 0;
-  const skillLevel = player.player.skillLevel
-    ? formatSkillLevel(player.player.skillLevel)
-    : "Beginner";
 
   return (
     <div
@@ -160,7 +155,7 @@ export default function PlayerCard({
         <span className="flex items-center gap-x-1">
           <Gamepad size={12} /> {gamesPlayed}
         </span>
-        <span>{skillLevel}</span>
+        <SkillLevelBadge skillLevel={player.player.skillLevel} />
       </div>
 
       {/* ================= PLAYER INFO ================= */}

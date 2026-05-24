@@ -19,6 +19,7 @@ import type {
   HostPlayerStatus,
   SkillLevelType,
 } from "../../lib/host";
+import { SKILL_LEVEL_OPTIONS, SkillLevelBadge } from "../../lib/skillLevels";
 
 type MasterType = {
   id: string;
@@ -230,8 +231,7 @@ export default function Community() {
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
-  const [isTogglingAdminAsPlayer, setIsTogglingAdminAsPlayer] =
-    useState(false);
+  const [isTogglingAdminAsPlayer, setIsTogglingAdminAsPlayer] = useState(false);
   const [isLoadingWinPoints, setIsLoadingWinPoints] = useState(false);
   const [savingCommunityPlayerId, setSavingCommunityPlayerId] = useState<
     string | null
@@ -371,16 +371,19 @@ export default function Community() {
   const getCommunityPlayerWinPointsAPI = async () => {
     try {
       setIsLoadingWinPoints(true);
-      const response = await api.get(`/api/community/${id}/players/win-points`, {
-        params: {
-          filter: pointsFilterMode,
-          ...getPointFilterDateRangeParams(
-            pointsFilterMode,
-            pointsFilterMonth,
-            pointsFilterDay,
-          ),
+      const response = await api.get(
+        `/api/community/${id}/players/win-points`,
+        {
+          params: {
+            filter: pointsFilterMode,
+            ...getPointFilterDateRangeParams(
+              pointsFilterMode,
+              pointsFilterMonth,
+              pointsFilterDay,
+            ),
+          },
         },
-      });
+      );
       setCommunityPlayerWinPoints(response.data.players);
     } catch (error) {
       if (axios.isAxiosError(error)) console.error(error);
@@ -686,7 +689,11 @@ export default function Community() {
         imagePreview: null,
       });
     } catch (error) {
-      setCommunityPlayerEditError("Unable to update this player.");
+      setCommunityPlayerEditError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to update this player.")
+          : "Unable to update this player.",
+      );
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -893,9 +900,7 @@ export default function Community() {
           >
             <header className="flex items-start justify-between gap-4">
               <div>
-                <h4 className="text-lg font-semibold text-text">
-                  Edit player
-                </h4>
+                <h4 className="text-lg font-semibold text-text">Edit player</h4>
                 <p className="mt-1 text-sm text-stone-500">
                   Update this static community player.
                 </p>
@@ -935,7 +940,9 @@ export default function Community() {
                   <input
                     type="file"
                     accept="image/*"
-                    disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                    disabled={
+                      savingCommunityPlayerId === editingCommunityPlayer.id
+                    }
                     className="sr-only"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -957,7 +964,9 @@ export default function Community() {
                       username: event.target.value,
                     }))
                   }
-                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  disabled={
+                    savingCommunityPlayerId === editingCommunityPlayer.id
+                  }
                   className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-stone-50"
                 />
               </label>
@@ -972,13 +981,16 @@ export default function Community() {
                       skillLevel: event.target.value as SkillLevelType,
                     }))
                   }
-                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  disabled={
+                    savingCommunityPlayerId === editingCommunityPlayer.id
+                  }
                   className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-stone-50"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="elite">Elite</option>
+                  {SKILL_LEVEL_OPTIONS.map((skillLevel) => (
+                    <option key={skillLevel.value} value={skillLevel.value}>
+                      {skillLevel.acronym} {skillLevel.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -992,7 +1004,9 @@ export default function Community() {
                 <button
                   type="button"
                   onClick={closeEditCommunityPlayer}
-                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  disabled={
+                    savingCommunityPlayerId === editingCommunityPlayer.id
+                  }
                   className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                 >
                   Cancel
@@ -1000,7 +1014,9 @@ export default function Community() {
 
                 <button
                   type="submit"
-                  disabled={savingCommunityPlayerId === editingCommunityPlayer.id}
+                  disabled={
+                    savingCommunityPlayerId === editingCommunityPlayer.id
+                  }
                   className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition cursor-pointer ${
                     savingCommunityPlayerId === editingCommunityPlayer.id
                       ? "cursor-not-allowed bg-stone-200 text-stone-400"
@@ -1031,9 +1047,7 @@ export default function Community() {
           >
             <header className="flex items-start justify-between gap-4">
               <div>
-                <h4 className="text-lg font-semibold text-text">
-                  Add players
-                </h4>
+                <h4 className="text-lg font-semibold text-text">Add players</h4>
                 <p className="mt-1 text-sm text-stone-500">
                   Create static players for this community.
                 </p>
@@ -1054,14 +1068,9 @@ export default function Community() {
               </button>
             </header>
 
-            <form
-              onSubmit={handleCreatePlayers}
-              className="mt-5 grid gap-4"
-            >
+            <form onSubmit={handleCreatePlayers} className="mt-5 grid gap-4">
               <label className="grid gap-2 text-sm">
-                <span className="font-medium text-stone-700">
-                  Player names
-                </span>
+                <span className="font-medium text-stone-700">Player names</span>
                 <textarea
                   name="names"
                   value={playerForm.names}
@@ -1082,10 +1091,11 @@ export default function Community() {
                   disabled={isCreatingPlayers}
                   className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-stone-50"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="elite">Elite</option>
+                  {SKILL_LEVEL_OPTIONS.map((skillLevel) => (
+                    <option key={skillLevel.value} value={skillLevel.value}>
+                      {skillLevel.acronym} {skillLevel.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -1413,94 +1423,95 @@ export default function Community() {
               onSubmit={handleCreateHost}
               className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
             >
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Name
-            </span>
-            <input
-              type="text"
-              name="hostName"
-              value={hostForm.hostName}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Name
+                </span>
+                <input
+                  type="text"
+                  name="hostName"
+                  value={hostForm.hostName}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Sport
-            </span>
-            <select
-              name="sportName"
-              value={hostForm.sportName}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            >
-              {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
-                <option key={sportOption} value={sportOption}>
-                  {sportOption.charAt(0).toUpperCase() + sportOption.slice(1)}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Sport
+                </span>
+                <select
+                  name="sportName"
+                  value={hostForm.sportName}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                >
+                  {DEFAULT_SPORT_OPTIONS.map((sportOption) => (
+                    <option key={sportOption} value={sportOption}>
+                      {sportOption.charAt(0).toUpperCase() +
+                        sportOption.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Location
-            </span>
-            <input
-              type="text"
-              name="location"
-              value={hostForm.location}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Location
+                </span>
+                <input
+                  type="text"
+                  name="location"
+                  value={hostForm.location}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Starts at
-            </span>
-            <input
-              type="datetime-local"
-              name="startTime"
-              value={hostForm.startTime}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Starts at
+                </span>
+                <input
+                  type="datetime-local"
+                  name="startTime"
+                  value={hostForm.startTime}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Ends at
-            </span>
-            <input
-              type="datetime-local"
-              name="endTime"
-              value={hostForm.endTime}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Ends at
+                </span>
+                <input
+                  type="datetime-local"
+                  name="endTime"
+                  value={hostForm.endTime}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium text-text">
-              Max players
-            </span>
-            <input
-              type="number"
-              name="maxPlayers"
-              min="0"
-              value={hostForm.maxPlayers}
-              onChange={handleHostFormChange}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-            />
-          </label>
+              <label>
+                <span className="mb-2 block text-sm font-medium text-text">
+                  Max players
+                </span>
+                <input
+                  type="number"
+                  name="maxPlayers"
+                  min="0"
+                  value={hostForm.maxPlayers}
+                  onChange={handleHostFormChange}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                />
+              </label>
 
-          <button
-            type="submit"
-            disabled={isCreatingHost}
-            className={`
+              <button
+                type="submit"
+                disabled={isCreatingHost}
+                className={`
               h-[46px] w-full rounded-xl px-5 py-3 text-sm font-semibold transition cursor-pointer
               ${
                 isCreatingHost
@@ -1508,270 +1519,207 @@ export default function Community() {
                   : "bg-primary text-white hover:bg-accent"
               }
             `}
-          >
-            {isCreatingHost ? "Hosting..." : "Host"}
-          </button>
-        </form>
+              >
+                {isCreatingHost ? "Hosting..." : "Host"}
+              </button>
+            </form>
 
-        {hostError ? (
-          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {hostError}
-          </p>
-        ) : null}
+            {hostError ? (
+              <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {hostError}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
         {activePanel === "players" ? (
           <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-          <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-text">
-                Community Players
-              </h3>
-              <p className="text-sm text-gray-500">
-                Build a reusable roster for every hosted match.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setPlayerError(null);
-                  setIsAddPlayerModalOpen(true);
-                }}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50"
-              >
-                <Plus size={15} />
-                Add player
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleToggleAdminAsPlayer()}
-                disabled={isTogglingAdminAsPlayer}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                  isTogglingAdminAsPlayer
-                    ? "cursor-not-allowed bg-stone-100 text-stone-400"
-                    : isAdminIncludedAsCommunityPlayer
-                      ? "cursor-pointer border border-red-200 bg-white text-red-600 hover:bg-red-50"
-                    : "cursor-pointer bg-primary text-white hover:bg-accent"
-                }`}
-              >
-                <UserPlus size={15} />
-                {isTogglingAdminAsPlayer
-                  ? "Saving..."
-                  : isAdminIncludedAsCommunityPlayer
-                    ? "Remove admin"
-                    : "Add admin"}
-              </button>
-
-              <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                {isLoadingWinPoints ? "..." : `${communityPlayers.length}`}
+            <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-text">
+                  Community Players
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Build a reusable roster for every hosted match.
+                </p>
               </div>
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
-              {(["all", "month", "day"] as const).map((filterMode) => (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  key={filterMode}
                   type="button"
-                  onClick={() => setPointsFilterMode(filterMode)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold capitalize transition ${
-                    pointsFilterMode === filterMode
-                      ? "bg-primary text-white"
-                      : "cursor-pointer border border-gray-200 bg-white text-stone-600 hover:border-primary/40 hover:bg-orange-50"
+                  onClick={() => {
+                    setPlayerError(null);
+                    setIsAddPlayerModalOpen(true);
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50"
+                >
+                  <Plus size={15} />
+                  Add player
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleToggleAdminAsPlayer()}
+                  disabled={isTogglingAdminAsPlayer}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    isTogglingAdminAsPlayer
+                      ? "cursor-not-allowed bg-stone-100 text-stone-400"
+                      : isAdminIncludedAsCommunityPlayer
+                        ? "cursor-pointer border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                        : "cursor-pointer bg-primary text-white hover:bg-accent"
                   }`}
                 >
-                  {filterMode === "day" ? "Daily" : filterMode}
+                  <UserPlus size={15} />
+                  {isTogglingAdminAsPlayer
+                    ? "Saving..."
+                    : isAdminIncludedAsCommunityPlayer
+                      ? "Remove admin"
+                      : "Add admin"}
                 </button>
-              ))}
+
+                <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                  {isLoadingWinPoints ? "..." : `${communityPlayers.length}`}
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {pointsFilterMode === "month" ? (
-                <input
-                  type="month"
-                  value={pointsFilterMonth}
-                  onChange={(event) => setPointsFilterMonth(event.target.value)}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
-              ) : null}
+            <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {(["all", "month", "day"] as const).map((filterMode) => (
+                  <button
+                    key={filterMode}
+                    type="button"
+                    onClick={() => setPointsFilterMode(filterMode)}
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold capitalize transition ${
+                      pointsFilterMode === filterMode
+                        ? "bg-primary text-white"
+                        : "cursor-pointer border border-gray-200 bg-white text-stone-600 hover:border-primary/40 hover:bg-orange-50"
+                    }`}
+                  >
+                    {filterMode === "day" ? "Daily" : filterMode}
+                  </button>
+                ))}
+              </div>
 
-              {pointsFilterMode === "day" ? (
-                <input
-                  type="date"
-                  value={pointsFilterDay}
-                  onChange={(event) => setPointsFilterDay(event.target.value)}
-                  className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {pointsFilterMode === "month" ? (
+                  <input
+                    type="month"
+                    value={pointsFilterMonth}
+                    onChange={(event) =>
+                      setPointsFilterMonth(event.target.value)
+                    }
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
+                ) : null}
 
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                {pointsFilterLabel}
-              </span>
+                {pointsFilterMode === "day" ? (
+                  <input
+                    type="date"
+                    value={pointsFilterDay}
+                    onChange={(event) => setPointsFilterDay(event.target.value)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
+                ) : null}
+
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  {pointsFilterLabel}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {playerError && !isAddPlayerModalOpen ? (
-            <p className="mx-5 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {playerError}
-            </p>
-          ) : null}
+            {playerError && !isAddPlayerModalOpen ? (
+              <p className="mx-5 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {playerError}
+              </p>
+            ) : null}
 
-          <div className="p-5">
-            <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {communityPlayers.length > 0 ? (
-                rankedCommunityPlayers.map((communityPlayer) => {
-                  const playerPoints =
-                    winPointsByCommunityPlayerId.get(communityPlayer.id)
-                      ?.points ?? 0;
-                  const hasMostPoints =
-                    highestCommunityPlayerPoints > 0 &&
-                    playerPoints === highestCommunityPlayerPoints;
+            <div className="p-5">
+              <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {communityPlayers.length > 0 ? (
+                  rankedCommunityPlayers.map((communityPlayer) => {
+                    const playerPoints =
+                      winPointsByCommunityPlayerId.get(communityPlayer.id)
+                        ?.points ?? 0;
+                    const hasMostPoints =
+                      highestCommunityPlayerPoints > 0 &&
+                      playerPoints === highestCommunityPlayerPoints;
 
-                  return (
-                    <div
-                      key={communityPlayer.id}
-                      className="grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-3"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <img
-                          src={communityPlayer.player.profileUrl}
-                          alt={communityPlayer.player.username}
-                          className="h-11 w-11 rounded-full object-cover"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-text">
-                            {communityPlayer.player.username}
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium capitalize text-primary">
-                              {communityPlayer.player.skillLevel}
-                            </span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${
-                                communityPlayer.status === "accepted"
-                                  ? "bg-green-50 text-green-700"
-                                  : communityPlayer.status === "requested"
-                                    ? "bg-yellow-50 text-yellow-700"
-                                    : communityPlayer.status === "banned"
-                                      ? "bg-red-50 text-red-700"
-                                      : "bg-stone-100 text-stone-600"
-                              }`}
-                            >
-                              {communityPlayer.player.isStatic
-                                ? "static"
-                                : communityPlayer.status}
-                            </span>
+                    return (
+                      <div
+                        key={communityPlayer.id}
+                        className="grid min-w-0 gap-3 rounded-2xl border border-gray-200 bg-white p-3"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <img
+                            src={communityPlayer.player.profileUrl}
+                            alt={communityPlayer.player.username}
+                            className="h-11 w-11 rounded-full object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-text">
+                              {communityPlayer.player.username}
+                            </p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <SkillLevelBadge
+                                skillLevel={communityPlayer.player.skillLevel}
+                              />
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                                  communityPlayer.status === "accepted"
+                                    ? "bg-green-50 text-green-700"
+                                    : communityPlayer.status === "requested"
+                                      ? "bg-yellow-50 text-yellow-700"
+                                      : communityPlayer.status === "banned"
+                                        ? "bg-red-50 text-red-700"
+                                        : "bg-stone-100 text-stone-600"
+                                }`}
+                              >
+                                {communityPlayer.player.isStatic
+                                  ? "static"
+                                  : communityPlayer.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div
+                            className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              hasMostPoints
+                                ? "border-yellow-400 bg-yellow-300 text-yellow-950 shadow-sm"
+                                : "border-amber-200 bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            <Trophy size={13} />
+                            {playerPoints} pts
                           </div>
                         </div>
 
-                        <div
-                          className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                            hasMostPoints
-                              ? "border-yellow-400 bg-yellow-300 text-yellow-950 shadow-sm"
-                              : "border-amber-200 bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          <Trophy size={13} />
-                          {playerPoints} pts
-                        </div>
-                      </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedPointsHistoryPlayer(communityPlayer)
+                            }
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                          >
+                            <Trophy size={14} />
+                            History
+                          </button>
 
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedPointsHistoryPlayer(communityPlayer)
-                          }
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
-                        >
-                          <Trophy size={14} />
-                          History
-                        </button>
-
-                        {communityPlayer.player.isStatic ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => openEditCommunityPlayer(communityPlayer)}
-                              disabled={
-                                savingCommunityPlayerId === communityPlayer.id
-                              }
-                              className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void handleDeleteCommunityPlayer(communityPlayer)
-                              }
-                              disabled={
-                                savingCommunityPlayerId === communityPlayer.id
-                              }
-                              className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {communityPlayer.status !== "accepted" ? (
+                          {communityPlayer.player.isStatic ? (
+                            <>
                               <button
                                 type="button"
                                 onClick={() =>
-                                  void handleUpdateCommunityPlayerStatus(
-                                    communityPlayer.id,
-                                    "accepted",
-                                  )
+                                  openEditCommunityPlayer(communityPlayer)
                                 }
                                 disabled={
                                   savingCommunityPlayerId === communityPlayer.id
                                 }
-                                className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                                className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                               >
-                                Accept
+                                Edit
                               </button>
-                            ) : null}
-                            {communityPlayer.status === "requested" ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleUpdateCommunityPlayerStatus(
-                                    communityPlayer.id,
-                                    "rejected",
-                                  )
-                                }
-                                disabled={
-                                  savingCommunityPlayerId === communityPlayer.id
-                                }
-                                className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                              >
-                                Reject
-                              </button>
-                            ) : null}
-                            {communityPlayer.status !== "banned" ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleUpdateCommunityPlayerStatus(
-                                    communityPlayer.id,
-                                    "banned",
-                                  )
-                                }
-                                disabled={
-                                  savingCommunityPlayerId === communityPlayer.id
-                                }
-                                className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                              >
-                                Ban
-                              </button>
-                            ) : null}
-                            {!communityPlayer.player.isAdmin ? (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1780,27 +1728,99 @@ export default function Community() {
                                   )
                                 }
                                 disabled={
-                                  savingCommunityPlayerId ===
-                                  communityPlayer.id
+                                  savingCommunityPlayerId === communityPlayer.id
                                 }
                                 className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                               >
-                                Kick
+                                Delete
                               </button>
-                            ) : null}
-                          </>
-                        )}
+                            </>
+                          ) : (
+                            <>
+                              {communityPlayer.status !== "accepted" ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleUpdateCommunityPlayerStatus(
+                                      communityPlayer.id,
+                                      "accepted",
+                                    )
+                                  }
+                                  disabled={
+                                    savingCommunityPlayerId ===
+                                    communityPlayer.id
+                                  }
+                                  className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                                >
+                                  Accept
+                                </button>
+                              ) : null}
+                              {communityPlayer.status === "requested" ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleUpdateCommunityPlayerStatus(
+                                      communityPlayer.id,
+                                      "rejected",
+                                    )
+                                  }
+                                  disabled={
+                                    savingCommunityPlayerId ===
+                                    communityPlayer.id
+                                  }
+                                  className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              ) : null}
+                              {communityPlayer.status !== "banned" ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleUpdateCommunityPlayerStatus(
+                                      communityPlayer.id,
+                                      "banned",
+                                    )
+                                  }
+                                  disabled={
+                                    savingCommunityPlayerId ===
+                                    communityPlayer.id
+                                  }
+                                  className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                                >
+                                  Ban
+                                </button>
+                              ) : null}
+                              {!communityPlayer.player.isAdmin ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleDeleteCommunityPlayer(
+                                      communityPlayer,
+                                    )
+                                  }
+                                  disabled={
+                                    savingCommunityPlayerId ===
+                                    communityPlayer.id
+                                  }
+                                  className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                                >
+                                  Kick
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
-                  No community players yet.
-                </div>
-              )}
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
+                    No community players yet.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
           </section>
         ) : null}
 

@@ -1,5 +1,7 @@
+import type { SkillLevelType } from "./skillLevels";
+
 export type MatchPlayerStatus = "waiting" | "inQueue" | "playing";
-export type SkillLevelType = "beginner" | "intermediate" | "advanced" | "elite";
+export type { SkillLevelType };
 export type PaymentCurrency = "PHP" | "USD" | "EUR";
 export type PaymentStatus = "unpaid" | "paid";
 export type PaymentMethod = "cash" | "ewallet";

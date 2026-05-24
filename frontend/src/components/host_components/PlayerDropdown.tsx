@@ -6,15 +6,13 @@ import { useHostData } from "../../hooks/useHostData";
 import type { AcceptedPlayers } from "../../lib/host";
 import type { RefObject } from "react";
 import { api } from "../../lib/api";
+import { SkillLevelBadge } from "../../lib/skillLevels";
 
 type PlayerDropdownProps = {
   player: AcceptedPlayers;
   anchorRef: RefObject<HTMLDivElement | null>;
   onCloseDropdown: () => void;
 };
-
-const formatSkillLevel = (skillLevel: string) =>
-  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
 const DROPDOWN_WIDTH = 220;
 const DROPDOWN_MAX_HEIGHT = 360;
@@ -192,9 +190,11 @@ export default function PlayerSettingsDropdown({
               )}
             </div>
 
-            <p className="mt-1 text-xs text-stone-500">
-              {formatSkillLevel(player.player.skillLevel)}
-            </p>
+            <SkillLevelBadge
+              skillLevel={player.player.skillLevel}
+              showLabel
+              className="mt-1"
+            />
           </div>
         </div>
 

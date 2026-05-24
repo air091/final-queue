@@ -225,10 +225,14 @@ enum UserRoles {
 }
 
 enum SkillLevels {
-  beginner
-  intermediate
+  expert
   advanced
-  elite
+  upper_intermediate
+  intermediate
+  low_intermediate
+  high_beginner
+  beginner
+  low_beginner
 }
 
 enum Sports {

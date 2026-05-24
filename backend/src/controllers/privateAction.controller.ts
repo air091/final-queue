@@ -174,6 +174,13 @@ type UpdateStaticPlayerNameBody = {
   username?: string;
 };
 
+type UpdateStaticPlayerBody = {
+  username?: string;
+  skillLevel?: SkillLevels;
+  profileUrl?: string | null;
+  imageData?: string;
+};
+
 export const banPlayer = async (
   request: Request<BanPlayerParams>,
   response: Response,
@@ -781,6 +788,184 @@ export const updateStaticPlayerName = async (
     });
   } catch (error) {
     console.error("Error updating static player name:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const updateStaticPlayer = async (
+  request: Request<StaticPlayerParams, unknown, UpdateStaticPlayerBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, hostedPlayerId } = request.params;
+    const { username, skillLevel, profileUrl, imageData } = request.body;
+
+    if (!communityId || !hostId || !hostedPlayerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const cleanUsername = username?.trim();
+    if (username !== undefined && !cleanUsername) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Player name is required" });
+    }
+
+    if (skillLevel !== undefined && !Object.values(SkillLevels).includes(skillLevel)) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
+    }
+
+    const cleanedProfileUrl = profileUrl?.trim() ?? "";
+    const cleanedImageData = imageData?.trim() ?? "";
+
+    if (cleanedProfileUrl && cleanedImageData) {
+      return response.status(400).json({
+        success: false,
+        message: "Choose either image upload or profile URL",
+      });
+    }
+
+    if (profileUrl !== undefined && cleanedProfileUrl.length > 0) {
+      try {
+        const parsedUrl = new URL(cleanedProfileUrl);
+
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          return response.status(400).json({
+            success: false,
+            message: "Profile URL must use http or https",
+          });
+        }
+      } catch {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid profile URL" });
+      }
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const host = await getAuthorizedHost(communityId, hostId, user.sub);
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const existing = await prisma.player.findFirst({
+      where: {
+        id: hostedPlayerId,
+        hostId: host.id,
+        player: {
+          role: UserRoles.static,
+        },
+      },
+      select: {
+        id: true,
+        hostStatus: true,
+        timerStartedAt: true,
+        player: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!existing || !existing.player?.id)
+      return response.status(404).json({
+        success: false,
+        message: "Static player not found",
+      });
+
+    const playerAccountId = existing.player.id;
+    const uploadedProfileUrl = cleanedImageData
+      ? await uploadImageToCloudinary({
+          dataUri: cleanedImageData,
+          publicId: `queue-system/static-player-images/${playerAccountId}`,
+        })
+      : null;
+    const nextProfileUrl = uploadedProfileUrl ?? cleanedProfileUrl;
+
+    await prisma.$transaction(async (transaction) => {
+      if (cleanUsername || nextProfileUrl) {
+        await transaction.account.update({
+          where: { id: playerAccountId },
+          data: {
+            ...(cleanUsername ? { username: cleanUsername } : {}),
+            ...(nextProfileUrl ? { profileUrl: nextProfileUrl } : {}),
+          },
+        });
+      }
+
+      if (skillLevel !== undefined) {
+        const sportRecord = await transaction.userSport.findFirst({
+          where: {
+            accountId: playerAccountId,
+            sport: host.sport as Sports,
+          },
+          select: { id: true },
+        });
+
+        if (sportRecord) {
+          await transaction.userSport.update({
+            where: { id: sportRecord.id },
+            data: { skillLevel },
+          });
+        } else {
+          await transaction.userSport.create({
+            data: {
+              accountId: playerAccountId,
+              sport: host.sport as Sports,
+              skillLevel,
+            },
+          });
+        }
+      }
+    });
+
+    const account = await prisma.account.findUnique({
+      where: { id: playerAccountId },
+      select: {
+        id: true,
+        username: true,
+        profileUrl: true,
+        role: true,
+        sports: {
+          where: { sport: host.sport as Sports },
+          select: {
+            sport: true,
+            skillLevel: true,
+          },
+        },
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Static player updated",
+      data: {
+        id: existing.id,
+        status: existing.hostStatus,
+        hostStatus: existing.hostStatus,
+        timerStartedAt: existing.timerStartedAt,
+        matchStatus: "waiting",
+        player: buildStaticPlayerProfile(account),
+        queueEntry: null,
+        courtAssignment: null,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating static player:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

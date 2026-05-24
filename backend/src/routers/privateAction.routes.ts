@@ -8,6 +8,7 @@ import {
   rejectPlayer,
   removePlayerFromCourt,
   unbanPlayer,
+  updateStaticPlayer,
   updateStaticPlayerName,
   updateStaticPlayerProfileUrl,
   updateStaticPlayerSkillLevel,
@@ -48,6 +49,12 @@ router.post(
   "/unban/community/:communityId/hosts/:hostId/players/:playerId",
   authenticate,
   unbanPlayer,
+);
+
+router.patch(
+  "/static/community/:communityId/hosts/:hostId/:hostedPlayerId",
+  authenticate,
+  updateStaticPlayer,
 );
 
 router.patch(

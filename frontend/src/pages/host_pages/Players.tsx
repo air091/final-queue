@@ -20,6 +20,10 @@ import {
   MoveUp,
   X,
 } from "lucide-react";
+import {
+  SKILL_LEVEL_OPTIONS,
+  SkillLevelBadge,
+} from "../../lib/skillLevels";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 type SortDirection = "asc" | "desc";
@@ -44,9 +48,6 @@ const readFileAsDataUrl = (file: File) =>
 
     reader.readAsDataURL(file);
   });
-
-const formatSkillLevel = (skillLevel: string) =>
-  skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1);
 
 const formatWinTotalGames = (player?: AcceptedPlayers) => {
   const matchHistory = player?.matchHistory;
@@ -202,9 +203,7 @@ function PlayerSection({
 
                 {/* Info Row */}
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    {formatSkillLevel(playerRecord.player.skillLevel)}
-                  </span>
+                  <SkillLevelBadge skillLevel={playerRecord.player.skillLevel} />
 
                   {playerRecord.player.isAdmin ? (
                     <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
@@ -434,9 +433,7 @@ function PlayerSection({
 
                 {/* TAGS */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    {formatSkillLevel(playerRecord.player.skillLevel)}
-                  </span>
+                  <SkillLevelBadge skillLevel={playerRecord.player.skillLevel} />
 
                   {playerRecord.player.isAdmin ? (
                     <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-[var(--color-accent)]">
@@ -1540,31 +1537,19 @@ export default function Players() {
     const previousPaymentsData = paymentsData;
 
     try {
-      const nameResponse = await api.patch(
-        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${editingStaticPlayer.id}/name`,
-        { username: cleanName },
+      const imageData = editingStaticPlayerImage
+        ? await readFileAsDataUrl(editingStaticPlayerImage)
+        : undefined;
+      const response = await api.patch(
+        `/api/private/actions/static/community/${communityId}/hosts/${hostId}/${editingStaticPlayer.id}`,
+        {
+          username: cleanName,
+          skillLevel: editingStaticPlayerSkillLevel,
+          imageData,
+        },
       );
 
-      updateStaticPlayerInState(nameResponse.data.data as AcceptedPlayers);
-
-      if (
-        editingStaticPlayerSkillLevel !== editingStaticPlayer.player.skillLevel
-      ) {
-        const skillResponse = await updateStaticPlayerSkillLevelAPI(
-          editingStaticPlayer.id,
-          editingStaticPlayerSkillLevel,
-        );
-        updateStaticPlayerInState(skillResponse);
-      }
-
-      if (editingStaticPlayerImage) {
-        setSavingStaticProfileUrlId(editingStaticPlayer.id);
-        const imageUpdatedPlayer = await updateStaticPlayerProfileImageAPI(
-          editingStaticPlayer.id,
-          editingStaticPlayerImage,
-        );
-        updateStaticPlayerInState(imageUpdatedPlayer);
-      }
+      updateStaticPlayerInState(response.data.data as AcceptedPlayers);
 
       setEditingStaticPlayer(null);
       setEditingStaticPlayerName("");
@@ -1575,7 +1560,11 @@ export default function Players() {
       setPlayersInHost(previousPlayers);
       setAcceptedPlayers(previousAcceptedPlayers);
       setPaymentsData(previousPaymentsData);
-      setStaticPlayerEditError("Unable to update static player.");
+      setStaticPlayerEditError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to update static player.")
+          : "Unable to update static player.",
+      );
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -1849,9 +1838,11 @@ export default function Players() {
                           <span className="block truncate text-sm font-semibold text-stone-800">
                             {communityPlayer.player.username}
                           </span>
-                          <span className="block text-xs capitalize text-stone-500">
-                            {communityPlayer.player.skillLevel}
-                          </span>
+                          <SkillLevelBadge
+                            skillLevel={communityPlayer.player.skillLevel}
+                            showLabel
+                            className="mt-1"
+                          />
                         </span>
                       </button>
                     );
@@ -1957,10 +1948,11 @@ export default function Players() {
                   disabled={isSavingStaticPlayerEdit}
                   className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="elite">Elite</option>
+                  {SKILL_LEVEL_OPTIONS.map((skillLevel) => (
+                    <option key={skillLevel.value} value={skillLevel.value}>
+                      {skillLevel.acronym} {skillLevel.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
