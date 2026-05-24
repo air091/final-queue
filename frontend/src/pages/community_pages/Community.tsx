@@ -1132,9 +1132,9 @@ export default function Community() {
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-2xl"
+            className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-orange-100 px-5 py-4">
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-orange-100 px-5 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <img
                   src={selectedPointsHistoryPlayer.player.profileUrl}
@@ -1164,7 +1164,7 @@ export default function Community() {
               </button>
             </header>
 
-            <div className="grid gap-4 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
               <div className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <span className="text-sm font-medium text-amber-800">
                   Total points for {pointsFilterLabel}
@@ -1176,7 +1176,7 @@ export default function Community() {
               </div>
 
               {(selectedPointsRecord?.pointsHistory.length ?? 0) > 0 ? (
-                <div className="grid gap-3">
+                <div className="mt-4 grid gap-3">
                   {selectedPointsRecord?.pointsHistory.map((historyItem) => (
                     <div
                       key={historyItem.id}
@@ -1211,7 +1211,9 @@ export default function Community() {
                         <p>
                           Reason:{" "}
                           <span className="font-medium text-stone-700">
-                            {historyItem.reason === "payment" ? "Paid" : "Win"}
+                            {historyItem.reason === "payment"
+                              ? "Attendance"
+                              : "Win"}
                           </span>
                         </p>
                         {historyItem.reason === "win" ? (
