@@ -1193,7 +1193,10 @@ export default function Players() {
     const previousQueues = queues;
     const previousPaymentsData = paymentsData;
     const previousCommunityPlayers = communityPlayers;
-    const playerToDelete = players.find((player) => player.id === hostedPlayerId);
+    const previousSelectedCommunityPlayerIds = selectedCommunityPlayerIds;
+    const playerToDelete = players.find(
+      (player) => player.id === hostedPlayerId,
+    );
     const playerAccountId = playerToDelete?.player.id;
 
     setPlayersInHost((currentPlayers) =>
@@ -1262,6 +1265,7 @@ export default function Players() {
       setQueues(previousQueues);
       setPaymentsData(previousPaymentsData);
       setCommunityPlayers(previousCommunityPlayers);
+      setSelectedCommunityPlayerIds(previousSelectedCommunityPlayerIds);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);

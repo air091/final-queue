@@ -303,6 +303,12 @@ export const deletePlayer = async (
       },
       select: {
         id: true,
+        playerId: true,
+        player: {
+          select: {
+            role: true,
+          },
+        },
         courtAssignment: {
           select: {
             court: {
