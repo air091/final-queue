@@ -172,9 +172,22 @@ export default function CourtCard({
     !isBusy && isGamePaused && hasTeamAPlayer && hasTeamBPlayer;
   const isInteractionDisabled = isBusy || isGameActive;
   const isDeleteDisabled = isBusy || isGameStarted;
+  const isEndingGame = busyAction === "ending";
 
   return (
     <div className="relative w-full max-w-[520px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3 md:grid-cols-3">
+      {isEndingGame && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-white/80 px-4 text-center backdrop-blur-[1.5px]">
+          <div className="rounded-lg border border-amber-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-sm font-semibold text-stone-900">
+              Processing ended game
+            </p>
+            <p className="mt-1 text-xs text-stone-500">
+              Saving results before this court can accept players.
+            </p>
+          </div>
+        </div>
+      )}
       <svg
         width="100%"
         height="100%"
@@ -245,6 +258,11 @@ export default function CourtCard({
             {court.startedAt && (
               <span className="text-[12px] text-background [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
                 {isGamePaused ? "Game paused" : "Game in progress"}
+              </span>
+            )}
+            {isEndingGame && (
+              <span className="text-[12px] font-medium text-background [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+                Processing ended game
               </span>
             )}
           </div>

@@ -653,6 +653,10 @@ export const getHostWithPlayers = async (
         } | null;
       }
     >();
+    const relationshipHistoryByPlayer = new Map<
+      string,
+      Map<string, { teammateCount: number; opponentCount: number }>
+    >();
 
     if (acceptedPlayerIds.length > 0) {
       const matchParticipants = await prisma.matchParticipant.findMany({
@@ -665,6 +669,7 @@ export const getHostWithPlayers = async (
         },
         orderBy: { joinedAt: "desc" },
         select: {
+          matchId: true,
           playerId: true,
           team: true,
           result: true,
@@ -684,7 +689,23 @@ export const getHostWithPlayers = async (
         },
       });
 
+      const matchParticipantsByMatch = new Map<
+        string,
+        Array<{ playerId: string; team: string | null }>
+      >();
+
       for (const participant of matchParticipants) {
+        const matchParticipantsForMatch =
+          matchParticipantsByMatch.get(participant.matchId) ?? [];
+        matchParticipantsForMatch.push({
+          playerId: participant.playerId,
+          team: participant.team,
+        });
+        matchParticipantsByMatch.set(
+          participant.matchId,
+          matchParticipantsForMatch,
+        );
+
         const existing = matchHistoryByPlayer.get(participant.playerId);
         const matchScore = {
           matchCount: 1,
@@ -708,6 +729,42 @@ export const getHostWithPlayers = async (
         existing.matchCount += 1;
         existing.winCount += matchScore.winCount;
         existing.lossCount += matchScore.lossCount;
+      }
+
+      const ensureRelationship = (playerId: string, relatedPlayerId: string) => {
+        const relationships =
+          relationshipHistoryByPlayer.get(playerId) ?? new Map();
+        const relationship = relationships.get(relatedPlayerId) ?? {
+          teammateCount: 0,
+          opponentCount: 0,
+        };
+
+        relationships.set(relatedPlayerId, relationship);
+        relationshipHistoryByPlayer.set(playerId, relationships);
+
+        return relationship;
+      };
+
+      for (const participants of matchParticipantsByMatch.values()) {
+        for (let leftIndex = 0; leftIndex < participants.length; leftIndex += 1) {
+          for (
+            let rightIndex = leftIndex + 1;
+            rightIndex < participants.length;
+            rightIndex += 1
+          ) {
+            const left = participants[leftIndex];
+            const right = participants[rightIndex];
+            if (!left || !right) continue;
+
+            const countKey =
+              left.team && left.team === right.team
+                ? "teammateCount"
+                : "opponentCount";
+
+            ensureRelationship(left.playerId, right.playerId)[countKey] += 1;
+            ensureRelationship(right.playerId, left.playerId)[countKey] += 1;
+          }
+        }
       }
     }
 
@@ -738,6 +795,13 @@ export const getHostWithPlayers = async (
           lossCount: 0,
           lastMatch: null,
         },
+        matchRelationships: Array.from(
+          relationshipHistoryByPlayer.get(acceptedPlayer.id)?.entries() ?? [],
+        ).map(([playerId, relationship]) => ({
+          playerId,
+          teammateCount: relationship.teammateCount,
+          opponentCount: relationship.opponentCount,
+        })),
       })),
     });
   } catch (error) {

@@ -85,6 +85,12 @@ export type MatchHistorySummary = {
   } | null;
 };
 
+export type MatchRelationshipSummary = {
+  playerId: string;
+  teammateCount: number;
+  opponentCount: number;
+};
+
 export type MatchParticipantHistoryPlayer = {
   username: string;
   profileUrl: string;
@@ -153,6 +159,7 @@ export type AcceptedPlayers = {
   queueEntry: QueueAssignmentType | null;
   courtAssignment: CourtAssignmentType | null;
   matchHistory?: MatchHistorySummary;
+  matchRelationships?: MatchRelationshipSummary[];
 };
 
 export type PlayerAssignedInCourt = {

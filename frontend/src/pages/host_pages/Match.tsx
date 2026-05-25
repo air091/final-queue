@@ -43,6 +43,96 @@ type QueueDropData = {
 type DropData = CourtDropData | QueueDropData;
 
 type PlayerStatusFilter = "all" | "paid" | MatchPlayerStatus;
+type RelationshipToastState = {
+  id: number;
+  messages: string[];
+};
+
+const RELATIONSHIP_WARNING_THRESHOLD = 2;
+const MAX_RELATIONSHIP_TOAST_MESSAGES = 4;
+
+const getMatchTeam = (position: number) =>
+  position === 1 || position === 3 ? "A" : "B";
+
+const getOrdinal = (value: number) => {
+  const lastTwoDigits = value % 100;
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 13) return `${value}th`;
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+};
+
+const getPlayerName = (player: AcceptedPlayers) =>
+  player.player.username.trim() || "Player";
+
+const getRelationshipCount = (
+  player: AcceptedPlayers,
+  relatedPlayerId: string,
+  relationshipKey: "teammateCount" | "opponentCount",
+) =>
+  player.matchRelationships?.find(
+    (relationship) => relationship.playerId === relatedPlayerId,
+  )?.[relationshipKey] ?? 0;
+
+const getRelationshipWarnings = (
+  currentPlayers: AcceptedPlayers[],
+  assignments: Array<{ playerId: string; position: number }>,
+) => {
+  const assignedPlayers = assignments
+    .map((assignment) => {
+      const player = currentPlayers.find(
+        (currentPlayer) => currentPlayer.id === assignment.playerId,
+      );
+
+      return player ? { ...assignment, player } : null;
+    })
+    .filter(
+      (
+        assignment,
+      ): assignment is {
+        playerId: string;
+        position: number;
+        player: AcceptedPlayers;
+      } => Boolean(assignment),
+    );
+  const messages: string[] = [];
+
+  for (let leftIndex = 0; leftIndex < assignedPlayers.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < assignedPlayers.length;
+      rightIndex += 1
+    ) {
+      const left = assignedPlayers[leftIndex];
+      const right = assignedPlayers[rightIndex];
+      const isTeammate =
+        getMatchTeam(left.position) === getMatchTeam(right.position);
+      const relationshipKey = isTeammate ? "teammateCount" : "opponentCount";
+      const nextCount =
+        getRelationshipCount(left.player, right.playerId, relationshipKey) + 1;
+
+      if (nextCount < RELATIONSHIP_WARNING_THRESHOLD) continue;
+
+      messages.push(
+        `${getPlayerName(left.player)} and ${getPlayerName(
+          right.player,
+        )} will ${isTeammate ? "be teammates" : "face each other"} for the ${getOrdinal(
+          nextCount,
+        )} time.`,
+      );
+    }
+  }
+
+  return messages;
+};
 
 const getUpdatedCourts = (
   currentCourts: CourtType[],
@@ -257,6 +347,56 @@ const getUpdatedPlayerMatchSummaries = (
           courtName: match.court?.name ?? null,
         },
       },
+    };
+  });
+
+const getPlayersWithIncrementedMatchRelationships = (
+  currentPlayers: AcceptedPlayers[],
+  match: FinishedMatchPayload,
+) =>
+  currentPlayers.map((player) => {
+    const participant = match.participants.find(
+      (matchParticipant) => matchParticipant.playerId === player.id,
+    );
+
+    if (!participant) return player;
+
+    const relationships = new Map(
+      player.matchRelationships?.map((relationship) => [
+        relationship.playerId,
+        {
+          teammateCount: relationship.teammateCount,
+          opponentCount: relationship.opponentCount,
+        },
+      ]) ?? [],
+    );
+
+    for (const relatedParticipant of match.participants) {
+      if (relatedParticipant.playerId === participant.playerId) continue;
+
+      const relationship = relationships.get(relatedParticipant.playerId) ?? {
+        teammateCount: 0,
+        opponentCount: 0,
+      };
+
+      if (participant.team && participant.team === relatedParticipant.team) {
+        relationship.teammateCount += 1;
+      } else {
+        relationship.opponentCount += 1;
+      }
+
+      relationships.set(relatedParticipant.playerId, relationship);
+    }
+
+    return {
+      ...player,
+      matchRelationships: Array.from(relationships.entries()).map(
+        ([playerId, relationship]) => ({
+          playerId,
+          teammateCount: relationship.teammateCount,
+          opponentCount: relationship.opponentCount,
+        }),
+      ),
     };
   });
 
@@ -578,12 +718,15 @@ export default function Match() {
     Record<string, "starting" | "pausing" | "resuming" | "ending">
   >({});
   const [busyQueueIds, setBusyQueueIds] = useState<string[]>([]);
+  const [relationshipToast, setRelationshipToast] =
+    useState<RelationshipToastState | null>(null);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
   const pendingQueuePlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
+  const relationshipToastTimeoutRef = useRef<number | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -600,6 +743,42 @@ export default function Match() {
     const activeElement = document.activeElement;
     if (activeElement instanceof HTMLElement) activeElement.blur();
   };
+
+  const showRelationshipToast = (messages: string[]) => {
+    if (messages.length === 0) return;
+
+    if (relationshipToastTimeoutRef.current !== null) {
+      window.clearTimeout(relationshipToastTimeoutRef.current);
+    }
+
+    setRelationshipToast({
+      id: Date.now(),
+      messages: messages.slice(0, MAX_RELATIONSHIP_TOAST_MESSAGES),
+    });
+
+    relationshipToastTimeoutRef.current = window.setTimeout(() => {
+      setRelationshipToast(null);
+      relationshipToastTimeoutRef.current = null;
+    }, 6500);
+  };
+
+  const dismissRelationshipToast = () => {
+    if (relationshipToastTimeoutRef.current !== null) {
+      window.clearTimeout(relationshipToastTimeoutRef.current);
+      relationshipToastTimeoutRef.current = null;
+    }
+
+    setRelationshipToast(null);
+  };
+
+  useEffect(
+    () => () => {
+      if (relationshipToastTimeoutRef.current !== null) {
+        window.clearTimeout(relationshipToastTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const queueCourtPlayerOperation = (
     hostedPlayerId: string,
@@ -899,6 +1078,9 @@ export default function Match() {
       const updatedTargetCourt = updatedCourts.find(
         (court) => court.id === dropData.courtId,
       );
+      const relationshipWarnings = updatedTargetCourt
+        ? getRelationshipWarnings(players, updatedTargetCourt.assignments)
+        : [];
       const replacedAssignment = targetCourt?.assignments.find(
         (assignment) =>
           assignment.position === dropData.position &&
@@ -930,6 +1112,7 @@ export default function Match() {
           isCourtActive(updatedTargetCourt),
         ),
       );
+      showRelationshipToast(relationshipWarnings);
 
       void queueCourtPlayerOperation(hostedPlayerId, async () => {
         try {
@@ -963,6 +1146,12 @@ export default function Match() {
         dropData.queueId,
         dropData.position,
       );
+      const updatedTargetQueue = updatedQueues.find(
+        (queue) => queue.id === dropData.queueId,
+      );
+      const relationshipWarnings = updatedTargetQueue
+        ? getRelationshipWarnings(players, updatedTargetQueue.entries ?? [])
+        : [];
 
       // Check if player is coming from a court and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
@@ -989,6 +1178,7 @@ export default function Match() {
           dropData.position,
         ),
       );
+      showRelationshipToast(relationshipWarnings);
 
       void queueQueuePlayerOperation(hostedPlayerId, async () => {
         try {
@@ -1432,11 +1622,14 @@ export default function Match() {
 
       setPlayers((currentPlayers) =>
         response.match
-          ? getUpdatedPlayerMatchSummaries(
-              getPlayersWithResetTimer(
-                currentPlayers,
-                endedPlayerIds,
-                "waiting",
+          ? getPlayersWithIncrementedMatchRelationships(
+              getUpdatedPlayerMatchSummaries(
+                getPlayersWithResetTimer(
+                  currentPlayers,
+                  endedPlayerIds,
+                  "waiting",
+                ),
+                response.match,
               ),
               response.match,
             )
@@ -1645,6 +1838,34 @@ export default function Match() {
 
   return (
     <>
+      {relationshipToast ? (
+        <div
+          key={relationshipToast.id}
+          role="status"
+          className="fixed right-3 top-3 z-[3000] w-[min(420px,calc(100vw-1.5rem))] rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900 shadow-lg"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-red-950">
+                Pair history warning
+              </p>
+              <ul className="mt-2 space-y-1">
+                {relationshipToast.messages.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss pair history warning"
+              onClick={dismissRelationshipToast}
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-red-700 transition hover:bg-red-100 hover:text-red-950"
+            >
+              x
+            </button>
+          </div>
+        </div>
+      ) : null}
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
