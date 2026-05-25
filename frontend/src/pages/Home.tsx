@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
+import LoadingState from "../components/LoadingState";
 
 type JoinStatus = "requested" | "accepted" | "rejected" | "banned" | null;
 
@@ -60,13 +61,20 @@ const isHostFull = (
 
 export default function Home() {
   const [availableHosts, setAvailableHost] = useState<AvailableHostType[]>([]);
+  const [isHostsLoading, setIsHostsLoading] = useState(true);
+  const [hostsError, setHostsError] = useState<string | null>(null);
   const [requestingHostIds, setRequestingHostIds] = useState<string[]>([]);
   const fallbackProfileUrl = "https://image.pngaaa.com/189/734189-middle.png";
   const { accessToken, isLoading } = useAuth();
 
   const getAvailableHosts = async () => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setIsHostsLoading(false);
+      return;
+    }
 
+    setIsHostsLoading(true);
+    setHostsError(null);
     try {
       const response = await api.get("/api/public/actions/hosts/available", {
         headers: {
@@ -75,8 +83,11 @@ export default function Home() {
       });
       setAvailableHost(response.data.hosts);
     } catch (error) {
+      setHostsError("Unable to load available hosts.");
       if (axios.isAxiosError(error)) console.error(error);
       else console.error(error);
+    } finally {
+      setIsHostsLoading(false);
     }
   };
 
@@ -171,7 +182,34 @@ export default function Home() {
   return (
     <div className="w-full px-2 py-2 sm:px-4">
       <main className="mx-auto flex max-w-3xl flex-col gap-4 pb-24 md:pb-6">
-        {availableHosts.map((availableHost) => {
+        {isHostsLoading ? (
+          <LoadingState
+            title="Loading available games"
+            message="Checking open hosts and player counts..."
+          />
+        ) : hostsError ? (
+          <div className="rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-red-600">{hostsError}</p>
+            <button
+              type="button"
+              onClick={() => void getAvailableHosts()}
+              className="mt-4 w-fit rounded-2xl bg-text px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : availableHosts.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-orange-200 bg-white p-8 text-center shadow-sm">
+            <h2 className="text-lg font-semibold text-text">
+              No open games right now
+            </h2>
+            <p className="mt-2 text-sm text-stone-500">
+              Available hosts will show up here as soon as someone starts a
+              session.
+            </p>
+          </div>
+        ) : (
+          availableHosts.map((availableHost) => {
           const isRequesting = requestingHostIds.includes(availableHost.id);
           const hostIsFull = isHostFull(availableHost);
 
@@ -325,7 +363,8 @@ export default function Home() {
               </div>
             </div>
           );
-        })}
+          })
+        )}
       </main>
     </div>
   );

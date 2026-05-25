@@ -4,6 +4,7 @@ import { Outlet, useParams } from "react-router-dom";
 import PlayerHistoryModal, {
   summarizePlayerHistory,
 } from "../components/host_components/PlayerHistoryModal";
+import LoadingState from "../components/LoadingState";
 import Sidebar from "../components/host_components/Sidebar";
 import type { HostOutletContext } from "../hooks/useHostData";
 import { api } from "../lib/api";
@@ -559,9 +560,11 @@ export default function HostLayout() {
         {openSidebar && <Sidebar />}
 
         {isHostLoading ? (
-          <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
-            <p className="text-sm text-stone-500">Loading host data...</p>
-          </div>
+          <LoadingState
+            className="flex-1"
+            title="Loading host data"
+            message="Fetching players, courts, queues, and payments..."
+          />
         ) : hostLoadError ? (
           <div className="grid gap-3 rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
             <p className="text-sm text-red-600">{hostLoadError}</p>

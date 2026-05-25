@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 
+import LoadingState from "./LoadingState";
 import { useAuth } from "../hooks/useAuth";
 
 export default function ProtectedRoute() {
@@ -7,7 +8,13 @@ export default function ProtectedRoute() {
 
   // Still checking auth
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <LoadingState
+        variant="page"
+        title="Checking your session"
+        message="Confirming your login before opening the app..."
+      />
+    );
   }
 
   // Not logged in

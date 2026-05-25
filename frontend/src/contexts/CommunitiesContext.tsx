@@ -56,6 +56,12 @@ export function CommunitiesProvider({ children }: CommunitiesProviderProps) {
   useEffect(() => {
     if (!authLoading && accessToken) {
       getCommunities();
+      return;
+    }
+
+    if (!authLoading && !accessToken) {
+      setCommunities([]);
+      setIsLoading(false);
     }
   }, [getCommunities, authLoading, accessToken]);
 

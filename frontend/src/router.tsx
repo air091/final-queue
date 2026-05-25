@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import LoadingState from "./components/LoadingState";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RouteErrorBoundary from "./components/RouteErrorBoundary";
 
@@ -8,6 +9,9 @@ const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const Home = lazy(() => import("./pages/Home"));
 const HomeLayout = lazy(() => import("./layouts/HomeLayout"));
+const CommunityIndex = lazy(
+  () => import("./pages/community_pages/CommunityIndex")
+);
 const Community = lazy(() => import("./pages/community_pages/Community"));
 const CommunityLayout = lazy(() => import("./layouts/CommunityLayout"));
 const CreateCommunity = lazy(
@@ -23,7 +27,17 @@ const ProfileLayout = lazy(() => import("./layouts/ProfileLayout"));
 const Landing = lazy(() => import("./pages/Landing"));
 
 const withSuspense = (children: ReactNode) => (
-  <Suspense fallback={null}>{children}</Suspense>
+  <Suspense
+    fallback={
+      <LoadingState
+        variant="page"
+        title="Loading page"
+        message="Opening the next view..."
+      />
+    }
+  >
+    {children}
+  </Suspense>
 );
 
 const router = createBrowserRouter([
@@ -78,6 +92,10 @@ const router = createBrowserRouter([
         path: "/community",
         element: withSuspense(<CommunityLayout />),
         children: [
+          {
+            index: true,
+            element: withSuspense(<CommunityIndex />),
+          },
           {
             path: "create",
             element: withSuspense(<CreateCommunity />),

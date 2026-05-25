@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
+import LoadingState from "../../components/LoadingState";
 import {
   EllipsisVertical,
   Plus,
@@ -240,6 +241,10 @@ export default function Community() {
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
+  const [isCommunityLoading, setIsCommunityLoading] = useState(true);
+  const [isCommunityHostsLoading, setIsCommunityHostsLoading] = useState(true);
+  const [isCommunityPlayersLoading, setIsCommunityPlayersLoading] =
+    useState(true);
   const [deletingHostId, setDeletingHostId] = useState<string | null>(null);
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [editCommunityError, setEditCommunityError] = useState<string | null>(
@@ -327,12 +332,23 @@ export default function Community() {
   }, [pointsFilterDay, pointsFilterMode, pointsFilterMonth]);
 
   const getCommunityAPI = async () => {
+    if (!id) {
+      setIsCommunityLoading(false);
+      return;
+    }
+
+    setIsCommunityLoading(true);
+    setCommunityError(null);
+
     try {
       const response = await api.get(`/api/community/${id}`);
       setCommunity(response.data.community);
     } catch (error) {
+      setCommunityError("Unable to load community details.");
       if (axios.isAxiosError(error)) console.error(error);
       else console.error("Get community api failed", error);
+    } finally {
+      setIsCommunityLoading(false);
     }
   };
 
@@ -341,12 +357,22 @@ export default function Community() {
   }, [id]);
 
   const getCommunityHostsAPI = async () => {
+    if (!id) {
+      setIsCommunityHostsLoading(false);
+      return;
+    }
+
+    setIsCommunityHostsLoading(true);
+
     try {
       const response = await api.get(`/api/community/${id}/hosts/`);
       setCommunityHosts(response.data.hosts);
     } catch (error) {
+      setCommunityError("Unable to load community hosts.");
       if (axios.isAxiosError(error)) console.error(error);
       else console.error("Get community hosts api failed", error);
+    } finally {
+      setIsCommunityHostsLoading(false);
     }
   };
 
@@ -355,12 +381,22 @@ export default function Community() {
   }, [id]);
 
   const getCommunityPlayersAPI = async () => {
+    if (!id) {
+      setIsCommunityPlayersLoading(false);
+      return;
+    }
+
+    setIsCommunityPlayersLoading(true);
+
     try {
       const response = await api.get(`/api/community/${id}/players`);
       setCommunityPlayers(response.data.players);
     } catch (error) {
+      setCommunityError("Unable to load community players.");
       if (axios.isAxiosError(error)) console.error(error);
       else console.error("Get community players api failed", error);
+    } finally {
+      setIsCommunityPlayersLoading(false);
     }
   };
 
@@ -871,6 +907,40 @@ export default function Community() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const isInitialCommunityLoading =
+    isCommunityLoading || isCommunityHostsLoading || isCommunityPlayersLoading;
+
+  if (isInitialCommunityLoading) {
+    return (
+      <LoadingState
+        title="Loading community"
+        message="Fetching hosts, players, and rankings..."
+      />
+    );
+  }
+
+  if (!community && communityError) {
+    return (
+      <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-3xl border border-red-100 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-red-600">{communityError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              void getCommunityAPI();
+              void getCommunityHostsAPI();
+              void getCommunityPlayersAPI();
+              void getCommunityPlayerWinPointsAPI();
+            }}
+            className="mt-4 w-fit rounded-2xl bg-text px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
