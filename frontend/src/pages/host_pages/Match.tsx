@@ -1958,7 +1958,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 max-[1025px]:grid-cols-1 gap-3">
+                  <div className="grid grid-cols-2 max-[1240px]:grid-cols-1 gap-3">
                     {courts.map((court) => (
                       <CourtCard
                         key={court.id}
@@ -2006,7 +2006,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 max-[1025px]:grid-cols-1 gap-3">
+                  <div className="grid grid-cols-2 max-[1240px]:grid-cols-1 gap-3">
                     {queues.map((queue) => (
                       <QueueCard
                         key={queue.id}
