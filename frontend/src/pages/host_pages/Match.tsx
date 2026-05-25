@@ -27,6 +27,7 @@ import {
   type MatchPlayerStatus,
   type QueueType,
 } from "../../lib/host";
+import { X } from "lucide-react";
 
 type CourtDropData = {
   type: "court-slot";
@@ -281,7 +282,9 @@ const getPlayersWithResetTimer = (
     return {
       ...nextPlayer,
       matchStatus:
-        nextStatus === "waiting" ? getDerivedMatchStatus(nextPlayer) : nextStatus,
+        nextStatus === "waiting"
+          ? getDerivedMatchStatus(nextPlayer)
+          : nextStatus,
     };
   });
 };
@@ -632,10 +635,7 @@ const getAllPlayersSortPriority = (player: AcceptedPlayers, now: number) => {
   return 6;
 };
 
-const sortAllPlayersByPriority = (
-  players: AcceptedPlayers[],
-  now: number,
-) =>
+const sortAllPlayersByPriority = (players: AcceptedPlayers[], now: number) =>
   players
     .map((player, index) => ({ player, index }))
     .sort((left, right) => {
@@ -645,19 +645,14 @@ const sortAllPlayersByPriority = (
       if (leftPriority !== rightPriority) return leftPriority - rightPriority;
 
       if (leftPriority <= 2) {
-        return (
-          getWaitingMs(right.player, now) - getWaitingMs(left.player, now)
-        );
+        return getWaitingMs(right.player, now) - getWaitingMs(left.player, now);
       }
 
       return left.index - right.index;
     })
     .map(({ player }) => player);
 
-const sortPlayersByTimerBucket = (
-  players: AcceptedPlayers[],
-  now: number,
-) =>
+const sortPlayersByTimerBucket = (players: AcceptedPlayers[], now: number) =>
   players
     .map((player, index) => ({ player, index }))
     .sort((left, right) => {
@@ -677,7 +672,8 @@ const sortPlayersByTimerBucket = (
             : 2;
 
       if (leftPriority !== rightPriority) return leftPriority - rightPriority;
-      if (leftWaitingMs !== rightWaitingMs) return rightWaitingMs - leftWaitingMs;
+      if (leftWaitingMs !== rightWaitingMs)
+        return rightWaitingMs - leftWaitingMs;
 
       return left.index - right.index;
     })
@@ -1518,7 +1514,9 @@ export default function Match() {
 
     setCourtBusy(courtId, true, "pausing");
     setCourts(getPausedCourt(previousCourts, courtId));
-    setPlayers(getPlayersWithMatchStatus(previousPlayers, playerIds, "inQueue"));
+    setPlayers(
+      getPlayersWithMatchStatus(previousPlayers, playerIds, "inQueue"),
+    );
 
     try {
       await pauseCourtGameAPI(courtId);
@@ -1842,26 +1840,21 @@ export default function Match() {
         <div
           key={relationshipToast.id}
           role="status"
-          className="fixed right-3 top-3 z-[3000] w-[min(420px,calc(100vw-1.5rem))] rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900 shadow-lg"
+          className="fixed right-3 top-3 z-[3000] w-[min(420px,calc(100vw-1.5rem))] rounded-lg border border-red-300 bg-red-200 p-4 text-sm text-red-900 shadow-lg"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-semibold text-red-950">
-                Pair history warning
-              </p>
-              <ul className="mt-2 space-y-1">
-                {relationshipToast.messages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
+          <div className="flex items-center justify-between">
+            <ul>
+              {relationshipToast.messages.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
             <button
               type="button"
               aria-label="Dismiss pair history warning"
               onClick={dismissRelationshipToast}
-              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-red-700 transition hover:bg-red-100 hover:text-red-950"
+              className="flex shrink-0 cursor-pointer items-center justify-center rounded-full text-red-700 transition hover:bg-red-100 hover:text-red-950 p-1"
             >
-              x
+              <X size={14} />
             </button>
           </div>
         </div>

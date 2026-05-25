@@ -182,9 +182,6 @@ export default function CourtCard({
             <p className="text-sm font-semibold text-stone-900">
               Processing ended game
             </p>
-            <p className="mt-1 text-xs text-stone-500">
-              Saving results before this court can accept players.
-            </p>
           </div>
         </div>
       )}
