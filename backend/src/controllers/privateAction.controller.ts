@@ -1336,17 +1336,6 @@ export const assignPlayerToQueue = async (
         .status(404)
         .json({ success: false, message: "Queue not found" });
 
-    const existingAssignment = await prisma.queueAssignment.findFirst({
-      where: { playerId: player.id },
-      select: { playerId: true, queueId: true },
-    });
-
-    if (existingAssignment && existingAssignment.queueId !== queue.id)
-      return response.status(400).json({
-        success: false,
-        message: "Player is already in a queue",
-      });
-
     const existingCourtAssignment = await prisma.courtAssignment.findFirst({
       where: { playerId: player.id },
       select: {
@@ -1365,16 +1354,19 @@ export const assignPlayerToQueue = async (
         queueId: queue.id,
         position,
       },
+      select: {
+        id: true,
+        playerId: true,
+      },
     });
 
-    if (occupied && occupied.playerId !== player.id) {
-      return response.status(400).json({
-        success: false,
-        message: "Position already occupied",
-      });
-    }
-
     await prisma.$transaction(async (transaction) => {
+      if (occupied && occupied.playerId !== player.id) {
+        await transaction.queueAssignment.delete({
+          where: { id: occupied.id },
+        });
+      }
+
       await transaction.queueAssignment.upsert({
         where: { playerId: player.id },
         update: {

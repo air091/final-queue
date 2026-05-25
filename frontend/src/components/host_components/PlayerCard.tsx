@@ -51,6 +51,7 @@ export default function PlayerCard({
       type: "player",
       hostedPlayerId: player.id,
       courtId,
+      queueId,
     },
   });
   const dropdownRef = useRef<HTMLDivElement>(null);

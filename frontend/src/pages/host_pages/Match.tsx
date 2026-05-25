@@ -48,6 +48,10 @@ type RelationshipToastState = {
   id: number;
   messages: string[];
 };
+type ActionToastState = {
+  id: number;
+  message: string;
+};
 
 const RELATIONSHIP_WARNING_THRESHOLD = 2;
 const MAX_RELATIONSHIP_TOAST_MESSAGES = 4;
@@ -716,6 +720,7 @@ export default function Match() {
   const [busyQueueIds, setBusyQueueIds] = useState<string[]>([]);
   const [relationshipToast, setRelationshipToast] =
     useState<RelationshipToastState | null>(null);
+  const [actionToast, setActionToast] = useState<ActionToastState | null>(null);
   const pendingCourtPlayerOperationsRef = useRef<Map<string, Promise<void>>>(
     new Map(),
   );
@@ -723,6 +728,7 @@ export default function Match() {
     new Map(),
   );
   const relationshipToastTimeoutRef = useRef<number | null>(null);
+  const actionToastTimeoutRef = useRef<number | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -767,10 +773,38 @@ export default function Match() {
     setRelationshipToast(null);
   };
 
+  const showActionToast = (message: string) => {
+    if (actionToastTimeoutRef.current !== null) {
+      window.clearTimeout(actionToastTimeoutRef.current);
+    }
+
+    setActionToast({
+      id: Date.now(),
+      message,
+    });
+
+    actionToastTimeoutRef.current = window.setTimeout(() => {
+      setActionToast(null);
+      actionToastTimeoutRef.current = null;
+    }, 4500);
+  };
+
+  const dismissActionToast = () => {
+    if (actionToastTimeoutRef.current !== null) {
+      window.clearTimeout(actionToastTimeoutRef.current);
+      actionToastTimeoutRef.current = null;
+    }
+
+    setActionToast(null);
+  };
+
   useEffect(
     () => () => {
       if (relationshipToastTimeoutRef.current !== null) {
         window.clearTimeout(relationshipToastTimeoutRef.current);
+      }
+      if (actionToastTimeoutRef.current !== null) {
+        window.clearTimeout(actionToastTimeoutRef.current);
       }
     },
     [],
@@ -1077,6 +1111,9 @@ export default function Match() {
       const relationshipWarnings = updatedTargetCourt
         ? getRelationshipWarnings(players, updatedTargetCourt.assignments)
         : [];
+      const previousCourts = courts;
+      const previousQueues = queues;
+      const previousPlayers = players;
       const replacedAssignment = targetCourt?.assignments.find(
         (assignment) =>
           assignment.position === dropData.position &&
@@ -1110,8 +1147,11 @@ export default function Match() {
       );
       showRelationshipToast(relationshipWarnings);
 
+      const pendingQueueOperation =
+        pendingQueuePlayerOperationsRef.current.get(hostedPlayerId);
       void queueCourtPlayerOperation(hostedPlayerId, async () => {
         try {
+          await pendingQueueOperation?.catch(() => undefined);
           await assignPlayerToCourtAPI(
             hostedPlayerId,
             dropData.courtId,
@@ -1125,11 +1165,15 @@ export default function Match() {
             );
           }
         } catch (error) {
+          setCourts(previousCourts);
+          setQueues(previousQueues);
+          setPlayers(previousPlayers);
+
           if (axios.isAxiosError(error))
             console.error(error.response?.data ?? error);
           else console.error(error);
 
-          await refreshHostData();
+          showActionToast("Couldn't move player. Please try again.");
         }
       });
     } else if (dropData.type === "queue-slot") {
@@ -1148,6 +1192,16 @@ export default function Match() {
       const relationshipWarnings = updatedTargetQueue
         ? getRelationshipWarnings(players, updatedTargetQueue.entries ?? [])
         : [];
+      const previousCourts = courts;
+      const previousQueues = queues;
+      const previousPlayers = players;
+      const targetQueue = queues.find((queue) => queue.id === dropData.queueId);
+      const replacedEntry = targetQueue?.entries.find(
+        (entry) =>
+          entry.position === dropData.position &&
+          entry.playerId !== hostedPlayerId,
+      );
+      const replacedPlayerId = replacedEntry?.playerId;
 
       // Check if player is coming from a court and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
@@ -1168,7 +1222,9 @@ export default function Match() {
       setCourts(updatedCourts);
       setPlayers(
         getPlayersWithQueueAssignment(
-          players,
+          replacedPlayerId
+            ? getPlayersWithoutQueueAssignment(players, replacedPlayerId)
+            : players,
           hostedPlayerId,
           dropData.queueId,
           dropData.position,
@@ -1176,8 +1232,11 @@ export default function Match() {
       );
       showRelationshipToast(relationshipWarnings);
 
+      const pendingCourtOperation =
+        pendingCourtPlayerOperationsRef.current.get(hostedPlayerId);
       void queueQueuePlayerOperation(hostedPlayerId, async () => {
         try {
+          await pendingCourtOperation?.catch(() => undefined);
           await assignPlayerToQueueAPI(
             hostedPlayerId,
             dropData.queueId,
@@ -1191,11 +1250,15 @@ export default function Match() {
             );
           }
         } catch (error) {
+          setCourts(previousCourts);
+          setQueues(previousQueues);
+          setPlayers(previousPlayers);
+
           if (axios.isAxiosError(error))
             console.error(error.response?.data ?? error);
           else console.error(error);
 
-          await refreshHostData();
+          showActionToast("Couldn't move player. Please try again.");
         }
       });
     }
@@ -1836,27 +1899,50 @@ export default function Match() {
 
   return (
     <>
-      {relationshipToast ? (
-        <div
-          key={relationshipToast.id}
-          role="status"
-          className="fixed right-3 top-3 z-[3000] w-[min(420px,calc(100vw-1.5rem))] rounded-lg border border-red-300 bg-red-200 p-4 text-sm text-red-900 shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <ul>
-              {relationshipToast.messages.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              aria-label="Dismiss pair history warning"
-              onClick={dismissRelationshipToast}
-              className="flex shrink-0 cursor-pointer items-center justify-center rounded-full text-red-700 transition hover:bg-red-100 hover:text-red-950 p-1"
+      {relationshipToast || actionToast ? (
+        <div className="fixed right-3 top-3 z-[3000] flex w-[min(420px,calc(100vw-1.5rem))] flex-col gap-2">
+          {relationshipToast ? (
+            <div
+              key={relationshipToast.id}
+              role="status"
+              className="rounded-lg border border-red-300 bg-red-200 p-4 text-sm text-red-900 shadow-lg"
             >
-              <X size={14} />
-            </button>
-          </div>
+              <div className="flex items-center justify-between">
+                <ul>
+                  {relationshipToast.messages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  aria-label="Dismiss pair history warning"
+                  onClick={dismissRelationshipToast}
+                  className="flex shrink-0 cursor-pointer items-center justify-center rounded-full text-red-700 transition hover:bg-red-100 hover:text-red-950 p-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {actionToast ? (
+            <div
+              key={actionToast.id}
+              role="alert"
+              className="rounded-lg border border-stone-300 bg-white p-4 text-sm font-medium text-stone-900 shadow-lg"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span>{actionToast.message}</span>
+                <button
+                  type="button"
+                  aria-label="Dismiss action message"
+                  onClick={dismissActionToast}
+                  className="flex shrink-0 cursor-pointer items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 hover:text-stone-950 p-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <DndContext
