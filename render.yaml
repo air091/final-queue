@@ -4,12 +4,19 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install --prefix backend --include=dev && npm --prefix backend run prisma:generate && npm install --prefix frontend --include=dev && npm --prefix frontend run build
-    startCommand: npm --prefix backend run prisma:generate && npm --prefix backend run migrate:deploy && npm --prefix backend run start
+    preDeployCommand: npm --prefix backend run migrate:deploy
+    startCommand: npm --prefix backend run start
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false
+      - key: DIRECT_URL
+        sync: false
       - key: JWT_ACCESS_SECRET
         sync: false
-      - key: JWT_EXPIRES_IN
+      - key: JWT_ACCESS_EXPIRES_IN
         value: 15m
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
