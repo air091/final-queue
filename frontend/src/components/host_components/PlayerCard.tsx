@@ -2,7 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PlayerSettingsDropdown from "./PlayerDropdown";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { TbArrowBack } from "react-icons/tb";
 import type { AcceptedPlayers } from "../../lib/host";
 import { Gamepad, TriangleAlert } from "lucide-react";
@@ -124,6 +124,14 @@ export default function PlayerCard({
     ? `${statusClasses} bg-red-200 shadow-red-100`
     : `${statusClasses} bg-white`;
   const gamesPlayed = player.gamesPlayed ?? 0;
+  const dragSelectionStyles: CSSProperties | undefined = canDrag
+    ? {
+        WebkitTapHighlightColor: "transparent",
+        WebkitTouchCallout: "none",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }
+    : undefined;
 
   return (
     <div
@@ -131,6 +139,7 @@ export default function PlayerCard({
       style={{
         transform: isDragging ? undefined : CSS.Transform.toString(transform),
         opacity: isDragging ? 0 : 1,
+        ...dragSelectionStyles,
       }}
       className={`
       relative flex items-center justify-between
@@ -139,7 +148,7 @@ export default function PlayerCard({
 
       ${cardStateClasses}
 
-      ${canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
+      ${canDrag ? "cursor-grab active:cursor-grabbing select-none" : "cursor-default"}
 
       ${
         activeDropdown === player.id
@@ -168,6 +177,7 @@ export default function PlayerCard({
         }`}
         style={{
           touchAction: canDrag ? "none" : "auto",
+          ...dragSelectionStyles,
         }}
       >
         {/* AVATAR */}
@@ -175,6 +185,7 @@ export default function PlayerCard({
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
+            draggable={false}
             className="h-full w-full object-cover"
           />
         </div>
