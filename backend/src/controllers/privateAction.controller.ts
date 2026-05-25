@@ -213,6 +213,12 @@ export const banPlayer = async (
       },
       select: {
         id: true,
+        playerId: true,
+        player: {
+          select: {
+            role: true,
+          },
+        },
         courtAssignment: {
           select: {
             court: {
@@ -324,9 +330,28 @@ export const deletePlayer = async (
         message: "Cannot delete a player while they are in an active game",
       });
 
-    await prisma.player.delete({
-      where: { id: existing.id },
-    });
+    if (existing.player.role === UserRoles.static) {
+      await prisma.$transaction([
+        prisma.player.deleteMany({
+          where: {
+            playerId: existing.playerId,
+            host: {
+              communityId,
+            },
+          },
+        }),
+        prisma.communityPlayer.deleteMany({
+          where: {
+            communityId,
+            accountId: existing.playerId,
+          },
+        }),
+      ]);
+    } else {
+      await prisma.player.delete({
+        where: { id: existing.id },
+      });
+    }
 
     return response.status(200).json({
       success: true,

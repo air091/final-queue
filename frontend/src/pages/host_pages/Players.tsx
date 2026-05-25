@@ -18,6 +18,7 @@ import {
   Gamepad,
   MoveDown,
   MoveUp,
+  Plus,
   X,
 } from "lucide-react";
 import {
@@ -28,6 +29,15 @@ import {
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 type SortDirection = "asc" | "desc";
 type PlayerSortField = "name" | "games";
+type NewPlayerFormState = {
+  names: string;
+  skillLevel: SkillLevelType;
+};
+
+const INITIAL_NEW_PLAYER_FORM: NewPlayerFormState = {
+  names: "",
+  skillLevel: "beginner",
+};
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -627,6 +637,12 @@ export default function Players() {
   const [communityPlayerError, setCommunityPlayerError] = useState<
     string | null
   >(null);
+  const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [newPlayerForm, setNewPlayerForm] = useState<NewPlayerFormState>(
+    INITIAL_NEW_PLAYER_FORM,
+  );
+  const [isCreatingNewPlayer, setIsCreatingNewPlayer] = useState(false);
+  const [newPlayerError, setNewPlayerError] = useState<string | null>(null);
   const [nameSortDirection, setNameSortDirection] =
     useState<SortDirection>("asc");
   const [gamesSortDirection, setGamesSortDirection] =
@@ -761,6 +777,21 @@ export default function Players() {
     return response.data.hostedPlayers as AcceptedPlayers[];
   };
 
+  const createCommunityStaticPlayerAPI = async (
+    username: string,
+    skillLevel: SkillLevelType,
+  ) => {
+    const response = await api.post(
+      `/api/community/${communityId}/players/static`,
+      {
+        username,
+        skillLevel,
+      },
+    );
+
+    return response.data.player as CommunityPlayerRecord;
+  };
+
   const addHostedPlayersToState = (hostedPlayers: AcceptedPlayers[]) => {
     const normalizedHostedPlayers = hostedPlayers.map((player) => ({
       ...player,
@@ -883,6 +914,89 @@ export default function Players() {
       else console.error(error);
     } finally {
       setIsAddingCommunityPlayers(false);
+    }
+  };
+
+  const closeAddPlayerModal = () => {
+    if (isCreatingNewPlayer) return;
+
+    setIsAddPlayerModalOpen(false);
+    setNewPlayerForm(INITIAL_NEW_PLAYER_FORM);
+    setNewPlayerError(null);
+  };
+
+  const handleCreateNewPlayer = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!communityId || !hostId) return;
+
+    const names = newPlayerForm.names
+      .split(/\r?\n/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+    const uniqueNames = Array.from(new Set(names));
+
+    if (uniqueNames.length === 0) {
+      setNewPlayerError("Add at least one player name.");
+      return;
+    }
+
+    setIsCreatingNewPlayer(true);
+    setNewPlayerError(null);
+
+    const previousCommunityPlayers = communityPlayers;
+    const previousPlayers = players;
+    const previousAcceptedPlayers = acceptedPlayers;
+    const previousPaymentsData = paymentsData;
+    const previousDrafts = staticProfileUrlDrafts;
+
+    try {
+      const createdCommunityPlayers: CommunityPlayerRecord[] = [];
+
+      for (const username of uniqueNames) {
+        const communityPlayer = await createCommunityStaticPlayerAPI(
+          username,
+          newPlayerForm.skillLevel,
+        );
+        createdCommunityPlayers.push(communityPlayer);
+      }
+
+      const hostedPlayers = await addCommunityPlayersToHostAPI(
+        createdCommunityPlayers.map((communityPlayer) => communityPlayer.id),
+      );
+
+      setCommunityPlayers((currentPlayers) => [
+        ...createdCommunityPlayers,
+        ...currentPlayers,
+      ]);
+      addHostedPlayersToState(hostedPlayers);
+      setSelectedCommunityPlayerIds((currentIds) =>
+        currentIds.filter(
+          (currentId) =>
+            !createdCommunityPlayers.some(
+              (communityPlayer) => communityPlayer.id === currentId,
+            ),
+        ),
+      );
+      setNewPlayerForm(INITIAL_NEW_PLAYER_FORM);
+      setIsAddPlayerModalOpen(false);
+    } catch (error) {
+      setCommunityPlayers(previousCommunityPlayers);
+      setPlayersInHost(previousPlayers);
+      setAcceptedPlayers(previousAcceptedPlayers);
+      setPaymentsData(previousPaymentsData);
+      setStaticProfileUrlDrafts(previousDrafts);
+      setNewPlayerError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to add players.")
+          : "Unable to add players.",
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error(error);
+    } finally {
+      setIsCreatingNewPlayer(false);
     }
   };
 
@@ -1078,6 +1192,9 @@ export default function Players() {
     const previousCourts = courts;
     const previousQueues = queues;
     const previousPaymentsData = paymentsData;
+    const previousCommunityPlayers = communityPlayers;
+    const playerToDelete = players.find((player) => player.id === hostedPlayerId);
+    const playerAccountId = playerToDelete?.player.id;
 
     setPlayersInHost((currentPlayers) =>
       currentPlayers.filter(
@@ -1116,6 +1233,23 @@ export default function Players() {
         summary: buildPaymentsSummary(nextPlayers),
       };
     });
+    if (playerToDelete?.player.isStatic && playerAccountId) {
+      setCommunityPlayers((currentPlayers) =>
+        currentPlayers.filter(
+          (communityPlayer) => communityPlayer.player.id !== playerAccountId,
+        ),
+      );
+      setSelectedCommunityPlayerIds((currentIds) =>
+        currentIds.filter(
+          (currentId) =>
+            !communityPlayers.some(
+              (communityPlayer) =>
+                communityPlayer.id === currentId &&
+                communityPlayer.player.id === playerAccountId,
+            ),
+        ),
+      );
+    }
 
     try {
       await api.delete(
@@ -1127,6 +1261,7 @@ export default function Players() {
       setCourts(previousCourts);
       setQueues(previousQueues);
       setPaymentsData(previousPaymentsData);
+      setCommunityPlayers(previousCommunityPlayers);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -1722,7 +1857,19 @@ export default function Players() {
           onUpdateStaticPlayerProfileUrl={handleUpdateStaticPlayerProfileUrl}
           onEditStaticPlayer={openEditStaticPlayerModal}
           headerActions={
-            <div className="flex items-center gap-x-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewPlayerError(null);
+                  setIsAddPlayerModalOpen(true);
+                }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[var(--color-primary)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--color-accent)]"
+              >
+                <Plus size={15} />
+                Add players
+              </button>
+
               <button
                 type="button"
                 title="Sort by player name"
@@ -1858,6 +2005,113 @@ export default function Players() {
           }
         />
       </div>
+
+      {isAddPlayerModalOpen ? (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeAddPlayerModal}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
+          >
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-lg font-semibold text-text">
+                  Add players
+                </h4>
+                <p className="mt-1 text-sm text-stone-500">
+                  Create community players and add them to this host.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddPlayerModal}
+                disabled={isCreatingNewPlayer}
+                className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <form
+              onSubmit={(event) => void handleCreateNewPlayer(event)}
+              className="mt-5 grid gap-4"
+            >
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">
+                  Player names
+                </span>
+                <textarea
+                  value={newPlayerForm.names}
+                  onChange={(event) =>
+                    setNewPlayerForm((currentForm) => ({
+                      ...currentForm,
+                      names: event.target.value,
+                    }))
+                  }
+                  placeholder={"John\nJane\nDoe"}
+                  rows={5}
+                  disabled={isCreatingNewPlayer}
+                  className="min-h-[130px] resize-y rounded-2xl border border-orange-100 bg-white px-4 py-3 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="font-medium text-stone-700">Skill level</span>
+                <select
+                  value={newPlayerForm.skillLevel}
+                  onChange={(event) =>
+                    setNewPlayerForm((currentForm) => ({
+                      ...currentForm,
+                      skillLevel: event.target.value as SkillLevelType,
+                    }))
+                  }
+                  disabled={isCreatingNewPlayer}
+                  className="rounded-xl border border-orange-100 bg-white px-4 py-2.5 text-sm text-stone-700 outline-none transition focus:border-[var(--color-primary)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-50"
+                >
+                  {SKILL_LEVEL_OPTIONS.map((skillLevel) => (
+                    <option key={skillLevel.value} value={skillLevel.value}>
+                      {skillLevel.acronym} {skillLevel.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {newPlayerError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                  {newPlayerError}
+                </p>
+              ) : null}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeAddPlayerModal}
+                  disabled={isCreatingNewPlayer}
+                  className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingNewPlayer}
+                  className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                    isCreatingNewPlayer
+                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                      : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
+                  }`}
+                >
+                  {isCreatingNewPlayer ? "Adding..." : "Add players"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {editingStaticPlayer ? (
         <div
