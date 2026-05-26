@@ -613,7 +613,6 @@ const PLAYER_STATUS_FILTERS: Array<{
   { label: "Paid", value: "paid" },
 ];
 
-const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1025px)";
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const TWENTY_MINUTES_MS = 20 * 60 * 1000;
 
@@ -701,7 +700,6 @@ export default function Match() {
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("all");
   const [playerSortNow, setPlayerSortNow] = useState(() => Date.now());
-  const [isPlayersListHidden, setIsPlayersListHidden] = useState(false);
   const [playerActiveDropdown, setPlayerActiveDropdown] = useState<
     string | null
   >(null);
@@ -1809,22 +1807,6 @@ export default function Match() {
   };
 
   useEffect(() => {
-    const desktopPlayersLayout = window.matchMedia(
-      DESKTOP_PLAYERS_LAYOUT_QUERY,
-    );
-
-    const showPlayersOnDesktop = () => {
-      if (desktopPlayersLayout.matches) setIsPlayersListHidden(false);
-    };
-
-    showPlayersOnDesktop();
-    desktopPlayersLayout.addEventListener("change", showPlayersOnDesktop);
-
-    return () =>
-      desktopPlayersLayout.removeEventListener("change", showPlayersOnDesktop);
-  }, []);
-
-  useEffect(() => {
     const intervalId = window.setInterval(() => {
       setPlayerSortNow(Date.now());
     }, 1000);
@@ -1954,39 +1936,23 @@ export default function Match() {
       >
         <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 md:flex-row">
           {/* PLAYERS */}
-          {isPlayersListHidden ? (
-            <button
-              type="button"
-              onClick={() => setIsPlayersListHidden(false)}
-              className="sticky top-2 z-40 ml-auto w-fit cursor-pointer self-end rounded-2xl border border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)] shadow-sm transition hover:bg-orange-50"
-            >
-              Show players
-            </button>
-          ) : (
-            <div className="sticky top-2 z-40 flex w-full flex-none flex-col self-start rounded-3xl border border-orange-500 bg-white p-3 shadow-sm max-h-[45dvh] md:h-[calc(100dvh-5rem)] md:max-h-[calc(100dvh-5rem)] md:w-[346px] md:p-4 min-[1321px]:w-[clamp(420px,34vw,760px)]">
-              <header className="mb-3 min-[1280px]:mb-4">
-                <div className="">
-                  <div className="w-full flex items-center justify-between">
-                    <h5 className="text-base font-bold tracking-tight text-[var(--color-text)] min-[1280px]:text-xl">
-                      Players
-                    </h5>
-                    <button
-                      type="button"
-                      onClick={() => setIsPlayersListHidden(true)}
-                      className="cursor-pointer rounded-xl border border-orange-100 bg-orange-50 px-2.5 py-2 text-xs font-semibold text-[var(--color-text)] lg:hidden transition hover:bg-orange-100 min-[1280px]:block min-[1280px]:px-3 min-[1280px]:py-2 min-[1280px]:text-sm"
-                    >
-                      Hide
-                    </button>
-                  </div>
+          <div className="sticky top-2 z-40 flex w-full flex-none flex-col self-start rounded-3xl border border-orange-100 bg-white p-3 shadow-sm max-h-[45dvh] md:h-[calc(100dvh-5rem)] md:max-h-[calc(100dvh-5rem)] md:w-[346px] md:p-4 min-[1321px]:w-[clamp(420px,34vw,760px)]">
+            <header className="mb-3 min-[1280px]:mb-4">
+              <div className="">
+                <div className="w-full flex items-center justify-between">
+                  <h5 className="text-base font-bold tracking-tight text-[var(--color-text)] min-[1280px]:text-xl">
+                    Players
+                  </h5>
                 </div>
+              </div>
 
-                <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-3">
-                  {PLAYER_STATUS_FILTERS.map((playerStatus) => (
-                    <button
-                      key={playerStatus.value}
-                      type="button"
-                      onClick={() => setActivePlayerStatus(playerStatus.value)}
-                      className={`w-full rounded-xl
+              <div className="mt-3 flex items-center gap-1 rounded-2xl border border-orange-100 bg-orange-50 p-1 min-[1280px]:mt-3">
+                {PLAYER_STATUS_FILTERS.map((playerStatus) => (
+                  <button
+                    key={playerStatus.value}
+                    type="button"
+                    onClick={() => setActivePlayerStatus(playerStatus.value)}
+                    className={`w-full rounded-xl
                       px-0 py-1.5
                       text-[10px]
                       font-semibold transition-all duration-200 cursor-pointer
@@ -2003,15 +1969,15 @@ export default function Match() {
                           ? "bg-white text-[var(--color-text)] shadow-sm"
                           : "text-stone-500 hover:bg-white hover:text-[var(--color-accent)]"
                       }`}
-                    >
-                      {playerStatus.label}
-                    </button>
-                  ))}
-                </div>
-              </header>
+                  >
+                    {playerStatus.label}
+                  </button>
+                ))}
+              </div>
+            </header>
 
-              <main
-                className="
+            <main
+              className="
                 grid min-h-0 w-full gap-2 overflow-y-auto
                 rounded-2xl border border-orange-200 bg-orange-50/40
                 grid-cols-1
@@ -2023,26 +1989,25 @@ export default function Match() {
                 min-[1280px]:px-4
                 min-[1280px]:gap-3
               "
-              >
-                {filteredPlayers.length > 0 ? (
-                  filteredPlayers.map((p) => (
-                    <PlayerCard
-                      key={p.id}
-                      player={p}
-                      activeDropdown={playerActiveDropdown}
-                      onToggleDropdown={handlePlayerDropdown}
-                    />
-                  ))
-                ) : (
-                  <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
-                    {normalizedPlayerSearchTerm
-                      ? "No players match your search"
-                      : "No players in this status"}
-                  </div>
-                )}
-              </main>
-            </div>
-          )}
+            >
+              {filteredPlayers.length > 0 ? (
+                filteredPlayers.map((p) => (
+                  <PlayerCard
+                    key={p.id}
+                    player={p}
+                    activeDropdown={playerActiveDropdown}
+                    onToggleDropdown={handlePlayerDropdown}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full flex items-center justify-center rounded-2xl border border-dashed border-orange-200 bg-white py-12 text-sm text-stone-500">
+                  {normalizedPlayerSearchTerm
+                    ? "No players match your search"
+                    : "No players in this status"}
+                </div>
+              )}
+            </main>
+          </div>
 
           {/* COURTS & QUEUES */}
           <div className="w-full">
