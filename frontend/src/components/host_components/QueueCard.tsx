@@ -162,7 +162,7 @@ export default function QueueCard({
   const queueSlots = QUEUE_SLOTS;
 
   return (
-    <div className="relative w-full max-w-[520px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3 md:grid-cols-3">
+    <div className="relative w-full rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3">
       <svg
         width="100%"
         height="100%"

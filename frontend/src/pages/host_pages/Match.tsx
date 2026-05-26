@@ -608,12 +608,12 @@ const PLAYER_STATUS_FILTERS: Array<{
 }> = [
   { label: "All", value: "all" },
   { label: "Waiting", value: "waiting" },
-  { label: "In queue", value: "inQueue" },
+  { label: "Queued", value: "inQueue" },
   { label: "Playing", value: "playing" },
   { label: "Paid", value: "paid" },
 ];
 
-const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1023px)";
+const DESKTOP_PLAYERS_LAYOUT_QUERY = "(min-width: 1025px)";
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const TWENTY_MINUTES_MS = 20 * 60 * 1000;
 
@@ -1952,7 +1952,7 @@ export default function Match() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveDraggedPlayerId(null)}
       >
-        <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 min-[1024px]:flex-row">
+        <main className="flex min-h-full w-full flex-col gap-4 px-2 py-2 md:flex-row">
           {/* PLAYERS */}
           {isPlayersListHidden ? (
             <button
@@ -1963,7 +1963,7 @@ export default function Match() {
               Show players
             </button>
           ) : (
-            <div className="sticky top-2 z-40 flex w-full flex-none flex-col self-start rounded-3xl border border-orange-100 bg-white p-3 shadow-sm max-h-[45dvh] lg:h-[calc(100dvh-5rem)] lg:max-h-[calc(100dvh-5rem)] lg:w-[440px] lg:p-4">
+            <div className="sticky top-2 z-40 flex w-full flex-none flex-col self-start rounded-3xl border border-orange-500 bg-white p-3 shadow-sm max-h-[45dvh] md:h-[calc(100dvh-5rem)] md:max-h-[calc(100dvh-5rem)] md:w-[346px] md:p-4 min-[1321px]:w-[clamp(420px,34vw,760px)]">
               <header className="mb-3 min-[1280px]:mb-4">
                 <div className="">
                   <div className="w-full flex items-center justify-between">
@@ -1986,7 +1986,19 @@ export default function Match() {
                       key={playerStatus.value}
                       type="button"
                       onClick={() => setActivePlayerStatus(playerStatus.value)}
-                      className={`w-full rounded-xl px-2 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer min-[1280px]:px-3 min-[1280px]:py-2 min-[1024px]:text-[10px] min-[1280px]:text-[12px] ${
+                      className={`w-full rounded-xl
+                      px-0 py-1.5
+                      text-[10px]
+                      font-semibold transition-all duration-200 cursor-pointer
+
+                      min-[1025px]:px-1.5
+                      min-[1025px]:py-2
+                      min-[1025px]:text-xs
+
+                      min-[1280px]:px-0
+                      min-[1280px]:text-[13px]
+
+                      ${
                         activePlayerStatus === playerStatus.value
                           ? "bg-white text-[var(--color-text)] shadow-sm"
                           : "text-stone-500 hover:bg-white hover:text-[var(--color-accent)]"
@@ -1998,7 +2010,20 @@ export default function Match() {
                 </div>
               </header>
 
-              <main className="grid min-h-0 w-full  gap-2 overflow-y-auto rounded-2xl border border-orange-100 bg-orange-50/40 p-4 min-[768px]:grid-cols-2 sm:gap-3 min-[1280px]:gap-3 min-[1280px]:p-3">
+              <main
+                className="
+                grid min-h-0 w-full gap-2 overflow-y-auto
+                rounded-2xl border border-orange-200 bg-orange-50/40
+                grid-cols-1
+                min-[856px]:grid-cols-2 py-3 px-5
+                min-[481px]:grid-cols-2
+                min-[1025px]:grid-cols-2
+                min-[1201px]:grid-cols-2
+                min-[1280px]:py-3
+                min-[1280px]:px-4
+                min-[1280px]:gap-3
+              "
+              >
                 {filteredPlayers.length > 0 ? (
                   filteredPlayers.map((p) => (
                     <PlayerCard
@@ -2020,7 +2045,7 @@ export default function Match() {
           )}
 
           {/* COURTS & QUEUES */}
-          <div className="order-2 min-[1280px]:order-none flex-1 min-w-0">
+          <div className="w-full">
             <main className="flex h-full flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
               <header className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
                 <div>
@@ -2044,7 +2069,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 max-[1240px]:grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(340px,1fr))]">
                     {courts.map((court) => (
                       <CourtCard
                         key={court.id}
@@ -2069,7 +2094,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                    flex h-[100px] w-full max-w-[520px] items-center justify-center cursor-pointer sm:h-[120px]
+                    flex h-[100px] w-full items-center justify-center cursor-pointer sm:h-[120px]
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200
@@ -2092,7 +2117,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 max-[1240px]:grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(340px,1fr))]">
                     {queues.map((queue) => (
                       <QueueCard
                         key={queue.id}
@@ -2115,7 +2140,7 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddQueue()}
                       className="
-                    flex h-[120px] w-full max-w-[520px] items-center justify-center cursor-pointer
+                    flex h-[120px] w-full items-center justify-center cursor-pointer
                     rounded-2xl border border-dashed border-orange-200
                     bg-orange-50/40 text-sm font-semibold text-stone-500
                     transition-all duration-200

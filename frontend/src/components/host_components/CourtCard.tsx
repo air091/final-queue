@@ -175,7 +175,7 @@ export default function CourtCard({
   const isEndingGame = busyAction === "ending";
 
   return (
-    <div className="relative w-full max-w-[520px] rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3 md:grid-cols-3">
+    <div className="relative w-full rounded-2xl border border-stone-200 bg-white p-2 shadow-sm transition hover:shadow-md sm:p-3">
       {isEndingGame && (
         <div className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-white/80 px-4 text-center backdrop-blur-[1.5px]">
           <div className="rounded-lg border border-amber-200 bg-white px-4 py-3 shadow-sm">

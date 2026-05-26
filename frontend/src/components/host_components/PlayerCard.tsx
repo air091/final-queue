@@ -5,7 +5,7 @@ import PlayerSettingsDropdown from "./PlayerDropdown";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { TbArrowBack } from "react-icons/tb";
 import type { AcceptedPlayers } from "../../lib/host";
-import { Gamepad, TriangleAlert } from "lucide-react";
+import { Gamepad } from "lucide-react";
 import { SkillLevelBadge } from "../../lib/skillLevels";
 
 type PlayerCardProps = {
@@ -117,13 +117,15 @@ export default function PlayerCard({
   })();
 
   const statusClasses = {
-    waiting: "border-green-500",
-    inQueue: "border-yellow-500",
-    playing: "border-red-500",
+    waiting: "border-gray-200 bg-white hover:border-primary/30",
+    inQueue: "border-yellow-300 bg-yellow-100 hover:border-yellow-400",
+    playing: "border-green-400 bg-green-100 hover:border-green-500",
   }[player.matchStatus];
-  const cardStateClasses = isOverWaitThreshold
-    ? `${statusClasses} bg-red-200 shadow-red-100`
-    : `${statusClasses} bg-white`;
+  const cardStateClasses = `${statusClasses} ${
+    isOverWaitThreshold
+      ? "!border-red-500 shadow-red-100 player-card-warning-pulse"
+      : ""
+  }`;
   const gamesPlayed = player.gamesPlayed ?? 0;
   const dragSelectionStyles: CSSProperties | undefined = canDrag
     ? {
@@ -156,12 +158,12 @@ export default function PlayerCard({
           ? " border-primary"
           : isOverWaitThreshold
             ? ""
-            : "border-gray-200 hover:border-primary/30"
+            : ""
       }
     `}
     >
       {/* PLAYER GAMES */}
-      <div className="absolute text-[10px] -top-2 left-1.5 px-1 bg-white text-stone-700 flex items-center gap-x-1 rounded-full">
+      <div className="absolute text-[10px] -top-2 left-1.5 pl-0.5 bg-white text-stone-700 flex items-center gap-x-1 rounded-full">
         <span className="flex items-center gap-x-1">
           <Gamepad size={12} /> {gamesPlayed}
         </span>
@@ -182,7 +184,7 @@ export default function PlayerCard({
         }}
       >
         {/* AVATAR */}
-        <div className="lg:h-7 lg:w-7 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 md:h-8 md:w-8">
+        <div className="lg:h-7 lg:w-7 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-50 md:h-8 md:w-8 max-[856px]:hidden">
           <img
             src={player.player.profileUrl}
             alt={player.player.username}
@@ -207,14 +209,6 @@ export default function PlayerCard({
 
       {/* ================= ACTIONS ================= */}
       <div className="flex items-center gap-1 shrink-0">
-        {isOverWaitThreshold && !isInSlot && (
-          <TriangleAlert
-            size={16}
-            className="shrink-0 text-red-500"
-            aria-label="Waiting over 20 minutes"
-          />
-        )}
-
         {/* REMOVE */}
         {isInSlot && (canRemoveFromCourt || canRemoveFromQueue) && (
           <button
@@ -223,12 +217,13 @@ export default function PlayerCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleRemoveClick}
             className="
-            flex h-8 w-8 items-center justify-center cursor-pointer md:h-6 md:w-6 lg:h-7 lg:w-7
+            flex items-center justify-center cursor-pointer
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
+            p-[3px]
           "
           >
-            <TbArrowBack className="h-4 w-4 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4" />
+            <TbArrowBack />
           </button>
         )}
 
@@ -246,12 +241,13 @@ export default function PlayerCard({
             title="Settings"
             onClick={() => onToggleDropdown(player.id)}
             className="
-            flex h-8 w-8 items-center justify-center cursor-pointer md:h-6 md:w-6 lg:h-7 lg:w-7
+            flex items-center justify-center cursor-pointer
             rounded-xl text-gray-500 transition
             hover:bg-gray-100 hover:text-primary
+            p-[3px]
           "
           >
-            <HiOutlineDotsVertical className="h-4 w-4 md:h-3.5 md:w-3.5 lg:h-4 lg:w-4" />
+            <HiOutlineDotsVertical />
           </button>
 
           {activeDropdown === player.id && (

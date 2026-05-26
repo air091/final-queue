@@ -7,3 +7,22 @@
   --color-background: #fbfbf9;
   --color-text: #0c090c;
 }
+
+@keyframes player-card-warning-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgb(239 68 68 / 0.6),
+      0 0 10px 1px rgb(239 68 68 / 0.25);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 6px rgb(239 68 68 / 0),
+      0 0 16px 3px rgb(239 68 68 / 0.38);
+  }
+}
+
+.player-card-warning-pulse {
+  animation: player-card-warning-pulse 1.15s ease-in-out infinite;
+}
