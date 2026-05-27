@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import axios from "axios";
+import { Eye, EyeClosed } from "lucide-react";
 
 type LoginCredentialsType = {
   email: string;
@@ -14,6 +15,7 @@ export default function Login() {
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { accessToken, login, refreshAccessToken, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -150,16 +152,28 @@ export default function Login() {
                 >
                   Password
                 </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    id="password"
+                    value={credentials.password}
+                    onChange={handleOnChange}
+                    placeholder="Enter your password"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
 
-                <input
-                  type="password"
-                  name="password"
-                  id="password"
-                  value={credentials.password}
-                  onChange={handleOnChange}
-                  placeholder="Enter your password"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
+                  <button
+                    type="button"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute top-0 right-0 flex h-full items-center px-3 text-gray-500 transition hover:text-text"
+                  >
+                    {showPassword ? <Eye /> : <EyeClosed />}
+                  </button>
+                </div>
               </div>
 
               {errorMessage ? (

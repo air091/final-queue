@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import axios from "axios";
+import { Eye, EyeClosed } from "lucide-react";
 
 type RegisterCredentialsType = {
   username: string;
@@ -20,6 +21,8 @@ export default function Register() {
       password: "",
       confirmPassword: "",
     });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleOnChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -182,16 +185,29 @@ export default function Register() {
                   Password
                 </label>
 
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  autoComplete="off"
-                  value={registerCredentials.password}
-                  onChange={handleOnChange}
-                  placeholder="Create a password"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    autoComplete="off"
+                    value={registerCredentials.password}
+                    onChange={handleOnChange}
+                    placeholder="Create a password"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
+
+                  <button
+                    type="button"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute top-0 right-0 flex h-full items-center px-3 text-gray-500 transition hover:text-text"
+                  >
+                    {showPassword ? <Eye /> : <EyeClosed />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -202,16 +218,31 @@ export default function Register() {
                   Confirm Password
                 </label>
 
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  autoComplete="off"
-                  value={registerCredentials.confirmPassword}
-                  onChange={handleOnChange}
-                  placeholder="Confirm your password"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    autoComplete="off"
+                    value={registerCredentials.confirmPassword}
+                    onChange={handleOnChange}
+                    placeholder="Confirm your password"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  />
+
+                  <button
+                    type="button"
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute top-0 right-0 flex h-full items-center px-3 text-gray-500 transition hover:text-text"
+                  >
+                    {showConfirmPassword ? <Eye /> : <EyeClosed />}
+                  </button>
+                </div>
               </div>
 
               <button
