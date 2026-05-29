@@ -116,11 +116,15 @@ export default function PlayerCard({
     };
   })();
 
-  const statusClasses = {
-    waiting: "border-gray-200 bg-white hover:border-primary/30",
-    inQueue: "border-yellow-300 bg-yellow-100 hover:border-yellow-400",
-    playing: "border-green-400 bg-green-100 hover:border-green-500",
-  }[player.matchStatus];
+  const isPlayingInQueue =
+    player.matchStatus === "playing" && Boolean(player.queueEntry);
+  const statusClasses = isPlayingInQueue
+    ? "border-orange-400 bg-orange-100 hover:border-orange-500"
+    : {
+        waiting: "border-gray-200 bg-white hover:border-primary/30",
+        inQueue: "border-yellow-300 bg-yellow-100 hover:border-yellow-400",
+        playing: "border-green-400 bg-green-100 hover:border-green-500",
+      }[player.matchStatus];
   const cardStateClasses = `${statusClasses} ${
     isOverWaitThreshold
       ? "!border-red-500 shadow-red-100 player-card-warning-pulse"
