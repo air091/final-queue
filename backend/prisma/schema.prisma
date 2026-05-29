@@ -19,6 +19,8 @@ model Account {
   status            AccountStatuses    @default(active)
   communities       Community[]
   communityPlayers  CommunityPlayer[]
+  receivedFriendRequests FriendRequest[]   @relation("ReceivedFriendRequests")
+  sentFriendRequests     FriendRequest[]   @relation("SentFriendRequests")
   matchParticipants MatchParticipant[]
   hostedPlayers     Player[]
   sports            UserSport[]
@@ -213,6 +215,21 @@ model PlayerPayment {
   @@index([playerId])
 }
 
+model FriendRequest {
+  id          String              @id @default(uuid())
+  requesterId String
+  receiverId  String
+  status      FriendRequestStatus @default(pending)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  requester   Account             @relation("SentFriendRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    Account             @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+}
+
 enum AccountStatuses {
   active
   inactive
@@ -259,6 +276,12 @@ enum PlayerHostStatuses {
   accepted
   rejected
   banned
+}
+
+enum FriendRequestStatus {
+  pending
+  accepted
+  rejected
 }
 
 enum MatchStatus {
