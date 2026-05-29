@@ -2,6 +2,8 @@ import express, { Router } from "express";
 import {
   createCommunity,
   createCommunityStaticPlayer,
+  createCommunityStaticPlayers,
+  createHostStaticPlayers,
   addCommunityPlayersToHost,
   deleteCommunityPlayer,
   getCommunities,
@@ -76,6 +78,11 @@ router.delete(
   removeCommunityAdminAsPlayer,
 );
 router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
+router.post(
+  "/:communityId/players/static/bulk",
+  authenticate,
+  createCommunityStaticPlayers,
+);
 router.patch(
   "/:communityId/players/:communityPlayerId",
   authenticate,
@@ -121,6 +128,11 @@ router.post(
   "/:communityId/hosts/:hostId/players/from-community",
   authenticate,
   addCommunityPlayersToHost,
+);
+router.post(
+  "/:communityId/hosts/:hostId/players/static/bulk",
+  authenticate,
+  createHostStaticPlayers,
 );
 router.get(
   "/:communityId/hosts/:hostId/players/:playerId/history",

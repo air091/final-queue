@@ -381,6 +381,16 @@ type CreateCommunityStaticPlayerBody = {
   imageData?: string;
 };
 
+type CreateCommunityStaticPlayersBody = {
+  usernames?: string[];
+  skillLevel?: SkillLevels;
+};
+
+type CreateHostStaticPlayersBody = {
+  usernames?: string[];
+  skillLevel?: SkillLevels;
+};
+
 type AddCommunityPlayersToHostBody = {
   communityPlayerIds?: string[];
 };
@@ -1050,6 +1060,126 @@ export const createCommunityStaticPlayer = async (
   }
 };
 
+export const createCommunityStaticPlayers = async (
+  request: Request<
+    CommunityPlayerParams,
+    unknown,
+    CreateCommunityStaticPlayersBody
+  >,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const usernames = Array.from(
+      new Set(
+        (request.body.usernames ?? [])
+          .map((username) => username.trim())
+          .filter(Boolean),
+      ),
+    );
+    const skillLevel = request.body.skillLevel ?? SkillLevels.beginner;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    if (usernames.length === 0)
+      return response
+        .status(400)
+        .json({ success: false, message: "Add at least one player name" });
+
+    if (!Object.values(SkillLevels).includes(skillLevel))
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const accountPassword = await bcrypt.hash(crypto.randomUUID(), 10);
+    const accounts = usernames.map((username) => ({
+      id: crypto.randomUUID(),
+      username,
+      email: `static-${crypto.randomUUID()}@queue-system.local`,
+      password: accountPassword,
+      role: UserRoles.static,
+    }));
+
+    await prisma.$transaction([
+      prisma.account.createMany({
+        data: accounts,
+      }),
+      prisma.userSport.createMany({
+        data: accounts.map((account) => ({
+          accountId: account.id,
+          sport: Sports.badminton,
+          skillLevel,
+        })),
+      }),
+      prisma.communityPlayer.createMany({
+        data: accounts.map((account) => ({
+          communityId: community.id,
+          accountId: account.id,
+          status: PlayerHostStatuses.accepted,
+        })),
+      }),
+    ]);
+
+    const communityPlayers = await prisma.communityPlayer.findMany({
+      where: {
+        communityId: community.id,
+        accountId: { in: accounts.map((account) => account.id) },
+      },
+      select: {
+        id: true,
+        status: true,
+        addedAt: true,
+        account: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+            role: true,
+            sports: {
+              where: { sport: Sports.badminton },
+              select: {
+                sport: true,
+                skillLevel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return response.status(201).json({
+      success: true,
+      message: "Community players created successfully",
+      players: communityPlayers.map(mapCommunityPlayerRecord),
+    });
+  } catch (error) {
+    console.error("Error creating community players:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const addCommunityPlayersToHost = async (
   request: Request<CommunityPlayerParams, unknown, AddCommunityPlayersToHostBody>,
   response: Response,
@@ -1193,6 +1323,191 @@ export const addCommunityPlayersToHost = async (
     });
   } catch (error) {
     console.error("Error adding community players to host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const createHostStaticPlayers = async (
+  request: Request<CommunityPlayerParams, unknown, CreateHostStaticPlayersBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const usernames = Array.from(
+      new Set(
+        (request.body.usernames ?? [])
+          .map((username) => username.trim())
+          .filter(Boolean),
+      ),
+    );
+    const skillLevel = request.body.skillLevel ?? SkillLevels.beginner;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    if (usernames.length === 0)
+      return response
+        .status(400)
+        .json({ success: false, message: "Add at least one player name" });
+
+    if (!Object.values(SkillLevels).includes(skillLevel))
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid skill level" });
+
+    const host = await prisma.host.findFirst({
+      where: {
+        id: hostId,
+        community: {
+          id: communityId,
+          masterId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+        sport: true,
+      },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const accountPassword = await bcrypt.hash(crypto.randomUUID(), 10);
+    const now = new Date();
+    const accounts = usernames.map((username) => ({
+      id: crypto.randomUUID(),
+      username,
+      email: `static-${crypto.randomUUID()}@queue-system.local`,
+      password: accountPassword,
+      role: UserRoles.static,
+    }));
+
+    await prisma.$transaction([
+      prisma.account.createMany({
+        data: accounts,
+      }),
+      prisma.userSport.createMany({
+        data: accounts.map((account) => ({
+          accountId: account.id,
+          sport: host.sport as Sports,
+          skillLevel,
+        })),
+      }),
+      prisma.communityPlayer.createMany({
+        data: accounts.map((account) => ({
+          communityId,
+          accountId: account.id,
+          status: PlayerHostStatuses.accepted,
+        })),
+      }),
+      prisma.player.createMany({
+        data: accounts.map((account) => ({
+          hostId: host.id,
+          playerId: account.id,
+          hostStatus: PlayerHostStatuses.accepted,
+          timerStartedAt: now,
+        })),
+      }),
+    ]);
+
+    const [communityPlayers, hostedPlayers] = await Promise.all([
+      prisma.communityPlayer.findMany({
+        where: {
+          communityId,
+          accountId: { in: accounts.map((account) => account.id) },
+        },
+        select: {
+          id: true,
+          status: true,
+          addedAt: true,
+          account: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                where: { sport: host.sport as Sports },
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.player.findMany({
+        where: {
+          hostId: host.id,
+          playerId: { in: accounts.map((account) => account.id) },
+        },
+        select: {
+          id: true,
+          hostStatus: true,
+          paymentStatus: true,
+          gamesPlayed: true,
+          timerStartedAt: true,
+          queueAssignment: {
+            select: {
+              id: true,
+              queueId: true,
+              position: true,
+            },
+          },
+          courtAssignment: {
+            select: {
+              id: true,
+              courtId: true,
+              position: true,
+              court: {
+                select: {
+                  startedAt: true,
+                  endedAt: true,
+                },
+              },
+            },
+          },
+          player: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                where: { sport: host.sport as Sports },
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return response.status(201).json({
+      success: true,
+      message: "Static players created and added to host successfully",
+      communityPlayers: communityPlayers.map(mapCommunityPlayerRecord),
+      hostedPlayers: hostedPlayers.map(mapHostedPlayerForResponse),
+    });
+  } catch (error) {
+    console.error("Error creating host static players:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

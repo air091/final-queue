@@ -777,19 +777,22 @@ export default function Players() {
     return response.data.hostedPlayers as AcceptedPlayers[];
   };
 
-  const createCommunityStaticPlayerAPI = async (
-    username: string,
+  const createHostStaticPlayersAPI = async (
+    usernames: string[],
     skillLevel: SkillLevelType,
   ) => {
     const response = await api.post(
-      `/api/community/${communityId}/players/static`,
+      `/api/community/${communityId}/hosts/${hostId}/players/static/bulk`,
       {
-        username,
+        usernames,
         skillLevel,
       },
     );
 
-    return response.data.player as CommunityPlayerRecord;
+    return response.data as {
+      communityPlayers: CommunityPlayerRecord[];
+      hostedPlayers: AcceptedPlayers[];
+    };
   };
 
   const addHostedPlayersToState = (hostedPlayers: AcceptedPlayers[]) => {
@@ -951,19 +954,11 @@ export default function Players() {
     const previousDrafts = staticProfileUrlDrafts;
 
     try {
-      const createdCommunityPlayers: CommunityPlayerRecord[] = [];
-
-      for (const username of uniqueNames) {
-        const communityPlayer = await createCommunityStaticPlayerAPI(
-          username,
+      const { communityPlayers: createdCommunityPlayers, hostedPlayers } =
+        await createHostStaticPlayersAPI(
+          uniqueNames,
           newPlayerForm.skillLevel,
         );
-        createdCommunityPlayers.push(communityPlayer);
-      }
-
-      const hostedPlayers = await addCommunityPlayersToHostAPI(
-        createdCommunityPlayers.map((communityPlayer) => communityPlayer.id),
-      );
 
       setCommunityPlayers((currentPlayers) => [
         ...createdCommunityPlayers,

@@ -521,15 +521,14 @@ export default function Community() {
     setPlayerError(null);
 
     try {
-      const createdPlayers: CommunityPlayerRecord[] = [];
-
-      for (const username of uniqueNames) {
-        const response = await api.post(`/api/community/${id}/players/static`, {
-          username,
+      const response = await api.post(
+        `/api/community/${id}/players/static/bulk`,
+        {
+          usernames: uniqueNames,
           skillLevel: playerForm.skillLevel,
-        });
-        createdPlayers.push(response.data.player as CommunityPlayerRecord);
-      }
+        },
+      );
+      const createdPlayers = response.data.players as CommunityPlayerRecord[];
 
       setCommunityPlayers((currentPlayers) => [
         ...createdPlayers,
