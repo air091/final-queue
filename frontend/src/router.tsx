@@ -8,6 +8,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const Home = lazy(() => import("./pages/Home"));
+const Friends = lazy(() => import("./pages/Friends"));
 const HomeLayout = lazy(() => import("./layouts/HomeLayout"));
 const CommunityIndex = lazy(
   () => import("./pages/community_pages/CommunityIndex")
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
           {
             index: true,
             element: withSuspense(<Home />),
+          },
+          {
+            path: "friends",
+            element: withSuspense(<Friends />),
           },
         ],
       },

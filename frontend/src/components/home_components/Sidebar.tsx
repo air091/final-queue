@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { House, UsersRound } from "lucide-react";
+import { House, UserRoundPlus, UsersRound } from "lucide-react";
 
 const navLinks = [
   {
@@ -11,6 +11,11 @@ const navLinks = [
     icon: <UsersRound size={24} />,
     path: "/community",
     name: "Community",
+  },
+  {
+    icon: <UserRoundPlus size={24} />,
+    path: "/home/friends",
+    name: "Friends",
   },
 ];
 
