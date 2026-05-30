@@ -38,6 +38,7 @@ export default function Sidebar() {
           <li key={link.name}>
             <NavLink
               to={link.path}
+              end={link.path === "/home"}
               className={({ isActive }) =>
                 `
               w-full

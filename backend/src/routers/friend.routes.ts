@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import {
   acceptFriendRequest,
+  deleteFriendRequest,
   getFriendRequests,
   getFriends,
   rejectFriendRequest,
@@ -18,6 +19,7 @@ router.get("/requests", authenticate, getFriendRequests);
 router.post("/requests", authenticate, sendFriendRequest);
 router.patch("/requests/:requestId/accept", authenticate, acceptFriendRequest);
 router.patch("/requests/:requestId/reject", authenticate, rejectFriendRequest);
+router.delete("/requests/:requestId", authenticate, deleteFriendRequest);
 router.delete("/:friendId", authenticate, removeFriend);
 
 export default router;

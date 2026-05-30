@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { AccountStatuses, FriendRequestStatus, UserRoles } from "../generated/prisma/enums.js";
+import {
+  AccountStatuses,
+  FriendRequestStatus,
+  UserRoles,
+} from "../generated/prisma/enums.js";
 import prisma from "../lib/prisma.js";
 
 type SendFriendRequestBody = {
@@ -48,6 +52,17 @@ const getFriendWhere = (currentUserId: string, friendId: string) => ({
   ],
 });
 
+const getPaginationValue = (
+  value: unknown,
+  fallback: number,
+  options: { min: number; max: number },
+) => {
+  const parsedValue = typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isInteger(parsedValue)) return fallback;
+
+  return Math.min(options.max, Math.max(options.min, parsedValue));
+};
+
 export const searchFriendCandidates = async (
   request: Request,
   response: Response,
@@ -56,36 +71,46 @@ export const searchFriendCandidates = async (
     const user = request.user;
     const query =
       typeof request.query.query === "string" ? request.query.query.trim() : "";
+    const shouldReturnAll = request.query.all === "true";
+    const limit = getPaginationValue(request.query.limit, 6, {
+      min: 1,
+      max: 24,
+    });
+    const offset = getPaginationValue(request.query.offset, 0, {
+      min: 0,
+      max: 10000,
+    });
 
     if (!user)
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (query.length < 2)
-      return response.status(200).json({
-        success: true,
-        users: [],
-      });
-
     const users = await prisma.account.findMany({
       where: {
         id: { not: user.sub },
         role: { not: UserRoles.static },
         status: AccountStatuses.active,
-        username: {
-          contains: query,
-          mode: "insensitive",
-        },
+        ...(query
+          ? {
+              username: {
+                contains: query,
+                mode: "insensitive",
+              },
+            }
+          : {}),
       },
       orderBy: { username: "asc" },
-      take: 10,
+      ...(shouldReturnAll ? {} : { skip: offset, take: limit + 1 }),
       select: selectAccountSummary,
     });
+    const hasMore = !shouldReturnAll && users.length > limit;
 
     return response.status(200).json({
       success: true,
-      users,
+      users: shouldReturnAll ? users : users.slice(0, limit),
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
     });
   } catch (error) {
     console.error("Error searching friend candidates:", error);
@@ -409,6 +434,51 @@ export const rejectFriendRequest = async (
     });
   } catch (error) {
     console.error("Error rejecting friend request:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const deleteFriendRequest = async (
+  request: Request<FriendRequestParams>,
+  response: Response,
+) => {
+  try {
+    const user = request.user;
+    const { requestId } = request.params;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const friendRequest = await prisma.friendRequest.findFirst({
+      where: {
+        id: requestId,
+        status: FriendRequestStatus.pending,
+        OR: [{ requesterId: user.sub }, { receiverId: user.sub }],
+      },
+      select: { id: true },
+    });
+
+    if (!friendRequest)
+      return response
+        .status(404)
+        .json({ success: false, message: "Friend request not found" });
+
+    await prisma.friendRequest.delete({
+      where: { id: friendRequest.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Friend request deleted",
+      requestId,
+    });
+  } catch (error) {
+    console.error("Error deleting friend request:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
