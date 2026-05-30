@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import { api } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
+import type { FriendPerson } from "../components/FriendPersonRow";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+type FriendItem = {
+  friendshipId: string;
+  friendsSince: string;
+  friend: FriendPerson;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  axios.isAxiosError(error)
+    ? (error.response?.data?.message ?? fallback)
+    : fallback;
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -28,17 +41,29 @@ const readFileAsDataUrl = (file: File) =>
 export default function Profile() {
   const { user, updateCurrentUser } = useAuth();
   const [openEditImage, setOpenEditImage] = useState(false);
-  const [username, setUsername] = useState(user?.username ?? "");
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [friends, setFriends] = useState<FriendItem[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
+  const [friendCountError, setFriendCountError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setUsername(user?.username ?? "");
-  }, [user?.username]);
+    void (async () => {
+      try {
+        setFriendCountError(null);
+        const response = await api.get("/api/friends");
+        setFriends(response.data.friends as FriendItem[]);
+      } catch (error) {
+        setFriendCountError(getErrorMessage(error, "Unable to load friends."));
+      } finally {
+        setIsLoadingFriends(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -148,7 +173,8 @@ export default function Profile() {
   ) => {
     event.preventDefault();
 
-    const cleanedUsername = username.trim();
+    const formData = new FormData(event.currentTarget);
+    const cleanedUsername = String(formData.get("username") ?? "").trim();
 
     if (!cleanedUsername) {
       setErrorMessage("Username is required.");
@@ -193,7 +219,15 @@ export default function Profile() {
             <p className="text-sm uppercase tracking-[0.3em] text-white/60">
               Account
             </p>
-            <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Profile</h1>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-3xl font-semibold sm:text-4xl">Profile</h1>
+              <Link
+                to="/profile/friends-list"
+                className="inline-flex items-center rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white hover:text-stone-950"
+              >
+                Friend list {isLoadingFriends ? "" : `(${friends.length})`}
+              </Link>
+            </div>
           </div>
 
           <div className="px-6 py-8 sm:px-10">
@@ -250,9 +284,10 @@ export default function Profile() {
                       Username
                     </span>
                     <input
+                      key={user?.username}
+                      name="username"
                       type="text"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
+                      defaultValue={user?.username ?? ""}
                       disabled={isSavingUsername}
                       maxLength={30}
                       className="w-full rounded-2xl border border-orange-200 bg-white px-4 py-3 text-text outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -300,6 +335,12 @@ export default function Profile() {
             ) : null}
           </div>
         </div>
+
+        {friendCountError ? (
+          <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {friendCountError}
+          </p>
+        ) : null}
       </div>
     </div>
   );

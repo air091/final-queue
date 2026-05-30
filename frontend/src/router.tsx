@@ -24,6 +24,7 @@ const Match = lazy(() => import("./pages/host_pages/Match"));
 const Payments = lazy(() => import("./pages/host_pages/Payments"));
 const Players = lazy(() => import("./pages/host_pages/Players"));
 const Profile = lazy(() => import("./pages/Profile"));
+const FriendsList = lazy(() => import("./pages/FriendsList"));
 const ProfileLayout = lazy(() => import("./layouts/ProfileLayout"));
 const Landing = lazy(() => import("./pages/Landing"));
 
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
           {
             index: true,
             element: withSuspense(<Profile />),
+          },
+          {
+            path: "friends-list",
+            element: withSuspense(<FriendsList />),
           },
         ],
       },

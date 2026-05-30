@@ -15,7 +15,7 @@ const navLinks = [
   {
     icon: <UserRoundPlus size={24} />,
     path: "/home/friends",
-    name: "Friends",
+    name: "Find Friends",
   },
 ];
 
