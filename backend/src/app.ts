@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import authRoutes from "./routers/auth.routes.js";
 import communityRoutes from "./routers/community.routes.js";
+import friendRoutes from "./routers/friend.routes.js";
 import publicActionRoutes from "./routers/publicAction.routes.js";
 import privateActionRoutes from "./routers/privateAction.routes.js";
 
@@ -53,6 +54,7 @@ app.get("/api/health", (_request, response) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/community", communityRoutes);
+app.use("/api/friends", friendRoutes);
 app.use("/api/public/actions", publicActionRoutes);
 app.use("/api/private/actions", privateActionRoutes);
 
