@@ -18,7 +18,10 @@ model Account {
   role              UserRoles          @default(player)
   status            AccountStatuses    @default(active)
   communities       Community[]
+  communityAdmins   CommunityAdmin[]
   communityPlayers  CommunityPlayer[]
+  receivedCommunityAdminInvites CommunityAdminInvite[] @relation("ReceivedCommunityAdminInvites")
+  sentCommunityAdminInvites     CommunityAdminInvite[] @relation("SentCommunityAdminInvites")
   receivedFriendRequests FriendRequest[]   @relation("ReceivedFriendRequests")
   sentFriendRequests     FriendRequest[]   @relation("SentFriendRequests")
   matchParticipants MatchParticipant[]
@@ -46,6 +49,8 @@ model Community {
   masterId      String
   master        Account  @relation(fields: [masterId], references: [id], onDelete: Cascade)
   hosts         Host[]
+  admins        CommunityAdmin[]
+  adminInvites  CommunityAdminInvite[]
   players       CommunityPlayer[]
 
   @@index([masterId])
@@ -63,6 +68,36 @@ model CommunityPlayer {
   @@unique([communityId, accountId])
   @@index([communityId])
   @@index([accountId])
+}
+
+model CommunityAdmin {
+  id          String    @id @default(uuid())
+  communityId String
+  accountId   String
+  addedAt     DateTime  @default(now())
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, accountId])
+  @@index([communityId])
+  @@index([accountId])
+}
+
+model CommunityAdminInvite {
+  id          String                     @id @default(uuid())
+  communityId String
+  inviterId   String
+  inviteeId   String
+  status      CommunityAdminInviteStatus @default(pending)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  community   Community                  @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  inviter     Account                    @relation("SentCommunityAdminInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee     Account                    @relation("ReceivedCommunityAdminInvites", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@index([inviteeId, status])
+  @@index([inviterId])
+  @@index([communityId])
 }
 
 model Host {
@@ -279,6 +314,12 @@ enum PlayerHostStatuses {
 }
 
 enum FriendRequestStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum CommunityAdminInviteStatus {
   pending
   accepted
   rejected

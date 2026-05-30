@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import {
   createCommunity,
+  createCommunityAdminInvite,
   createCommunityStaticPlayer,
   createCommunityStaticPlayers,
   createHostStaticPlayers,
@@ -76,6 +77,11 @@ router.delete(
   "/:communityId/players/admin",
   authenticate,
   removeCommunityAdminAsPlayer,
+);
+router.post(
+  "/:communityId/admin-invites",
+  authenticate,
+  createCommunityAdminInvite,
 );
 router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
 router.post(

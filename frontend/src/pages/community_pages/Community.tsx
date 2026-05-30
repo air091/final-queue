@@ -28,6 +28,12 @@ type MasterType = {
   username: string;
 };
 
+type FriendItem = {
+  friendshipId: string;
+  friendsSince: string;
+  friend: MasterType;
+};
+
 type CommunityType = {
   id: string;
   profileUrl: string;
@@ -98,6 +104,7 @@ type CommunityPlayerWinPointsRecord = {
 };
 
 type CommunityPanel = "host" | "players" | null;
+type AddAdminMode = "asPlayer" | "newAdmin";
 type CommunityPlayerEditForm = {
   username: string;
   skillLevel: SkillLevelType;
@@ -239,6 +246,19 @@ export default function Community() {
   >(null);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
+  const [addAdminMode, setAddAdminMode] = useState<AddAdminMode>("asPlayer");
+  const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
+  const [adminInviteFriends, setAdminInviteFriends] = useState<FriendItem[]>(
+    [],
+  );
+  const [selectedNewAdminFriendId, setSelectedNewAdminFriendId] = useState<
+    string | null
+  >(null);
+  const [isLoadingAdminInviteFriends, setIsLoadingAdminInviteFriends] =
+    useState(false);
+  const [isSendingAdminInvite, setIsSendingAdminInvite] = useState(false);
+  const [addAdminSuccess, setAddAdminSuccess] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
   const [isCommunityLoading, setIsCommunityLoading] = useState(true);
@@ -309,6 +329,10 @@ export default function Community() {
 
   const isAdminIncludedAsCommunityPlayer = communityPlayers.some(
     (communityPlayer) => communityPlayer.player.id === community?.master.id,
+  );
+  const adminCandidates = useMemo(
+    () => (community ? [community.master] : []),
+    [community],
   );
   const selectedPointsRecord = selectedPointsHistoryPlayer
     ? winPointsByCommunityPlayerId.get(selectedPointsHistoryPlayer.id)
@@ -547,8 +571,104 @@ export default function Community() {
     }
   };
 
-  const handleToggleAdminAsPlayer = async () => {
+  const openAddAdminModal = () => {
+    setAddAdminMode("asPlayer");
+    setSelectedAdminId(community?.master.id ?? null);
+    setPlayerError(null);
+    setIsAddAdminModalOpen(true);
+  };
+
+  const closeAddAdminModal = () => {
+    if (isTogglingAdminAsPlayer || isSendingAdminInvite) return;
+    setIsAddAdminModalOpen(false);
+    setPlayerError(null);
+    setAddAdminSuccess(null);
+    setSelectedNewAdminFriendId(null);
+  };
+
+  const loadAdminInviteFriends = async () => {
+    setIsLoadingAdminInviteFriends(true);
+    setPlayerError(null);
+
+    try {
+      const response = await api.get("/api/friends");
+      setAdminInviteFriends(response.data.friends as FriendItem[]);
+    } catch (error) {
+      setPlayerError("Unable to load friends.");
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error("Load friends api failed", error);
+    } finally {
+      setIsLoadingAdminInviteFriends(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAddAdminModalOpen && addAdminMode === "newAdmin") {
+      const timeoutId = window.setTimeout(() => {
+        void loadAdminInviteFriends();
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [isAddAdminModalOpen, addAdminMode]);
+
+  const handleSendAdminInvite = async () => {
+    if (!id || isSendingAdminInvite) return;
+
+    if (!selectedNewAdminFriendId) {
+      setPlayerError("Select a friend first.");
+      return;
+    }
+
+    setIsSendingAdminInvite(true);
+    setPlayerError(null);
+    setAddAdminSuccess(null);
+
+    try {
+      await api.post(`/api/community/${id}/admin-invites`, {
+        accountId: selectedNewAdminFriendId,
+      });
+      const invitedFriend = adminInviteFriends.find(
+        (friendship) => friendship.friend.id === selectedNewAdminFriendId,
+      );
+      setAddAdminSuccess(
+        invitedFriend
+          ? `Admin invite sent to ${invitedFriend.friend.username}.`
+          : "Admin invite sent.",
+      );
+      setSelectedNewAdminFriendId(null);
+    } catch (error) {
+      setPlayerError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to send admin invite.")
+          : "Unable to send admin invite.",
+      );
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error("Send admin invite api failed", error);
+    } finally {
+      setIsSendingAdminInvite(false);
+    }
+  };
+
+  const handleAddSelectedAdminAsPlayer = async () => {
     if (!id || isTogglingAdminAsPlayer) {
+      return;
+    }
+
+    if (!selectedAdminId) {
+      setPlayerError("Select an admin first.");
+      return;
+    }
+
+    if (selectedAdminId !== community?.master.id) {
+      setPlayerError("Only the community owner can be added right now.");
+      return;
+    }
+
+    if (isAdminIncludedAsCommunityPlayer) {
+      setPlayerError("This admin is already a community player.");
       return;
     }
 
@@ -556,45 +676,23 @@ export default function Community() {
     setPlayerError(null);
 
     try {
-      if (isAdminIncludedAsCommunityPlayer) {
-        const response = await api.delete(`/api/community/${id}/players/admin`);
-        const removedCommunityPlayerId = response.data.communityPlayerId;
+      const response = await api.post(`/api/community/${id}/players/admin`);
+      const adminPlayer = response.data.player as CommunityPlayerRecord;
 
-        if (removedCommunityPlayerId) {
-          setCommunityPlayers((currentPlayers) =>
-            currentPlayers.filter(
-              (currentPlayer) => currentPlayer.id !== removedCommunityPlayerId,
-            ),
-          );
-          setCommunityPlayerWinPoints((currentPlayers) =>
-            currentPlayers.filter(
-              (currentPlayer) =>
-                currentPlayer.communityPlayerId !== removedCommunityPlayerId,
-            ),
-          );
-        }
-      } else {
-        const response = await api.post(`/api/community/${id}/players/admin`);
-        const adminPlayer = response.data.player as CommunityPlayerRecord;
-
-        setCommunityPlayers((currentPlayers) => [
-          adminPlayer,
-          ...currentPlayers.filter(
-            (currentPlayer) => currentPlayer.id !== adminPlayer.id,
-          ),
-        ]);
-        void getCommunityPlayerWinPointsAPI();
-      }
+      setCommunityPlayers((currentPlayers) => [
+        adminPlayer,
+        ...currentPlayers.filter(
+          (currentPlayer) => currentPlayer.id !== adminPlayer.id,
+        ),
+      ]);
+      setIsAddAdminModalOpen(false);
+      void getCommunityPlayerWinPointsAPI();
     } catch (error) {
-      setPlayerError(
-        isAdminIncludedAsCommunityPlayer
-          ? "Unable to remove the admin from community players."
-          : "Unable to add the admin as a community player.",
-      );
+      setPlayerError("Unable to add the admin as a community player.");
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
-      else console.error("Toggle admin as community player api failed", error);
+      else console.error("Add admin as community player api failed", error);
     } finally {
       setIsTogglingAdminAsPlayer(false);
     }
@@ -1204,6 +1302,288 @@ export default function Community() {
           </div>
         </div>
       ) : null}
+      {isAddAdminModalOpen ? (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeAddAdminModal}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-2xl rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
+          >
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-lg font-semibold text-text">Add admin</h4>
+                <p className="mt-1 text-sm text-stone-500">
+                  Choose how this admin should be added.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddAdminModal}
+                disabled={isTogglingAdminAsPlayer}
+                className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAddAdminMode("asPlayer");
+                  setPlayerError(null);
+                  setAddAdminSuccess(null);
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  addAdminMode === "asPlayer"
+                    ? "bg-primary text-white"
+                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                }`}
+              >
+                As Player
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddAdminMode("newAdmin");
+                  setPlayerError(null);
+                  setAddAdminSuccess(null);
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  addAdminMode === "newAdmin"
+                    ? "bg-primary text-white"
+                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                }`}
+              >
+                New Admin
+              </button>
+            </div>
+
+            {addAdminMode === "asPlayer" ? (
+              <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-orange-50/60">
+                    <tr>
+                      <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Select
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Admin
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-orange-100 bg-white">
+                    {adminCandidates.map((admin) => {
+                      const isSelected = selectedAdminId === admin.id;
+                      const isAlreadyPlayer =
+                        admin.id === community?.master.id &&
+                        isAdminIncludedAsCommunityPlayer;
+
+                      return (
+                        <tr
+                          key={admin.id}
+                          className="transition hover:bg-orange-50/40"
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="radio"
+                              name="selectedAdminId"
+                              checked={isSelected}
+                              onChange={() => setSelectedAdminId(admin.id)}
+                              disabled={isTogglingAdminAsPlayer}
+                              className="h-4 w-4 accent-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <img
+                                src={admin.profileUrl}
+                                alt={admin.username}
+                                className="h-10 w-10 shrink-0 rounded-full object-cover"
+                              />
+                              <p className="truncate font-semibold text-text">
+                                {admin.username}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                isAlreadyPlayer
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-stone-100 text-stone-600"
+                              }`}
+                            >
+                              {isAlreadyPlayer ? "Player" : "Admin"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {playerError ? (
+                  <p className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {playerError}
+                  </p>
+                ) : null}
+
+                <div className="flex justify-end gap-3 border-t border-orange-100 bg-orange-50/30 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={closeAddAdminModal}
+                    disabled={isTogglingAdminAsPlayer}
+                    className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleAddSelectedAdminAsPlayer()}
+                    disabled={
+                      isTogglingAdminAsPlayer ||
+                      !selectedAdminId ||
+                      isAdminIncludedAsCommunityPlayer
+                    }
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    {isTogglingAdminAsPlayer
+                      ? "Adding..."
+                      : isAdminIncludedAsCommunityPlayer
+                        ? "Already a player"
+                        : "Add as player"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-orange-50/60">
+                    <tr>
+                      <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Select
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Friend
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
+                        Invite
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-orange-100 bg-white">
+                    {isLoadingAdminInviteFriends ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-8 text-center text-sm text-stone-500"
+                        >
+                          Loading friends...
+                        </td>
+                      </tr>
+                    ) : adminInviteFriends.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-8 text-center text-sm text-stone-500"
+                        >
+                          No friends available.
+                        </td>
+                      </tr>
+                    ) : (
+                      adminInviteFriends.map((friendship) => {
+                        const friend = friendship.friend;
+                        const isSelected =
+                          selectedNewAdminFriendId === friend.id;
+
+                        return (
+                          <tr
+                            key={friendship.friendshipId}
+                            className="transition hover:bg-orange-50/40"
+                          >
+                            <td className="px-4 py-3">
+                              <input
+                                type="radio"
+                                name="selectedNewAdminFriendId"
+                                checked={isSelected}
+                                onChange={() =>
+                                  setSelectedNewAdminFriendId(friend.id)
+                                }
+                                disabled={isSendingAdminInvite}
+                                className="h-4 w-4 accent-primary"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <img
+                                  src={friend.profileUrl}
+                                  alt={friend.username}
+                                  className="h-10 w-10 shrink-0 rounded-full object-cover"
+                                />
+                                <p className="truncate font-semibold text-text">
+                                  {friend.username}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">
+                                Pending acceptance
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                {playerError ? (
+                  <p className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {playerError}
+                  </p>
+                ) : null}
+
+                {addAdminSuccess ? (
+                  <p className="border-t border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    {addAdminSuccess}
+                  </p>
+                ) : null}
+
+                <div className="flex justify-end gap-3 border-t border-orange-100 bg-orange-50/30 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={closeAddAdminModal}
+                    disabled={isSendingAdminInvite}
+                    className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSendAdminInvite()}
+                    disabled={
+                      isSendingAdminInvite ||
+                      isLoadingAdminInviteFriends ||
+                      !selectedNewAdminFriendId
+                    }
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    {isSendingAdminInvite ? "Sending..." : "Send admin invite"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
       {selectedPointsHistoryPlayer ? (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
@@ -1628,22 +2008,11 @@ export default function Community() {
 
                 <button
                   type="button"
-                  onClick={() => void handleToggleAdminAsPlayer()}
-                  disabled={isTogglingAdminAsPlayer}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                    isTogglingAdminAsPlayer
-                      ? "cursor-not-allowed bg-stone-100 text-stone-400"
-                      : isAdminIncludedAsCommunityPlayer
-                        ? "cursor-pointer border border-red-200 bg-white text-red-600 hover:bg-red-50"
-                        : "cursor-pointer bg-primary text-white hover:bg-accent"
-                  }`}
+                  onClick={openAddAdminModal}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent"
                 >
                   <UserPlus size={15} />
-                  {isTogglingAdminAsPlayer
-                    ? "Saving..."
-                    : isAdminIncludedAsCommunityPlayer
-                      ? "Remove admin"
-                      : "Add admin"}
+                  Add admin
                 </button>
 
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">

@@ -4,6 +4,8 @@ import prisma from "../lib/prisma.js";
 import type { Request, Response } from "express";
 import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 import {
+  CommunityAdminInviteStatus,
+  FriendRequestStatus,
   MatchStatus,
   PaymentStatuses,
   PlayerHostStatuses,
@@ -393,6 +395,10 @@ type CreateHostStaticPlayersBody = {
 
 type AddCommunityPlayersToHostBody = {
   communityPlayerIds?: string[];
+};
+
+type CreateCommunityAdminInviteBody = {
+  accountId?: string;
 };
 
 type UpdateCommunityPlayerBody = {
@@ -946,6 +952,130 @@ export const removeCommunityAdminAsPlayer = async (
     });
   } catch (error) {
     console.error("Error removing admin as community player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const createCommunityAdminInvite = async (
+  request: Request<CommunityPlayerParams, unknown, CreateCommunityAdminInviteBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const inviteeId = request.body.accountId;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !inviteeId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    if (inviteeId === user.sub)
+      return response.status(400).json({
+        success: false,
+        message: "You are already the community owner",
+      });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: { id: true, communityName: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const acceptedFriendship = await prisma.friendRequest.findFirst({
+      where: {
+        status: FriendRequestStatus.accepted,
+        OR: [
+          { requesterId: user.sub, receiverId: inviteeId },
+          { requesterId: inviteeId, receiverId: user.sub },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!acceptedFriendship)
+      return response.status(400).json({
+        success: false,
+        message: "You can only invite friends as admins",
+      });
+
+    const existingAdmin = await prisma.communityAdmin.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId: inviteeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingAdmin)
+      return response.status(409).json({
+        success: false,
+        message: "This friend is already an admin",
+      });
+
+    const existingPendingInvite = await prisma.communityAdminInvite.findFirst({
+      where: {
+        communityId: community.id,
+        inviteeId,
+        status: CommunityAdminInviteStatus.pending,
+      },
+      select: { id: true },
+    });
+
+    if (existingPendingInvite)
+      return response.status(409).json({
+        success: false,
+        message: "This friend already has a pending admin invite",
+      });
+
+    const invite = await prisma.communityAdminInvite.create({
+      data: {
+        communityId: community.id,
+        inviterId: user.sub,
+        inviteeId,
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        community: {
+          select: {
+            id: true,
+            communityName: true,
+            profileUrl: true,
+          },
+        },
+        inviter: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+          },
+        },
+      },
+    });
+
+    return response.status(201).json({
+      success: true,
+      message: "Admin invite sent",
+      notification: invite,
+    });
+  } catch (error) {
+    console.error("Error creating community admin invite:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
