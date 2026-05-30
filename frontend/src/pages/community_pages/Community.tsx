@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCommunities } from "../../contexts/CommunitiesContext";
 import EditCommunityModal from "../../components/community_components/EditCommunityModal";
+import { useAuth } from "../../hooks/useAuth";
 import type {
   CommunityPlayerRecord,
   HostPlayerStatus,
@@ -217,6 +218,7 @@ const formatHostDateTime = (value: string | null) => {
 export default function Community() {
   const { id } = useParams();
   const { refetchCommunities } = useCommunities();
+  const { user } = useAuth();
   const [community, setCommunity] = useState<CommunityType | null>(null);
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
   const [communityPlayers, setCommunityPlayers] = useState<
@@ -328,11 +330,27 @@ export default function Community() {
   );
 
   const isAdminIncludedAsCommunityPlayer = communityPlayers.some(
-    (communityPlayer) => communityPlayer.player.id === community?.master.id,
+    (communityPlayer) => communityPlayer.player.id === user?.id,
   );
+  const isCommunityOwner = Boolean(
+    user && community && user.id === community.master.id,
+  );
+  const canAddAdminAsPlayer = Boolean(user && community);
   const adminCandidates = useMemo(
-    () => (community ? [community.master] : []),
-    [community],
+    () => {
+      if (!community || !user) return [];
+
+      return [
+        isCommunityOwner
+          ? community.master
+          : {
+              id: user.id,
+              username: user.username,
+              profileUrl: user.profileUrl,
+            },
+      ];
+    },
+    [community, isCommunityOwner, user],
   );
   const selectedPointsRecord = selectedPointsHistoryPlayer
     ? winPointsByCommunityPlayerId.get(selectedPointsHistoryPlayer.id)
@@ -572,8 +590,10 @@ export default function Community() {
   };
 
   const openAddAdminModal = () => {
+    if (!canAddAdminAsPlayer) return;
+
     setAddAdminMode("asPlayer");
-    setSelectedAdminId(community?.master.id ?? null);
+    setSelectedAdminId(user?.id ?? null);
     setPlayerError(null);
     setIsAddAdminModalOpen(true);
   };
@@ -604,16 +624,21 @@ export default function Community() {
   };
 
   useEffect(() => {
-    if (isAddAdminModalOpen && addAdminMode === "newAdmin") {
+    if (isCommunityOwner && isAddAdminModalOpen && addAdminMode === "newAdmin") {
       const timeoutId = window.setTimeout(() => {
         void loadAdminInviteFriends();
       }, 0);
 
       return () => window.clearTimeout(timeoutId);
     }
-  }, [isAddAdminModalOpen, addAdminMode]);
+  }, [isCommunityOwner, isAddAdminModalOpen, addAdminMode]);
 
   const handleSendAdminInvite = async () => {
+    if (!isCommunityOwner) {
+      setPlayerError("Only the community owner can add new admins.");
+      return;
+    }
+
     if (!id || isSendingAdminInvite) return;
 
     if (!selectedNewAdminFriendId) {
@@ -662,8 +687,8 @@ export default function Community() {
       return;
     }
 
-    if (selectedAdminId !== community?.master.id) {
-      setPlayerError("Only the community owner can be added right now.");
+    if (selectedAdminId !== user?.id) {
+      setPlayerError("You can only add yourself as a community player.");
       return;
     }
 
@@ -913,6 +938,11 @@ export default function Community() {
   };
 
   const handleDeleteCommunity = async () => {
+    if (!isCommunityOwner) {
+      setCommunityError("Only the community owner can delete this community.");
+      return;
+    }
+
     if (!id || !community || isDeletingCommunity) return;
 
     const confirmed = window.confirm(
@@ -945,6 +975,11 @@ export default function Community() {
     communityName: string;
     description: string;
   }) => {
+    if (!isCommunityOwner) {
+      setEditCommunityError("Only the community owner can edit this community.");
+      return;
+    }
+
     if (!id || !community || isUpdatingCommunity) return;
 
     if (!form.communityName) {
@@ -1041,7 +1076,7 @@ export default function Community() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {isEditModalOpen && community ? (
+      {isEditModalOpen && community && isCommunityOwner ? (
         <EditCommunityModal
           profileUrl={community.profileUrl}
           communityName={community.communityName}
@@ -1302,7 +1337,7 @@ export default function Community() {
           </div>
         </div>
       ) : null}
-      {isAddAdminModalOpen ? (
+      {isAddAdminModalOpen && canAddAdminAsPlayer ? (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
           onClick={closeAddAdminModal}
@@ -1330,40 +1365,42 @@ export default function Community() {
               </button>
             </header>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setAddAdminMode("asPlayer");
-                  setPlayerError(null);
-                  setAddAdminSuccess(null);
-                }}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                  addAdminMode === "asPlayer"
-                    ? "bg-primary text-white"
-                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
-                }`}
-              >
-                As Player
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAddAdminMode("newAdmin");
-                  setPlayerError(null);
-                  setAddAdminSuccess(null);
-                }}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                  addAdminMode === "newAdmin"
-                    ? "bg-primary text-white"
-                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
-                }`}
-              >
-                New Admin
-              </button>
-            </div>
+            {isCommunityOwner ? (
+              <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddAdminMode("asPlayer");
+                    setPlayerError(null);
+                    setAddAdminSuccess(null);
+                  }}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                    addAdminMode === "asPlayer"
+                      ? "bg-primary text-white"
+                      : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                  }`}
+                >
+                  As Player
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddAdminMode("newAdmin");
+                    setPlayerError(null);
+                    setAddAdminSuccess(null);
+                  }}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                    addAdminMode === "newAdmin"
+                      ? "bg-primary text-white"
+                      : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                  }`}
+                >
+                  New Admin
+                </button>
+              </div>
+            ) : null}
 
-            {addAdminMode === "asPlayer" ? (
+            {addAdminMode === "asPlayer" || !isCommunityOwner ? (
               <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100">
                 <table className="w-full text-sm">
                   <thead className="bg-orange-50/60">
@@ -1737,39 +1774,41 @@ export default function Community() {
             </div>
           </div>
 
-          <div ref={dropdownRef} className="relative">
-            <div
-              onClick={() => setOpenDropdownCommunity((prev) => !prev)}
-              className="p-1 rounded-full  cursor-pointer hover:bg-primary/10"
-            >
-              <EllipsisVertical size={20} />
-            </div>
-
-            {openDropdownCommunity && (
-              <div className="absolute border border-primary py-2 w-[240px] top-8 -left-53 rounded-lg bg-white">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenDropdownCommunity(false);
-                    setEditCommunityError(null);
-                    setIsEditModalOpen(true);
-                  }}
-                  className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]"
-                >
-                  <SquarePen size={18} /> Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDeleteCommunity()}
-                  disabled={isDeletingCommunity}
-                  className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash size={18} />
-                  {isDeletingCommunity ? "Deleting..." : "Delete"}
-                </button>
+          {isCommunityOwner ? (
+            <div ref={dropdownRef} className="relative">
+              <div
+                onClick={() => setOpenDropdownCommunity((prev) => !prev)}
+                className="p-1 rounded-full  cursor-pointer hover:bg-primary/10"
+              >
+                <EllipsisVertical size={20} />
               </div>
-            )}
-          </div>
+
+              {openDropdownCommunity && (
+                <div className="absolute border border-primary py-2 w-[240px] top-8 -left-53 rounded-lg bg-white">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenDropdownCommunity(false);
+                      setEditCommunityError(null);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]"
+                  >
+                    <SquarePen size={18} /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteCommunity()}
+                    disabled={isDeletingCommunity}
+                    className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash size={18} />
+                    {isDeletingCommunity ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       </header>
 

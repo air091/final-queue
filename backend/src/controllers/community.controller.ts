@@ -20,6 +20,14 @@ export type Params = {
   playerId?: string;
 };
 
+const communityMemberWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+  ],
+});
+
 const IMAGE_DATA_URI_PATTERN =
   /^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i;
 
@@ -217,7 +225,13 @@ export const getCommunities = async (request: Request, response: Response) => {
     }
 
     const communities = await prisma.community.findMany({
-      where: { masterId: user.sub },
+      where: {
+        OR: [
+          { masterId: user.sub },
+          { admins: { some: { accountId: user.sub } } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         profileUrl: true,
@@ -259,7 +273,7 @@ export const getCommunityById = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: {
         id: true,
         profileUrl: true,
@@ -428,7 +442,7 @@ export const getCommunityPlayers = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -504,7 +518,7 @@ export const getCommunityPlayerWinPoints = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -835,7 +849,7 @@ export const includeCommunityAdminAsPlayer = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 

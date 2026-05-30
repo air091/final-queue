@@ -74,6 +74,14 @@ const mapHostPlayerRecord = (player: {
   player: buildPlayerProfile(player.player),
 });
 
+const communityMemberWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+  ],
+});
+
 export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
@@ -98,7 +106,7 @@ export const host = async (request: Request<Params>, response: Response) => {
         .json({ success: false, message: "Sport unavailable" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
@@ -173,7 +181,7 @@ export const getHosts = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
