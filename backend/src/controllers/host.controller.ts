@@ -274,6 +274,24 @@ export const getHostById = async (
             select: {
               profileUrl: true,
               communityName: true,
+              master: {
+                select: {
+                  id: true,
+                  username: true,
+                  profileUrl: true,
+                },
+              },
+              admins: {
+                select: {
+                  account: {
+                    select: {
+                      id: true,
+                      username: true,
+                      profileUrl: true,
+                    },
+                  },
+                },
+              },
             },
           },
           _count: { select: { players: true } },
@@ -1024,6 +1042,10 @@ type CreateStaticPlayerBody = {
   profileUrl?: string;
 };
 
+type HostAdminPlayerBody = {
+  accountId?: string;
+};
+
 const selectAcceptedPlayerForResponse = {
   id: true,
   hostStatus: true,
@@ -1118,12 +1140,13 @@ const mapAcceptedPlayerForResponse = (
 });
 
 export const includeHostAsPlayer = async (
-  request: Request<Params>,
+  request: Request<Params, unknown, HostAdminPlayerBody>,
   response: Response,
 ) => {
   try {
     const { communityId, hostId } = request.params;
     const user = request.user;
+    const targetAccountId = request.body.accountId?.trim() || user?.sub;
 
     if (!user)
       return response
@@ -1138,14 +1161,21 @@ export const includeHostAsPlayer = async (
     const host = await prisma.host.findFirst({
       where: {
         id: hostId,
-        community: {
-          id: communityId,
-          masterId: user.sub,
-        },
+        community: communityMemberWhere(communityId, user.sub),
       },
       select: {
         id: true,
         sport: true,
+        community: {
+          select: {
+            masterId: true,
+            admins: {
+              select: {
+                accountId: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1154,11 +1184,36 @@ export const includeHostAsPlayer = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
+    if (!targetAccountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const isCommunityOwner = host.community.masterId === user.sub;
+    const isTargetCurrentUser = targetAccountId === user.sub;
+    const isTargetCommunityOwner = targetAccountId === host.community.masterId;
+
+    if (!isCommunityOwner && !isTargetCurrentUser && !isTargetCommunityOwner)
+      return response.status(403).json({
+        success: false,
+        message: "Only the community owner can update other admins",
+      });
+
+    const isTargetCommunityAdmin =
+      targetAccountId === host.community.masterId ||
+      host.community.admins.some((admin) => admin.accountId === targetAccountId);
+
+    if (!isTargetCommunityAdmin)
+      return response.status(400).json({
+        success: false,
+        message: "Only community admins can be added as host players",
+      });
+
     await prisma.player.upsert({
       where: {
         hostId_playerId: {
           hostId: host.id,
-          playerId: user.sub,
+          playerId: targetAccountId,
         },
       },
       update: {
@@ -1167,7 +1222,7 @@ export const includeHostAsPlayer = async (
       },
       create: {
         hostId: host.id,
-        playerId: user.sub,
+        playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
         timerStartedAt: new Date(),
       },
@@ -1176,7 +1231,7 @@ export const includeHostAsPlayer = async (
     const hostedPlayer = await prisma.player.findFirst({
       where: {
         hostId: host.id,
-        playerId: user.sub,
+        playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
       },
       select: selectAcceptedPlayerForResponse,
@@ -1265,12 +1320,13 @@ export const includeHostAsPlayer = async (
 };
 
 export const removeHostAsPlayer = async (
-  request: Request<Params>,
+  request: Request<Params, unknown, HostAdminPlayerBody>,
   response: Response,
 ) => {
   try {
     const { communityId, hostId } = request.params;
     const user = request.user;
+    const targetAccountId = request.body.accountId?.trim() || user?.sub;
 
     if (!user)
       return response
@@ -1285,13 +1341,20 @@ export const removeHostAsPlayer = async (
     const host = await prisma.host.findFirst({
       where: {
         id: hostId,
-        community: {
-          id: communityId,
-          masterId: user.sub,
-        },
+        community: communityMemberWhere(communityId, user.sub),
       },
       select: {
         id: true,
+        community: {
+          select: {
+            masterId: true,
+            admins: {
+              select: {
+                accountId: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1300,10 +1363,35 @@ export const removeHostAsPlayer = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
+    if (!targetAccountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const isCommunityOwner = host.community.masterId === user.sub;
+    const isTargetCurrentUser = targetAccountId === user.sub;
+    const isTargetCommunityOwner = targetAccountId === host.community.masterId;
+
+    if (!isCommunityOwner && !isTargetCurrentUser && !isTargetCommunityOwner)
+      return response.status(403).json({
+        success: false,
+        message: "Only the community owner can update other admins",
+      });
+
+    const isTargetCommunityAdmin =
+      targetAccountId === host.community.masterId ||
+      host.community.admins.some((admin) => admin.accountId === targetAccountId);
+
+    if (!isTargetCommunityAdmin)
+      return response.status(400).json({
+        success: false,
+        message: "Only community admins can be removed as host players",
+      });
+
     const hostedPlayer = await prisma.player.findFirst({
       where: {
         hostId: host.id,
-        playerId: user.sub,
+        playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
       },
       select: {

@@ -53,6 +53,18 @@ export type HostMeta = {
   community: {
     profileUrl: string;
     communityName: string;
+    master: {
+      id: string;
+      username: string;
+      profileUrl: string;
+    };
+    admins: Array<{
+      account: {
+        id: string;
+        username: string;
+        profileUrl: string;
+      };
+    }>;
   };
   _count: {
     players: number;

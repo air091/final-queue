@@ -69,6 +69,14 @@ export const getAvailableHosts = async (
               id: true,
               profileUrl: true,
               communityName: true,
+              players: {
+                where: {
+                  accountId: user.sub,
+                },
+                select: {
+                  status: true,
+                },
+              },
               master: {
                 select: {
                   id: true,
@@ -120,15 +128,21 @@ export const getAvailableHosts = async (
     return response.status(200).json({
       success: true,
 
-      hosts: hosts.map(({ players, ...host }) => ({
-        ...host,
-        currentUserStatus: players[0]?.hostStatus ?? null,
-        isOwnedByCurrentUser: host.community.master.id === user.sub,
+      hosts: hosts.map(({ players, community, ...host }) => {
+        const { players: communityPlayers, ...communityData } = community;
 
-        acceptedPlayers: acceptedPlayers.filter(
-          (player) => player.hostId === host.id,
-        ),
-      })),
+        return {
+          ...host,
+          community: communityData,
+          currentUserStatus: players[0]?.hostStatus ?? null,
+          currentUserCommunityStatus: communityPlayers[0]?.status ?? null,
+          isOwnedByCurrentUser: community.master.id === user.sub,
+
+          acceptedPlayers: acceptedPlayers.filter(
+            (player) => player.hostId === host.id,
+          ),
+        };
+      }),
     });
   } catch (error) {
     console.error("Error getting available hosts:", error);
@@ -188,10 +202,18 @@ export const playerRequestToJoinHost = async (
         message: "You are banned from this community",
       });
     }
-    const nextCommunityPlayerStatus =
-      communityPlayer?.status === PlayerHostStatuses.accepted
-        ? PlayerHostStatuses.accepted
-        : PlayerHostStatuses.requested;
+
+    if (communityPlayer) {
+      return response.status(400).json({
+        success: false,
+        message:
+          communityPlayer.status === PlayerHostStatuses.accepted
+            ? "You are already a member of this community"
+            : communityPlayer.status === PlayerHostStatuses.rejected
+              ? "Your request to join this community was rejected"
+              : "You already requested to join this community",
+      });
+    }
 
     const host = await prisma.host.findFirst({
       where: { id: hostId, communityId: community.id },
@@ -250,12 +272,12 @@ export const playerRequestToJoinHost = async (
           },
         },
         update: {
-          status: nextCommunityPlayerStatus,
+          status: PlayerHostStatuses.requested,
         },
         create: {
           communityId: community.id,
           accountId: user.sub,
-          status: nextCommunityPlayerStatus,
+          status: PlayerHostStatuses.requested,
         },
       }),
       prisma.player.create({

@@ -37,6 +37,7 @@ type AvailableHostType = {
   status: string;
   community: CommunityType;
   currentUserStatus: JoinStatus;
+  currentUserCommunityStatus: JoinStatus;
   isOwnedByCurrentUser: boolean;
   acceptedPlayers: AcceptedPlayerType[];
 };
@@ -99,6 +100,7 @@ export default function Home() {
 
   const handleRequestToJoinHost = async (host: AvailableHostType) => {
     if (
+      host.currentUserCommunityStatus ||
       host.currentUserStatus ||
       host.isOwnedByCurrentUser ||
       isHostFull(host)
@@ -109,8 +111,15 @@ export default function Home() {
     setRequestingHostIds((currentHostIds) => [...currentHostIds, host.id]);
     setAvailableHost((currentHosts) =>
       currentHosts.map((currentHost) =>
-        currentHost.id === host.id
-          ? { ...currentHost, currentUserStatus: "requested" }
+        currentHost.community.id === host.community.id
+          ? {
+              ...currentHost,
+              currentUserCommunityStatus: "requested",
+              currentUserStatus:
+                currentHost.id === host.id
+                  ? "requested"
+                  : currentHost.currentUserStatus,
+            }
           : currentHost,
       ),
     );
@@ -128,8 +137,15 @@ export default function Home() {
     } catch (error) {
       setAvailableHost((currentHosts) =>
         currentHosts.map((currentHost) =>
-          currentHost.id === host.id
-            ? { ...currentHost, currentUserStatus: null }
+          currentHost.community.id === host.community.id
+            ? {
+                ...currentHost,
+                currentUserCommunityStatus: null,
+                currentUserStatus:
+                  currentHost.id === host.id
+                    ? null
+                    : currentHost.currentUserStatus,
+              }
             : currentHost,
         ),
       );
@@ -148,26 +164,35 @@ export default function Home() {
     host: Pick<
       AvailableHostType,
       | "acceptedPlayers"
+      | "currentUserCommunityStatus"
       | "currentUserStatus"
       | "isOwnedByCurrentUser"
       | "maxPlayers"
     >,
     isRequesting: boolean,
   ) => {
-    if (isRequesting) return "Requesting...";
+    if (isRequesting) return "Sending request...";
     if (host.isOwnedByCurrentUser) return "Host";
-    if (isHostFull(host)) return "Full";
+    if (host.currentUserCommunityStatus === "accepted")
+      return "Community Member";
+    if (host.currentUserCommunityStatus === "requested")
+      return "Request Sent";
+    if (host.currentUserCommunityStatus === "rejected")
+      return "Request Rejected";
+    if (host.currentUserCommunityStatus === "banned") return "Banned";
     if (host.currentUserStatus === "accepted") return "Joined";
-    if (host.currentUserStatus === "requested") return "Requested";
+    if (host.currentUserStatus === "requested") return "Request Sent";
     if (host.currentUserStatus === "rejected") return "Rejected";
     if (host.currentUserStatus === "banned") return "Banned";
-    return "Request";
+    if (isHostFull(host)) return "Full";
+    return "Join Community";
   };
 
   const isButtonDisabled = (
     host: Pick<
       AvailableHostType,
       | "acceptedPlayers"
+      | "currentUserCommunityStatus"
       | "currentUserStatus"
       | "isOwnedByCurrentUser"
       | "maxPlayers"
@@ -176,6 +201,7 @@ export default function Home() {
   ) =>
     isRequesting ||
     host.isOwnedByCurrentUser ||
+    host.currentUserCommunityStatus !== null ||
     host.currentUserStatus !== null ||
     isHostFull(host);
 
