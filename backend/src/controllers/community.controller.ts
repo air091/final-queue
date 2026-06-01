@@ -910,8 +910,9 @@ export const includeCommunityAdminAsPlayer = async (
 
     const isCommunityOwner = community.masterId === user.sub;
     const isTargetCurrentUser = targetAccountId === user.sub;
+    const isTargetCommunityOwner = targetAccountId === community.masterId;
 
-    if (!isCommunityOwner && !isTargetCurrentUser)
+    if (!isCommunityOwner && !isTargetCurrentUser && !isTargetCommunityOwner)
       return response.status(403).json({
         success: false,
         message: "Only the community owner can update other admins",
@@ -1022,8 +1023,9 @@ export const removeCommunityAdminAsPlayer = async (
 
     const isCommunityOwner = community.masterId === user.sub;
     const isTargetCurrentUser = targetAccountId === user.sub;
+    const isTargetCommunityOwner = targetAccountId === community.masterId;
 
-    if (!isCommunityOwner && !isTargetCurrentUser)
+    if (!isCommunityOwner && !isTargetCurrentUser && !isTargetCommunityOwner)
       return response.status(403).json({
         success: false,
         message: "Only the community owner can update other admins",

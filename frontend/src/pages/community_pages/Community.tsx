@@ -742,7 +742,13 @@ export default function Community() {
       return;
     }
 
-    if (!isCommunityOwner && adminId !== user?.id) {
+    const isTargetCommunityOwner = adminId === community?.master.id;
+
+    if (
+      !isCommunityOwner &&
+      adminId !== user?.id &&
+      !isTargetCommunityOwner
+    ) {
       setPlayerError("Only the community owner can update other admins.");
       return;
     }
@@ -1505,8 +1511,11 @@ export default function Community() {
                           (communityPlayer) =>
                             communityPlayer.player.id === admin.id,
                         );
+                      const isOwner = admin.id === community?.master.id;
                       const canToggleAdmin =
-                        isCommunityOwner || admin.id === user?.id;
+                        isCommunityOwner ||
+                        admin.id === user?.id ||
+                        isOwner;
                       const isTogglingThisAdmin =
                         togglingAdminPlayerId === admin.id;
 
