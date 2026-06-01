@@ -310,6 +310,8 @@ export default function Community() {
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [addPlayerMode, setAddPlayerMode] = useState<AddPlayerMode>("static");
   const [playerInviteSearchTerm, setPlayerInviteSearchTerm] = useState("");
+  const [communityPlayerSearchTerm, setCommunityPlayerSearchTerm] =
+    useState("");
   const [playerInviteCandidates, setPlayerInviteCandidates] = useState<
     MasterType[]
   >([]);
@@ -408,6 +410,22 @@ export default function Community() {
       ),
     [rankedCommunityPlayers],
   );
+  const searchedRequestedCommunityPlayers = useMemo(() => {
+    const searchTerm = communityPlayerSearchTerm.trim().toLowerCase();
+    if (!searchTerm) return requestedCommunityPlayers;
+
+    return requestedCommunityPlayers.filter((communityPlayer) =>
+      communityPlayer.player.username.toLowerCase().includes(searchTerm),
+    );
+  }, [communityPlayerSearchTerm, requestedCommunityPlayers]);
+  const searchedRosterCommunityPlayers = useMemo(() => {
+    const searchTerm = communityPlayerSearchTerm.trim().toLowerCase();
+    if (!searchTerm) return rosterCommunityPlayers;
+
+    return rosterCommunityPlayers.filter((communityPlayer) =>
+      communityPlayer.player.username.toLowerCase().includes(searchTerm),
+    );
+  }, [communityPlayerSearchTerm, rosterCommunityPlayers]);
 
   const highestCommunityPlayerPoints = useMemo(
     () =>
@@ -2906,6 +2924,19 @@ export default function Community() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                  <Search size={16} className="shrink-0 text-stone-400" />
+                  <input
+                    type="search"
+                    value={communityPlayerSearchTerm}
+                    onChange={(event) =>
+                      setCommunityPlayerSearchTerm(event.target.value)
+                    }
+                    placeholder="Search players"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-400"
+                  />
+                </label>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -2930,9 +2961,9 @@ export default function Community() {
                   Add admin
                 </button>
 
-                {requestedCommunityPlayers.length > 0 ? (
+                {searchedRequestedCommunityPlayers.length > 0 ? (
                   <div className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
-                    {requestedCommunityPlayers.length} requests
+                    {searchedRequestedCommunityPlayers.length} requests
                   </div>
                 ) : null}
 
@@ -3046,7 +3077,7 @@ export default function Community() {
             ) : null}
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
-              {requestedCommunityPlayers.length > 0 ? (
+              {searchedRequestedCommunityPlayers.length > 0 ? (
                 <section className="mb-5 overflow-hidden rounded-2xl border border-yellow-200 bg-yellow-50/40">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-yellow-200 px-4 py-3">
                     <div>
@@ -3058,12 +3089,12 @@ export default function Community() {
                       </p>
                     </div>
                     <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
-                      {requestedCommunityPlayers.length}
+                      {searchedRequestedCommunityPlayers.length}
                     </span>
                   </div>
 
                   <div className="divide-y divide-yellow-200 bg-white">
-                    {requestedCommunityPlayers.map((communityPlayer) => (
+                    {searchedRequestedCommunityPlayers.map((communityPlayer) => (
                       <div
                         key={communityPlayer.id}
                         className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto]"
@@ -3147,8 +3178,8 @@ export default function Community() {
                   isLoadingWinPoints ? "opacity-60" : "opacity-100"
                 }`}
               >
-                {rosterCommunityPlayers.length > 0 ? (
-                  rosterCommunityPlayers.map((communityPlayer) => {
+                {searchedRosterCommunityPlayers.length > 0 ? (
+                  searchedRosterCommunityPlayers.map((communityPlayer) => {
                     const playerPoints =
                       winPointsByCommunityPlayerId.get(communityPlayer.id)
                         ?.points ?? 0;
@@ -3327,7 +3358,9 @@ export default function Community() {
                   })
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
-                    {requestedCommunityPlayers.length > 0
+                    {communityPlayerSearchTerm.trim()
+                      ? "No players match your search."
+                      : requestedCommunityPlayers.length > 0
                       ? "No approved community players yet."
                       : "No community players yet."}
                   </div>

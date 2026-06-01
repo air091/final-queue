@@ -15,6 +15,8 @@ import {
 import {
   AArrowDown,
   AArrowUp,
+  ChevronDown,
+  ChevronUp,
   Gamepad,
   MoveDown,
   MoveUp,
@@ -633,6 +635,8 @@ export default function Players() {
   const [selectedCommunityPlayerIds, setSelectedCommunityPlayerIds] = useState<
     string[]
   >([]);
+  const [isCommunityPickerMinimized, setIsCommunityPickerMinimized] =
+    useState(false);
   const [isAddingCommunityPlayers, setIsAddingCommunityPlayers] =
     useState(false);
   const [communityPlayerError, setCommunityPlayerError] = useState<
@@ -1739,7 +1743,11 @@ export default function Players() {
   const selectableCommunityPlayers = communityPlayers.filter(
     (communityPlayer) =>
       communityPlayer.status === "accepted" &&
-      !hostedAccountIds.has(communityPlayer.player.id),
+      !hostedAccountIds.has(communityPlayer.player.id) &&
+      (normalizedPlayerSearchTerm === "" ||
+        communityPlayer.player.username
+          .toLowerCase()
+          .includes(normalizedPlayerSearchTerm)),
   );
 
   const statusPriority: Record<string, number> = {
@@ -1894,9 +1902,9 @@ export default function Players() {
                 }`}
               >
                 {nameSortDirection === "desc" ? (
-                  <AArrowDown size={22} />
-                ) : (
                   <AArrowUp size={22} />
+                ) : (
+                  <AArrowDown size={22} />
                 )}
               </button>
 
@@ -1911,9 +1919,9 @@ export default function Players() {
               >
                 <Gamepad size={22} />
                 {gamesSortDirection === "desc" ? (
-                  <MoveUp size={14} />
-                ) : (
                   <MoveDown size={14} />
+                ) : (
+                  <MoveUp size={14} />
                 )}
               </button>
             </div>
@@ -1931,28 +1939,50 @@ export default function Players() {
                     Add from community
                   </h5>
                   <p className="text-sm text-stone-500">
-                    Select saved community players for this hosted match.
+                    {isCommunityPickerMinimized
+                      ? `${selectableCommunityPlayers.length} available community players hidden.`
+                      : "Select saved community players for this hosted match."}
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => void handleAddCommunityPlayers()}
-                  disabled={
-                    isAddingCommunityPlayers ||
-                    selectedCommunityPlayerIds.length === 0
-                  }
-                  className={`w-fit rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                    isAddingCommunityPlayers ||
-                    selectedCommunityPlayerIds.length === 0
-                      ? "cursor-not-allowed bg-stone-200 text-stone-400"
-                      : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
-                  }`}
-                >
-                  {isAddingCommunityPlayers
-                    ? "Adding..."
-                    : `Add selected (${selectedCommunityPlayerIds.length})`}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsCommunityPickerMinimized(
+                        (isMinimized) => !isMinimized,
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-orange-50 cursor-pointer"
+                    aria-expanded={!isCommunityPickerMinimized}
+                  >
+                    {isCommunityPickerMinimized ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronUp size={16} />
+                    )}
+                    {isCommunityPickerMinimized ? "Show" : "Minimize"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleAddCommunityPlayers()}
+                    disabled={
+                      isAddingCommunityPlayers ||
+                      selectedCommunityPlayerIds.length === 0
+                    }
+                    className={`w-fit rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      isAddingCommunityPlayers ||
+                      selectedCommunityPlayerIds.length === 0
+                        ? "cursor-not-allowed bg-stone-200 text-stone-400"
+                        : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)] active:scale-[0.98]"
+                    }`}
+                  >
+                    {isAddingCommunityPlayers
+                      ? "Adding..."
+                      : `Add selected (${selectedCommunityPlayerIds.length})`}
+                  </button>
+                </div>
               </div>
 
               {communityPlayerError ? (
@@ -1961,6 +1991,7 @@ export default function Players() {
                 </p>
               ) : null}
 
+              {!isCommunityPickerMinimized ? (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {selectableCommunityPlayers.length > 0 ? (
                   selectableCommunityPlayers.map((communityPlayer) => {
@@ -2010,11 +2041,13 @@ export default function Players() {
                   })
                 ) : (
                   <div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 px-4 py-6 text-center text-sm text-stone-500 sm:col-span-2 lg:col-span-3 xl:col-span-4">
-                    All community players are already in this host, or no
-                    community players have been added yet.
+                    {normalizedPlayerSearchTerm
+                      ? "No community players match your search."
+                      : "All community players are already in this host, or no community players have been added yet."}
                   </div>
                 )}
               </div>
+              ) : null}
             </div>
           }
         />
