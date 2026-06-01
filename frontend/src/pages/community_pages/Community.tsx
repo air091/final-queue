@@ -317,6 +317,22 @@ export default function Community() {
     [communityPlayers, winPointsByCommunityPlayerId],
   );
 
+  const requestedCommunityPlayers = useMemo(
+    () =>
+      rankedCommunityPlayers.filter(
+        (communityPlayer) => communityPlayer.status === "requested",
+      ),
+    [rankedCommunityPlayers],
+  );
+
+  const rosterCommunityPlayers = useMemo(
+    () =>
+      rankedCommunityPlayers.filter(
+        (communityPlayer) => communityPlayer.status !== "requested",
+      ),
+    [rankedCommunityPlayers],
+  );
+
   const highestCommunityPlayerPoints = useMemo(
     () =>
       communityPlayers.reduce((highestPoints, communityPlayer) => {
@@ -1974,14 +1990,27 @@ export default function Community() {
               </span>
             </span>
 
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                activePanel === "players"
-                  ? "bg-white/15 text-white"
-                  : "bg-primary/10 text-primary"
-              }`}
-            >
-              {communityPlayers.length}
+            <span className="flex items-center gap-2">
+              {requestedCommunityPlayers.length > 0 ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    activePanel === "players"
+                      ? "bg-yellow-200 text-yellow-950"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {requestedCommunityPlayers.length} requests
+                </span>
+              ) : null}
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  activePanel === "players"
+                    ? "bg-white/15 text-white"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                {communityPlayers.length}
+              </span>
             </span>
           </button>
         </div>
@@ -2148,6 +2177,12 @@ export default function Community() {
                   Add admin
                 </button>
 
+                {requestedCommunityPlayers.length > 0 ? (
+                  <div className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
+                    {requestedCommunityPlayers.length} requests
+                  </div>
+                ) : null}
+
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                   {isLoadingWinPoints ? "..." : `${communityPlayers.length}`}
                 </div>
@@ -2215,9 +2250,105 @@ export default function Community() {
             ) : null}
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
+              {requestedCommunityPlayers.length > 0 ? (
+                <section className="mb-5 overflow-hidden rounded-2xl border border-yellow-200 bg-yellow-50/40">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-yellow-200 px-4 py-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-yellow-950">
+                        Requested players
+                      </h4>
+                      <p className="text-xs text-yellow-800">
+                        Review people waiting to join this community.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
+                      {requestedCommunityPlayers.length}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-yellow-200 bg-white">
+                    {requestedCommunityPlayers.map((communityPlayer) => (
+                      <div
+                        key={communityPlayer.id}
+                        className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto]"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <img
+                            src={communityPlayer.player.profileUrl}
+                            alt={communityPlayer.player.username}
+                            className="h-11 w-11 shrink-0 rounded-full object-cover"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-text">
+                              {communityPlayer.player.username}
+                            </p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <SkillLevelBadge
+                                skillLevel={communityPlayer.player.skillLevel}
+                              />
+                              <span className="rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-medium text-yellow-700">
+                                requested
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleUpdateCommunityPlayerStatus(
+                                communityPlayer.id,
+                                "accepted",
+                              )
+                            }
+                            disabled={
+                              savingCommunityPlayerId === communityPlayer.id
+                            }
+                            className="rounded-xl bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleUpdateCommunityPlayerStatus(
+                                communityPlayer.id,
+                                "rejected",
+                              )
+                            }
+                            disabled={
+                              savingCommunityPlayerId === communityPlayer.id
+                            }
+                            className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleUpdateCommunityPlayerStatus(
+                                communityPlayer.id,
+                                "banned",
+                              )
+                            }
+                            disabled={
+                              savingCommunityPlayerId === communityPlayer.id
+                            }
+                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                          >
+                            Ban
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {communityPlayers.length > 0 ? (
-                  rankedCommunityPlayers.map((communityPlayer) => {
+                {rosterCommunityPlayers.length > 0 ? (
+                  rosterCommunityPlayers.map((communityPlayer) => {
                     const playerPoints =
                       winPointsByCommunityPlayerId.get(communityPlayer.id)
                         ?.points ?? 0;
@@ -2396,7 +2527,9 @@ export default function Community() {
                   })
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
-                    No community players yet.
+                    {requestedCommunityPlayers.length > 0
+                      ? "No approved community players yet."
+                      : "No community players yet."}
                   </div>
                 )}
               </div>

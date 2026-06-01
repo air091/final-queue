@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
-import { CommunityAdminInviteStatus } from "../generated/prisma/enums.js";
+import {
+  CommunityAdminInviteStatus,
+  PlayerHostStatuses,
+} from "../generated/prisma/enums.js";
 import prisma from "../lib/prisma.js";
+
+const COMMUNITY_PLAYER_REQUEST_PREFIX = "community_player_request:";
 
 const selectAdminInviteNotification = {
   id: true,
@@ -49,6 +54,31 @@ const mapAdminInviteNotification = (invite: {
   message: `${invite.inviter.username} invited you to be an admin of ${invite.community.communityName}.`,
 });
 
+const mapCommunityPlayerRequestNotification = (communityPlayer: {
+  id: string;
+  status: PlayerHostStatuses;
+  addedAt: Date;
+  community: {
+    id: string;
+    communityName: string;
+    profileUrl: string;
+  };
+  account: {
+    id: string;
+    username: string;
+    profileUrl: string;
+  };
+}) => ({
+  id: `${COMMUNITY_PLAYER_REQUEST_PREFIX}${communityPlayer.id}`,
+  type: "community_player_request",
+  status: communityPlayer.status,
+  createdAt: communityPlayer.addedAt,
+  updatedAt: communityPlayer.addedAt,
+  community: communityPlayer.community,
+  actor: communityPlayer.account,
+  message: `${communityPlayer.account.username} requested to join ${communityPlayer.community.communityName}.`,
+});
+
 export const getNotifications = async (
   request: Request,
   response: Response,
@@ -70,7 +100,43 @@ export const getNotifications = async (
       select: selectAdminInviteNotification,
     });
 
-    const notifications = adminInvites.map(mapAdminInviteNotification);
+    const communityPlayerRequests = await prisma.communityPlayer.findMany({
+      where: {
+        status: PlayerHostStatuses.requested,
+        community: {
+          masterId: user.sub,
+        },
+      },
+      orderBy: { addedAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        addedAt: true,
+        community: {
+          select: {
+            id: true,
+            communityName: true,
+            profileUrl: true,
+          },
+        },
+        account: {
+          select: {
+            id: true,
+            username: true,
+            profileUrl: true,
+          },
+        },
+      },
+    });
+
+    const notifications = [
+      ...adminInvites.map(mapAdminInviteNotification),
+      ...communityPlayerRequests.map(mapCommunityPlayerRequestNotification),
+    ].sort(
+      (firstNotification, secondNotification) =>
+        new Date(secondNotification.createdAt).getTime() -
+        new Date(firstNotification.createdAt).getTime(),
+    );
 
     return response.status(200).json({
       success: true,
@@ -98,6 +164,39 @@ export const acceptNotification = async (
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
+
+    if (notificationId.startsWith(COMMUNITY_PLAYER_REQUEST_PREFIX)) {
+      const communityPlayerId = notificationId.slice(
+        COMMUNITY_PLAYER_REQUEST_PREFIX.length,
+      );
+
+      const communityPlayer = await prisma.communityPlayer.findFirst({
+        where: {
+          id: communityPlayerId,
+          status: PlayerHostStatuses.requested,
+          community: {
+            masterId: user.sub,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!communityPlayer)
+        return response
+          .status(404)
+          .json({ success: false, message: "Notification not found" });
+
+      await prisma.communityPlayer.update({
+        where: { id: communityPlayer.id },
+        data: { status: PlayerHostStatuses.accepted },
+      });
+
+      return response.status(200).json({
+        success: true,
+        message: "Community player request accepted",
+        notificationId,
+      });
+    }
 
     const invite = await prisma.communityAdminInvite.findFirst({
       where: {
@@ -163,6 +262,39 @@ export const rejectNotification = async (
       return response
         .status(401)
         .json({ success: false, message: "Unauthorized" });
+
+    if (notificationId.startsWith(COMMUNITY_PLAYER_REQUEST_PREFIX)) {
+      const communityPlayerId = notificationId.slice(
+        COMMUNITY_PLAYER_REQUEST_PREFIX.length,
+      );
+
+      const communityPlayer = await prisma.communityPlayer.findFirst({
+        where: {
+          id: communityPlayerId,
+          status: PlayerHostStatuses.requested,
+          community: {
+            masterId: user.sub,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!communityPlayer)
+        return response
+          .status(404)
+          .json({ success: false, message: "Notification not found" });
+
+      await prisma.communityPlayer.update({
+        where: { id: communityPlayer.id },
+        data: { status: PlayerHostStatuses.rejected },
+      });
+
+      return response.status(200).json({
+        success: true,
+        message: "Community player request rejected",
+        notificationId,
+      });
+    }
 
     const invite = await prisma.communityAdminInvite.findFirst({
       where: {
