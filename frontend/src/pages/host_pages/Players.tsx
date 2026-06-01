@@ -1914,11 +1914,10 @@ export default function Players() {
                 }`}
               >
                 {nameSortDirection === "asc" ? (
-                  <AArrowUp size={18} />
+                  <AArrowUp size={22} />
                 ) : (
-                  <AArrowDown size={18} />
+                  <AArrowDown size={22} />
                 )}
-                {nameSortDirection === "asc" ? "Ascending" : "Descending"}
               </button>
 
               <button
