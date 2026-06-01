@@ -36,6 +36,23 @@ type HostAdminCandidate = {
   roleLabel: "Owner" | "Admin";
 };
 
+const preserveCurrentOrder = <Item extends { id: string }>(
+  currentItems: Item[],
+  nextItems: Item[],
+) => {
+  if (currentItems.length === 0) return nextItems;
+
+  const nextItemsById = new Map(nextItems.map((item) => [item.id, item]));
+  const orderedExistingItems = currentItems
+    .map((item) => nextItemsById.get(item.id))
+    .filter((item): item is Item => Boolean(item));
+  const newItems = nextItems.filter(
+    (item) => !currentItems.some((currentItem) => currentItem.id === item.id),
+  );
+
+  return [...orderedExistingItems, ...newItems];
+};
+
 export default function HostLayout() {
   const { communityId, hostId } = useParams();
   const { user } = useAuth();
@@ -204,7 +221,9 @@ export default function HostLayout() {
       setAcceptedPlayers(
         normalizeAcceptedPlayers(playersResponse.data.acceptedPlayers),
       );
-      setCourts(courtsResponse.data.courts);
+      setCourts((currentCourts) =>
+        preserveCurrentOrder(currentCourts, courtsResponse.data.courts),
+      );
       setQueues(queuesResponse.data.queues);
       setPaymentsData(
         normalizePaymentsData(
