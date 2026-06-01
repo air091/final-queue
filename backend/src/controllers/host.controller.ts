@@ -159,6 +159,103 @@ export const host = async (request: Request<Params>, response: Response) => {
   }
 };
 
+export const updateHost = async (
+  request: Request<{ communityId: string; hostId: string }>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const { hostName, sportName, location, startTime, endTime, maxPlayers } =
+      request.body;
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    if (sportName && !Object.values(Sports).includes(sportName as Sports))
+      return response
+        .status(400)
+        .json({ success: false, message: "Sport unavailable" });
+
+    if (
+      maxPlayers !== undefined &&
+      (typeof maxPlayers !== "number" || Number.isNaN(maxPlayers) || maxPlayers < 0)
+    ) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Max players must be 0 or more" });
+    }
+
+    const community = await prisma.community.findFirst({
+      where: communityMemberWhere(communityId, user.sub),
+      select: { id: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const existingHost = await prisma.host.findFirst({
+      where: {
+        id: hostId,
+        communityId: community.id,
+      },
+      select: { id: true, hostName: true },
+    });
+
+    if (!existingHost)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    const updatedHost = await prisma.host.update({
+      where: { id: existingHost.id },
+      data: {
+        hostName:
+          typeof hostName === "string" && hostName.trim()
+            ? hostName.trim()
+            : existingHost.hostName,
+        sport: sportName ?? undefined,
+        location: location ?? null,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
+        maxPlayers: maxPlayers ?? 0,
+      },
+      select: {
+        id: true,
+        hostName: true,
+        sport: true,
+        location: true,
+        startTime: true,
+        endTime: true,
+        maxPlayers: true,
+        status: true,
+        _count: { select: { players: true } },
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Host updated successfully",
+      data: updatedHost,
+    });
+  } catch (error) {
+    console.error("Error updating host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 type GetHostsParamsType = {
   communityId: string;
 };

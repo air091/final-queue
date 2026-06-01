@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   EllipsisVertical,
+  LoaderCircle,
   Plus,
   Search,
   SquarePen,
@@ -79,7 +80,7 @@ type PlayerFormState = {
 };
 
 type AddPlayerMode = "static" | "invite";
-type PointsFilterMode = "all" | "month" | "day";
+type PointsFilterMode = "all" | "month" | "day" | "weekday";
 
 type CommunityPlayerPointHistoryItem = {
   id: string;
@@ -139,9 +140,29 @@ const INITIAL_PLAYER_FORM: PlayerFormState = {
   skillLevel: "beginner",
 };
 
+const POINTS_WEEKDAY_OPTIONS = [
+  { value: "0", label: "Sunday" },
+  { value: "1", label: "Monday" },
+  { value: "2", label: "Tuesday" },
+  { value: "3", label: "Wednesday" },
+  { value: "4", label: "Thursday" },
+  { value: "5", label: "Friday" },
+  { value: "6", label: "Saturday" },
+] as const;
+
 const getLocalDateInputValue = (date = new Date()) => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
+};
+
+const getLocalDateTimeInputValue = (value: string | null) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
 };
 
 const getLocalMonthInputValue = (date = new Date()) =>
@@ -158,6 +179,7 @@ const getPointFilterDateRangeParams = (
   mode: PointsFilterMode,
   month: string,
   day: string,
+  weekday: string,
 ) => {
   if (mode === "day") {
     const parts = getDatePartsFromInput(day);
@@ -169,6 +191,23 @@ const getPointFilterDateRangeParams = (
 
     return {
       day,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+  }
+
+  if (mode === "weekday") {
+    const parts = getDatePartsFromInput(month);
+    if (!parts || parts.length !== 2) return {};
+
+    const [year, monthNumber] = parts;
+    const startDate = new Date(year, monthNumber - 1, 1);
+    const endDate = new Date(year, monthNumber, 1);
+
+    return {
+      month,
+      weekday,
+      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     };
@@ -246,6 +285,7 @@ export default function Community() {
     CommunityPlayerWinPointsRecord[]
   >([]);
   const [hostForm, setHostForm] = useState<HostFormState>(INITIAL_HOST_FORM);
+  const [editingHostId, setEditingHostId] = useState<string | null>(null);
   const [playerForm, setPlayerForm] =
     useState<PlayerFormState>(INITIAL_PLAYER_FORM);
   const [pointsFilterMode, setPointsFilterMode] =
@@ -255,6 +295,9 @@ export default function Community() {
   );
   const [pointsFilterDay, setPointsFilterDay] = useState(
     getLocalDateInputValue(),
+  );
+  const [pointsFilterWeekday, setPointsFilterWeekday] = useState(
+    String(new Date().getDay()),
   );
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
@@ -495,6 +538,23 @@ export default function Community() {
   const pointsFilterLabel = useMemo(() => {
     if (pointsFilterMode === "all") return "All time";
 
+    if (pointsFilterMode === "weekday") {
+      const filterDate = new Date(`${pointsFilterMonth}-01T00:00:00`);
+      const weekdayLabel =
+        POINTS_WEEKDAY_OPTIONS.find(
+          (option) => option.value === pointsFilterWeekday,
+        )?.label ?? "Selected day";
+
+      if (Number.isNaN(filterDate.getTime())) return `${weekdayLabel} sessions`;
+
+      const monthLabel = new Intl.DateTimeFormat(undefined, {
+        month: "long",
+        year: "numeric",
+      }).format(filterDate);
+
+      return `${weekdayLabel}s in ${monthLabel}`;
+    }
+
     const filterDate = new Date(
       pointsFilterMode === "month"
         ? `${pointsFilterMonth}-01T00:00:00`
@@ -508,7 +568,12 @@ export default function Community() {
         ? ({ month: "long", year: "numeric" } as const)
         : ({ dateStyle: "medium" } as const)),
     }).format(filterDate);
-  }, [pointsFilterDay, pointsFilterMode, pointsFilterMonth]);
+  }, [
+    pointsFilterDay,
+    pointsFilterMode,
+    pointsFilterMonth,
+    pointsFilterWeekday,
+  ]);
 
   const getCommunityAPI = async () => {
     if (!id) {
@@ -595,6 +660,7 @@ export default function Community() {
               pointsFilterMode,
               pointsFilterMonth,
               pointsFilterDay,
+              pointsFilterWeekday,
             ),
           },
         },
@@ -610,7 +676,13 @@ export default function Community() {
 
   useEffect(() => {
     void getCommunityPlayerWinPointsAPI();
-  }, [id, pointsFilterDay, pointsFilterMode, pointsFilterMonth]);
+  }, [
+    id,
+    pointsFilterDay,
+    pointsFilterMode,
+    pointsFilterMonth,
+    pointsFilterWeekday,
+  ]);
 
   const handleHostFormChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -624,6 +696,43 @@ export default function Community() {
   ) => {
     const { name, value } = event.target;
     setPlayerForm((currentForm) => ({ ...currentForm, [name]: value }));
+  };
+
+  const resetHostForm = () => {
+    setHostForm(INITIAL_HOST_FORM);
+    setEditingHostId(null);
+    setHostError(null);
+  };
+
+  const closeHostModal = () => {
+    if (isCreatingHost) return;
+
+    resetHostForm();
+    setActivePanel(null);
+  };
+
+  const openCreateHostModal = () => {
+    resetHostForm();
+    setActivePanel("host");
+  };
+
+  const openEditHost = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    host: HostsType,
+  ) => {
+    event.stopPropagation();
+
+    setHostForm({
+      hostName: host.hostName,
+      sportName: host.sport,
+      location: host.location ?? "",
+      startTime: getLocalDateTimeInputValue(host.startTime),
+      endTime: getLocalDateTimeInputValue(host.endTime),
+      maxPlayers: host.maxPlayers > 0 ? String(host.maxPlayers) : "",
+    });
+    setEditingHostId(host.id);
+    setHostError(null);
+    setActivePanel("host");
   };
 
   const handleCreateHost = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -655,25 +764,38 @@ export default function Community() {
         return;
       }
 
-      const response = await api.post(`/api/community/${id}/host`, {
+      const hostPayload = {
         hostName: cleanedHostName || undefined,
         sportName: hostForm.sportName,
-        location: cleanedLocation || undefined,
+        location: cleanedLocation || (editingHostId ? null : undefined),
         startTime,
         endTime,
         maxPlayers,
-      });
+      };
+      const response = editingHostId
+        ? await api.patch(
+            `/api/community/${id}/hosts/${editingHostId}`,
+            hostPayload,
+          )
+        : await api.post(`/api/community/${id}/host`, hostPayload);
 
-      const newHost = response.data.data as HostsType;
-      setCommunityHosts((currentHosts) => [...currentHosts, newHost]);
+      const savedHost = response.data.data as HostsType;
+      setCommunityHosts((currentHosts) =>
+        editingHostId
+          ? currentHosts.map((currentHost) =>
+              currentHost.id === savedHost.id ? savedHost : currentHost,
+            )
+          : [...currentHosts, savedHost],
+      );
       setHostForm(INITIAL_HOST_FORM);
+      setEditingHostId(null);
       setActivePanel(null);
     } catch (error) {
-      setHostError("Unable to create host.");
+      setHostError(editingHostId ? "Unable to update host." : "Unable to create host.");
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
-      else console.error("Create host api failed", error);
+      else console.error(editingHostId ? "Update host api failed" : "Create host api failed", error);
     } finally {
       setIsCreatingHost(false);
     }
@@ -1702,9 +1824,6 @@ export default function Community() {
             <header className="flex items-start justify-between gap-4">
               <div>
                 <h4 className="text-lg font-semibold text-text">Add players</h4>
-                <p className="mt-1 text-sm text-stone-500">
-                  Create static players or invite registered users.
-                </p>
               </div>
 
               <button
@@ -1748,7 +1867,7 @@ export default function Community() {
                 }`}
               >
                 <UserPlus size={15} />
-                Invite registered players
+                Invite users
               </button>
             </div>
 
@@ -1824,7 +1943,7 @@ export default function Community() {
                       onChange={(event) =>
                         setPlayerInviteSearchTerm(event.target.value)
                       }
-                      placeholder="Search registered players"
+                      placeholder="Search users"
                       disabled={isSendingPlayerInvites}
                       className="min-w-0 flex-1 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-400"
                     />
@@ -1834,11 +1953,11 @@ export default function Community() {
                 <div className="max-h-72 overflow-y-auto divide-y divide-orange-100 bg-white">
                   {isLoadingPlayerInviteCandidates ? (
                     <div className="px-4 py-8 text-center text-sm text-stone-500">
-                      Loading registered players...
+                      Loading users...
                     </div>
                   ) : playerInviteCandidates.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-stone-500">
-                      No registered players available to invite.
+                      No users available to invite.
                     </div>
                   ) : (
                     playerInviteCandidates.map((candidate) => {
@@ -2190,7 +2309,7 @@ export default function Community() {
                           colSpan={3}
                           className="px-4 py-8 text-center text-sm text-stone-500"
                         >
-                          No registered community players available.
+                          No community players available.
                         </td>
                       </tr>
                     ) : (
@@ -2509,11 +2628,7 @@ export default function Community() {
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() =>
-              setActivePanel((currentPanel) =>
-                currentPanel === "host" ? null : "host",
-              )
-            }
+            onClick={openCreateHostModal}
             aria-pressed={activePanel === "host"}
             className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition cursor-pointer ${
               activePanel === "host"
@@ -2606,10 +2721,51 @@ export default function Community() {
         </div>
 
         {activePanel === "host" ? (
-          <section className="rounded-3xl border border-gray-200 bg-white p-5">
+          <div
+            className="fixed inset-0 z-[900] flex items-center justify-center bg-black/40 px-4 py-6"
+            onClick={closeHostModal}
+          >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="host-form-title"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-y-auto rounded-3xl border border-gray-200 bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 id="host-form-title" className="text-lg font-semibold text-text">
+                  {editingHostId ? "Edit hosted match" : "Host a Match"}
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-x-2">
+                {editingHostId ? (
+                  <button
+                    type="button"
+                    onClick={resetHostForm}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-stone-600 transition hover:bg-gray-50 cursor-pointer"
+                  >
+                    Cancel edit
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={closeHostModal}
+                  disabled={isCreatingHost}
+                  className="rounded-full p-2 text-sm font-semibold text-stone-500 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  aria-label="Close host form"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+            </div>
+
             <form
               onSubmit={handleCreateHost}
-              className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+              className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-3"
             >
               <label>
                 <span className="mb-2 block text-sm font-medium text-text">
@@ -2708,7 +2864,13 @@ export default function Community() {
               }
             `}
               >
-                {isCreatingHost ? "Hosting..." : "Host"}
+                {isCreatingHost
+                  ? editingHostId
+                    ? "Saving..."
+                    : "Hosting..."
+                  : editingHostId
+                    ? "Save changes"
+                    : "Host"}
               </button>
             </form>
 
@@ -2718,6 +2880,7 @@ export default function Community() {
               </p>
             ) : null}
           </section>
+          </div>
         ) : null}
 
         {activePanel === "players" ? (
@@ -2732,7 +2895,7 @@ export default function Community() {
               className="flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl"
               onClick={(event) => event.stopPropagation()}
             >
-            <div className="flex shrink-0 flex-col gap-4 border-b border-gray-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-center shrink-0 flex-col gap-4 border-b border-gray-200 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h3
                   id="community-players-title"
@@ -2740,9 +2903,6 @@ export default function Community() {
                 >
                   Community Players
                 </h3>
-                <p className="text-sm text-gray-500">
-                  Build a reusable roster for every hosted match.
-                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -2793,18 +2953,22 @@ export default function Community() {
 
             <div className="flex shrink-0 flex-col gap-3 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-2">
-                {(["all", "month", "day"] as const).map((filterMode) => (
+                {(["all", "month", "day", "weekday"] as const).map((filterMode) => (
                   <button
                     key={filterMode}
                     type="button"
                     onClick={() => setPointsFilterMode(filterMode)}
-                    className={`rounded-xl px-3 py-2 text-xs font-semibold capitalize transition ${
+                    className={`rounded-xl px-3 py-2 text-xs font-semibold capitalize transition cursor-pointer ${
                       pointsFilterMode === filterMode
                         ? "bg-primary text-white"
                         : "cursor-pointer border border-gray-200 bg-white text-stone-600 hover:border-primary/40 hover:bg-orange-50"
-                    }`}
+                      }`}
                   >
-                    {filterMode === "day" ? "Daily" : filterMode}
+                    {filterMode === "day"
+                      ? "Daily"
+                      : filterMode === "weekday"
+                        ? "Month + day"
+                        : filterMode}
                   </button>
                 ))}
               </div>
@@ -2821,6 +2985,35 @@ export default function Community() {
                   />
                 ) : null}
 
+                {pointsFilterMode === "weekday" ? (
+                  <>
+                    <input
+                      type="month"
+                      value={pointsFilterMonth}
+                      onChange={(event) =>
+                        setPointsFilterMonth(event.target.value)
+                      }
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    />
+                    <select
+                      value={pointsFilterWeekday}
+                      onChange={(event) =>
+                        setPointsFilterWeekday(event.target.value)
+                      }
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    >
+                      {POINTS_WEEKDAY_OPTIONS.map((weekdayOption) => (
+                        <option
+                          key={weekdayOption.value}
+                          value={weekdayOption.value}
+                        >
+                          {weekdayOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : null}
+
                 {pointsFilterMode === "day" ? (
                   <input
                     type="date"
@@ -2833,6 +3026,16 @@ export default function Community() {
                 <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                   {pointsFilterLabel}
                 </span>
+
+                {isLoadingWinPoints ? (
+                  <span
+                    aria-live="polite"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                  >
+                    <LoaderCircle className="animate-spin" size={13} />
+                    Updating points...
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -2939,7 +3142,11 @@ export default function Community() {
                 </section>
               ) : null}
 
-              <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div
+                className={`grid content-start gap-3 transition-opacity sm:grid-cols-2 xl:grid-cols-3 ${
+                  isLoadingWinPoints ? "opacity-60" : "opacity-100"
+                }`}
+              >
                 {rosterCommunityPlayers.length > 0 ? (
                   rosterCommunityPlayers.map((communityPlayer) => {
                     const playerPoints =
@@ -3250,6 +3457,15 @@ export default function Community() {
                     </td>
 
                     <td className="px-5 py-4 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => openEditHost(event, communityHost)}
+                          className="w-fit rounded-full p-1 text-gray-500 transition hover:bg-orange-100 hover:text-primary cursor-pointer"
+                          aria-label={`Edit ${communityHost.hostName}`}
+                        >
+                          <SquarePen size={18} />
+                        </button>
                       <button
                         type="button"
                         onClick={(event) =>
@@ -3261,6 +3477,7 @@ export default function Community() {
                       >
                         <Trash size={20} />
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -3334,7 +3551,16 @@ export default function Community() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={(event) => openEditHost(event, communityHost)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-orange-200 px-3 py-2 text-xs font-medium text-primary transition hover:bg-orange-50 cursor-pointer"
+                    aria-label={`Edit ${communityHost.hostName}`}
+                  >
+                    <SquarePen size={16} />
+                    Edit
+                  </button>
                   <button
                     type="button"
                     onClick={(event) =>

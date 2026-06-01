@@ -625,6 +625,7 @@ export default function Players() {
     historyLoadingPlayerId,
     openPlayerHistory,
     playerSearchTerm,
+    pauseHostLiveSync,
   } = useHostData();
   const [communityPlayers, setCommunityPlayers] = useState<
     CommunityPlayerRecord[]
@@ -1123,6 +1124,7 @@ export default function Players() {
     );
     if (!shouldRemove) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
@@ -1181,6 +1183,8 @@ export default function Players() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
@@ -1193,6 +1197,7 @@ export default function Players() {
     );
     if (!shouldDelete) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
@@ -1273,6 +1278,8 @@ export default function Players() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 

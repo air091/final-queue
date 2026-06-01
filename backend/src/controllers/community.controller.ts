@@ -349,6 +349,7 @@ type CommunityPlayerParams = {
 
 const MONTH_FILTER_PATTERN = /^\d{4}-\d{2}$/;
 const DAY_FILTER_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const WEEKDAY_FILTER_PATTERN = /^[0-6]$/;
 const WIN_POINTS = 1;
 const PAID_PAYMENT_POINTS = 3;
 
@@ -370,6 +371,12 @@ const getIsoDateRange = (startDate: string, endDate: string) => {
     lt: end,
   };
 };
+
+const getDateWithTimezoneOffset = (date: Date, timezoneOffsetMinutes: number) =>
+  new Date(date.getTime() - timezoneOffsetMinutes * 60000);
+
+const getDateWeekday = (date: Date, timezoneOffsetMinutes: number) =>
+  getDateWithTimezoneOffset(date, timezoneOffsetMinutes).getUTCDay();
 
 const getMonthDateRange = (month: string) => {
   if (!MONTH_FILTER_PATTERN.test(month)) return null;
@@ -544,12 +551,21 @@ export const getCommunityPlayerWinPoints = async (
     const filter = getStringQueryValue(request.query.filter) ?? "all";
     const month = getStringQueryValue(request.query.month);
     const day = getStringQueryValue(request.query.day);
+    const weekday = getStringQueryValue(request.query.weekday);
+    const timezoneOffsetMinutes = Number(
+      getStringQueryValue(request.query.timezoneOffsetMinutes) ?? 0,
+    );
     const startDate = getStringQueryValue(request.query.startDate);
     const endDate = getStringQueryValue(request.query.endDate);
     const filterMode =
-      filter === "month" || filter === "day" || filter === "all"
+      filter === "month" ||
+      filter === "day" ||
+      filter === "weekday" ||
+      filter === "all"
         ? filter
         : "all";
+    const weekdayNumber =
+      weekday && WEEKDAY_FILTER_PATTERN.test(weekday) ? Number(weekday) : null;
 
     if (!user)
       return response
@@ -592,6 +608,17 @@ export const getCommunityPlayerWinPoints = async (
         .json({ success: false, message: "Invalid day filter" });
     }
 
+    if (filterMode === "weekday" && (!pointDateRange || weekdayNumber === null)) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid weekday filter" });
+    }
+
+    const safeTimezoneOffsetMinutes = Number.isFinite(timezoneOffsetMinutes)
+      ? timezoneOffsetMinutes
+      : 0;
+    const isWeekdayFilterActive =
+      filterMode === "weekday" && weekdayNumber !== null;
     const hostDateFilter = pointDateRange
       ? {
           OR: [
@@ -630,9 +657,12 @@ export const getCommunityPlayerWinPoints = async (
           accountId: { not: null },
           match: {
             status: MatchStatus.finished,
-            ...(pointDateRange ? { endedAt: pointDateRange } : {}),
+            ...(pointDateRange && !isWeekdayFilterActive
+              ? { endedAt: pointDateRange }
+              : {}),
             host: {
               communityId: community.id,
+              ...(isWeekdayFilterActive ? hostDateFilter : {}),
             },
           },
         },
@@ -661,6 +691,7 @@ export const getCommunityPlayerWinPoints = async (
                   id: true,
                   hostName: true,
                   startTime: true,
+                  createdAt: true,
                 },
               },
             },
@@ -710,7 +741,30 @@ export const getCommunityPlayerWinPoints = async (
       }),
     ]);
 
-    const pointHistoryByAccountId = winParticipants.reduce(
+    const filteredWinParticipants = isWeekdayFilterActive
+      ? winParticipants.filter((participant) => {
+          const sessionDate =
+            participant.match.host.startTime ?? participant.match.host.createdAt;
+
+          return (
+            getDateWeekday(sessionDate, safeTimezoneOffsetMinutes) ===
+            weekdayNumber
+          );
+        })
+      : winParticipants;
+    const filteredPaidHostedPlayers = isWeekdayFilterActive
+      ? paidHostedPlayers.filter((hostedPlayer) => {
+          const sessionDate =
+            hostedPlayer.host.startTime ?? hostedPlayer.host.createdAt;
+
+          return (
+            getDateWeekday(sessionDate, safeTimezoneOffsetMinutes) ===
+            weekdayNumber
+          );
+        })
+      : paidHostedPlayers;
+
+    const pointHistoryByAccountId = filteredWinParticipants.reduce(
       (historyByAccountId, participant) => {
         if (!participant.accountId) return historyByAccountId;
 
@@ -757,12 +811,13 @@ export const getCommunityPlayerWinPoints = async (
               id: string;
               hostName: string;
               startTime: Date | null;
+              createdAt: Date;
             };
           };
         }>>(),
     );
 
-    paidHostedPlayers.forEach((hostedPlayer) => {
+    filteredPaidHostedPlayers.forEach((hostedPlayer) => {
       const payment = hostedPlayer.payments[0] ?? null;
       const pointDate =
         hostedPlayer.host.startTime ??
@@ -788,6 +843,7 @@ export const getCommunityPlayerWinPoints = async (
             id: hostedPlayer.host.id,
             hostName: hostedPlayer.host.hostName,
             startTime: hostedPlayer.host.startTime,
+            createdAt: hostedPlayer.host.createdAt,
           },
         },
       });
@@ -799,7 +855,7 @@ export const getCommunityPlayerWinPoints = async (
       pointHistoryByAccountId.set(hostedPlayer.playerId, currentHistory);
     });
 
-    const winsByAccountId = winParticipants.reduce(
+    const winsByAccountId = filteredWinParticipants.reduce(
       (wins, participant) => {
         if (!participant.accountId) return wins;
 
@@ -812,7 +868,7 @@ export const getCommunityPlayerWinPoints = async (
       new Map<string, number>(),
     );
 
-    const paidPointsByAccountId = paidHostedPlayers.reduce(
+    const paidPointsByAccountId = filteredPaidHostedPlayers.reduce(
       (pointsByAccountId, hostedPlayer) => {
         pointsByAccountId.set(
           hostedPlayer.playerId,
@@ -860,8 +916,10 @@ export const getCommunityPlayerWinPoints = async (
       message: "Community player win points retrieved successfully",
       filter: {
         mode: filterMode,
-        month: filterMode === "month" ? month : null,
+        month:
+          filterMode === "month" || filterMode === "weekday" ? month : null,
         day: filterMode === "day" ? day : null,
+        weekday: filterMode === "weekday" ? weekday : null,
       },
       players,
     });

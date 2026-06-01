@@ -38,6 +38,7 @@ export default function PlayerSettingsDropdown({
     setPaymentsData,
     historyLoadingPlayerId,
     openPlayerHistory,
+    pauseHostLiveSync,
   } = useHostData();
   const isPlayerInGame = player.matchStatus === "playing";
   const isHistoryLoading = historyLoadingPlayerId === player.id;
@@ -111,6 +112,7 @@ export default function PlayerSettingsDropdown({
     );
     if (!shouldRemove) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousPlayersInHost = playersInHost;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
@@ -162,6 +164,8 @@ export default function PlayerSettingsDropdown({
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
