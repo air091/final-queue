@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import LoadingState from "../../components/LoadingState";
 import {
+  ArrowDown,
+  ArrowUp,
   EllipsisVertical,
   Plus,
   Search,
@@ -112,6 +114,7 @@ type CommunityPlayerWinPointsRecord = {
 
 type CommunityPanel = "host" | "players" | null;
 type AddAdminMode = "asPlayer" | "newAdmin";
+type HostScheduleSortDirection = "asc" | "desc";
 type CommunityPlayerEditForm = {
   username: string;
   skillLevel: SkillLevelType;
@@ -221,12 +224,21 @@ const formatHostDateTime = (value: string | null) => {
   }).format(date);
 };
 
+const getHostScheduleTime = (host: HostsType) => {
+  if (!host.startTime) return null;
+
+  const time = new Date(host.startTime).getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
 export default function Community() {
   const { id } = useParams();
   const { refetchCommunities } = useCommunities();
   const { user } = useAuth();
   const [community, setCommunity] = useState<CommunityType | null>(null);
   const [communityHosts, setCommunityHosts] = useState<HostsType[]>([]);
+  const [hostScheduleSortDirection, setHostScheduleSortDirection] =
+    useState<HostScheduleSortDirection>("asc");
   const [communityPlayers, setCommunityPlayers] = useState<
     CommunityPlayerRecord[]
   >([]);
@@ -363,6 +375,30 @@ export default function Community() {
         return Math.max(highestPoints, playerPoints);
       }, 0),
     [communityPlayers, winPointsByCommunityPlayerId],
+  );
+
+  const sortedCommunityHosts = useMemo(
+    () =>
+      [...communityHosts].sort((firstHost, secondHost) => {
+        const firstTime = getHostScheduleTime(firstHost);
+        const secondTime = getHostScheduleTime(secondHost);
+
+        if (firstTime === null && secondTime === null) {
+          return firstHost.hostName.localeCompare(secondHost.hostName);
+        }
+
+        if (firstTime === null) return 1;
+        if (secondTime === null) return -1;
+
+        const directionMultiplier =
+          hostScheduleSortDirection === "asc" ? 1 : -1;
+        const timeResult = (firstTime - secondTime) * directionMultiplier;
+
+        if (timeResult !== 0) return timeResult;
+
+        return firstHost.hostName.localeCompare(secondHost.hostName);
+      }),
+    [communityHosts, hostScheduleSortDirection],
   );
 
   const isCommunityOwner = Boolean(
@@ -3122,7 +3158,27 @@ export default function Community() {
                     Location
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
-                    Schedule
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setHostScheduleSortDirection((currentDirection) =>
+                          currentDirection === "asc" ? "desc" : "asc",
+                        )
+                      }
+                      className="w-full flex items-center justify-between gap-1.5 rounded-md text-xs font-semibold uppercase text-gray-500 transition hover:text-text focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                      aria-label={`Sort schedule ${
+                        hostScheduleSortDirection === "asc"
+                          ? "descending"
+                          : "ascending"
+                      }`}
+                    >
+                      <span>Schedule</span>
+                      {hostScheduleSortDirection === "asc" ? (
+                        <ArrowUp size={14} aria-hidden="true" />
+                      ) : (
+                        <ArrowDown size={14} aria-hidden="true" />
+                      )}
+                    </button>
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                     Players
@@ -3140,7 +3196,7 @@ export default function Community() {
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {communityHosts.map((communityHost) => (
+                {sortedCommunityHosts.map((communityHost) => (
                   <tr
                     key={communityHost.id}
                     onClick={() =>
@@ -3214,7 +3270,7 @@ export default function Community() {
 
           {/* MOBILE / TABLET CARDS (<1024px) */}
           <div className="grid gap-3 p-4 lg:hidden">
-            {communityHosts.map((communityHost) => (
+            {sortedCommunityHosts.map((communityHost) => (
               <div
                 key={communityHost.id}
                 onClick={() =>
