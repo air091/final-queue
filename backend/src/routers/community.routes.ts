@@ -11,6 +11,7 @@ import {
   getCommunityPlayers,
   getCommunityPlayerWinPoints,
   includeCommunityAdminAsPlayer,
+  removeCommunityAdminRole,
   removeCommunityAdminAsPlayer,
   updateCommunity,
   updateCommunityPlayer,
@@ -82,6 +83,11 @@ router.post(
   "/:communityId/admin-invites",
   authenticate,
   createCommunityAdminInvite,
+);
+router.delete(
+  "/:communityId/admins/:accountId",
+  authenticate,
+  removeCommunityAdminRole,
 );
 router.post("/:communityId/players/static", authenticate, createCommunityStaticPlayer);
 router.post(

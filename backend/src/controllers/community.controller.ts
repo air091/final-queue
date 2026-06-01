@@ -286,6 +286,33 @@ export const getCommunityById = async (
             username: true,
           },
         },
+        admins: {
+          orderBy: {
+            account: {
+              username: "asc",
+            },
+          },
+          select: {
+            id: true,
+            account: {
+              select: {
+                id: true,
+                profileUrl: true,
+                username: true,
+              },
+            },
+          },
+        },
+        adminInvites: {
+          where: {
+            status: CommunityAdminInviteStatus.pending,
+          },
+          select: {
+            id: true,
+            inviteeId: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -413,6 +440,15 @@ type AddCommunityPlayersToHostBody = {
 
 type CreateCommunityAdminInviteBody = {
   accountId?: string;
+};
+
+type CommunityAdminPlayerBody = {
+  accountId?: string;
+};
+
+type CommunityAdminParams = {
+  communityId: string;
+  accountId: string;
 };
 
 type UpdateCommunityPlayerBody = {
@@ -831,11 +867,12 @@ export const getCommunityPlayerWinPoints = async (
 };
 
 export const includeCommunityAdminAsPlayer = async (
-  request: Request<CommunityPlayerParams>,
+  request: Request<CommunityPlayerParams, unknown, CommunityAdminPlayerBody>,
   response: Response,
 ) => {
   try {
     const { communityId } = request.params;
+    const targetAccountId = request.body.accountId?.trim() || request.user?.sub;
     const user = request.user;
 
     if (!user)
@@ -850,7 +887,15 @@ export const includeCommunityAdminAsPlayer = async (
 
     const community = await prisma.community.findFirst({
       where: communityMemberWhere(communityId, user.sub),
-      select: { id: true },
+      select: {
+        id: true,
+        masterId: true,
+        admins: {
+          select: {
+            accountId: true,
+          },
+        },
+      },
     });
 
     if (!community)
@@ -858,11 +903,35 @@ export const includeCommunityAdminAsPlayer = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    if (!targetAccountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const isCommunityOwner = community.masterId === user.sub;
+    const isTargetCurrentUser = targetAccountId === user.sub;
+
+    if (!isCommunityOwner && !isTargetCurrentUser)
+      return response.status(403).json({
+        success: false,
+        message: "Only the community owner can update other admins",
+      });
+
+    const isTargetCommunityAdmin =
+      targetAccountId === community.masterId ||
+      community.admins.some((admin) => admin.accountId === targetAccountId);
+
+    if (!isTargetCommunityAdmin)
+      return response.status(400).json({
+        success: false,
+        message: "Only community admins can be added as players",
+      });
+
     const communityPlayer = await prisma.communityPlayer.upsert({
       where: {
         communityId_accountId: {
           communityId: community.id,
-          accountId: user.sub,
+          accountId: targetAccountId,
         },
       },
       update: {
@@ -870,7 +939,7 @@ export const includeCommunityAdminAsPlayer = async (
       },
       create: {
         communityId: community.id,
-        accountId: user.sub,
+        accountId: targetAccountId,
         status: PlayerHostStatuses.accepted,
       },
       select: {
@@ -910,11 +979,12 @@ export const includeCommunityAdminAsPlayer = async (
 };
 
 export const removeCommunityAdminAsPlayer = async (
-  request: Request<CommunityPlayerParams>,
+  request: Request<CommunityPlayerParams, unknown, CommunityAdminPlayerBody>,
   response: Response,
 ) => {
   try {
     const { communityId } = request.params;
+    const targetAccountId = request.body.accountId?.trim() || request.user?.sub;
     const user = request.user;
 
     if (!user)
@@ -928,8 +998,16 @@ export const removeCommunityAdminAsPlayer = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
-      select: { id: true },
+      where: communityMemberWhere(communityId, user.sub),
+      select: {
+        id: true,
+        masterId: true,
+        admins: {
+          select: {
+            accountId: true,
+          },
+        },
+      },
     });
 
     if (!community)
@@ -937,11 +1015,35 @@ export const removeCommunityAdminAsPlayer = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    if (!targetAccountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const isCommunityOwner = community.masterId === user.sub;
+    const isTargetCurrentUser = targetAccountId === user.sub;
+
+    if (!isCommunityOwner && !isTargetCurrentUser)
+      return response.status(403).json({
+        success: false,
+        message: "Only the community owner can update other admins",
+      });
+
+    const isTargetCommunityAdmin =
+      targetAccountId === community.masterId ||
+      community.admins.some((admin) => admin.accountId === targetAccountId);
+
+    if (!isTargetCommunityAdmin)
+      return response.status(400).json({
+        success: false,
+        message: "Only community admins can be removed as players",
+      });
+
     const communityPlayer = await prisma.communityPlayer.findUnique({
       where: {
         communityId_accountId: {
           communityId: community.id,
-          accountId: user.sub,
+          accountId: targetAccountId,
         },
       },
       select: {
@@ -966,6 +1068,115 @@ export const removeCommunityAdminAsPlayer = async (
     });
   } catch (error) {
     console.error("Error removing admin as community player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const removeCommunityAdminRole = async (
+  request: Request<CommunityAdminParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, accountId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !accountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: {
+        id: true,
+        masterId: true,
+      },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    if (accountId === community.masterId)
+      return response.status(400).json({
+        success: false,
+        message: "The community owner cannot be removed as admin",
+      });
+
+    const communityAdmin = await prisma.communityAdmin.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!communityAdmin)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community admin not found" });
+
+    const [, communityPlayer] = await prisma.$transaction([
+      prisma.communityAdmin.delete({
+        where: { id: communityAdmin.id },
+      }),
+      prisma.communityPlayer.upsert({
+        where: {
+          communityId_accountId: {
+            communityId: community.id,
+            accountId,
+          },
+        },
+        update: {
+          status: PlayerHostStatuses.accepted,
+        },
+        create: {
+          communityId: community.id,
+          accountId,
+          status: PlayerHostStatuses.accepted,
+        },
+        select: {
+          id: true,
+          status: true,
+          addedAt: true,
+          account: {
+            select: {
+              id: true,
+              username: true,
+              profileUrl: true,
+              role: true,
+              sports: {
+                where: { sport: Sports.badminton },
+                select: {
+                  sport: true,
+                  skillLevel: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Admin role removed",
+      accountId,
+      player: mapCommunityPlayerRecord(communityPlayer),
+    });
+  } catch (error) {
+    console.error("Error removing community admin role:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
