@@ -40,8 +40,13 @@ const toAmount = (value: string) => {
 
 export default function Payments() {
   const { communityId, hostId } = useParams();
-  const { paymentsData, setPaymentsData, refreshHostData, playerSearchTerm } =
-    useHostData();
+  const {
+    paymentsData,
+    setPaymentsData,
+    refreshHostData,
+    pauseHostLiveSync,
+    playerSearchTerm,
+  } = useHostData();
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>({
     entranceFee: "0",
     perMatchFee: "0",
@@ -60,12 +65,20 @@ export default function Payments() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setPricingDraft({
-      entranceFee: String(paymentsData.pricing.entranceFee),
-      perMatchFee: String(paymentsData.pricing.perMatchFee),
-      currency: paymentsData.pricing.currency,
-    });
-  }, [paymentsData]);
+    const timeoutId = window.setTimeout(() => {
+      setPricingDraft({
+        entranceFee: String(paymentsData.pricing.entranceFee),
+        perMatchFee: String(paymentsData.pricing.perMatchFee),
+        currency: paymentsData.pricing.currency,
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    paymentsData.pricing.currency,
+    paymentsData.pricing.entranceFee,
+    paymentsData.pricing.perMatchFee,
+  ]);
 
   const updatePaymentsData = (
     updater: (current: HostPaymentsData) => HostPaymentsData,
@@ -92,6 +105,7 @@ export default function Payments() {
   const handleSavePricing = async () => {
     if (!communityId || !hostId) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     setIsSavingPricing(true);
     setError(null);
     const previousPaymentsData = paymentsData;
@@ -160,6 +174,7 @@ export default function Payments() {
       await refreshHostData();
     } finally {
       setIsSavingPricing(false);
+      resumeHostLiveSync();
     }
   };
 
@@ -174,6 +189,7 @@ export default function Payments() {
     );
     if (!currentPlayer) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     setSavingPlayerId(hostedPlayerId);
     setError(null);
     const previousPaymentsData = paymentsData;
@@ -231,6 +247,7 @@ export default function Payments() {
       await refreshHostData();
     } finally {
       setSavingPlayerId(null);
+      resumeHostLiveSync();
     }
   };
 
