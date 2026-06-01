@@ -34,20 +34,8 @@ type CommunityAdminType = {
   account: MasterType;
 };
 
-type CommunityAdminInviteType = {
-  id: string;
-  inviteeId: string;
-  status: "pending" | "accepted" | "rejected";
-};
-
 type AdminCandidate = MasterType & {
   roleLabel: "Owner" | "Admin";
-};
-
-type FriendItem = {
-  friendshipId: string;
-  friendsSince: string;
-  friend: MasterType;
 };
 
 type CommunityType = {
@@ -57,7 +45,6 @@ type CommunityType = {
   description: string;
   master: MasterType;
   admins: CommunityAdminType[];
-  adminInvites: CommunityAdminInviteType[];
 };
 
 type HostsType = {
@@ -269,15 +256,9 @@ export default function Community() {
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
   const [addAdminMode, setAddAdminMode] = useState<AddAdminMode>("asPlayer");
-  const [adminInviteFriends, setAdminInviteFriends] = useState<FriendItem[]>(
-    [],
-  );
-  const [selectedNewAdminFriendId, setSelectedNewAdminFriendId] = useState<
+  const [updatingNewAdminAccountId, setUpdatingNewAdminAccountId] = useState<
     string | null
   >(null);
-  const [isLoadingAdminInviteFriends, setIsLoadingAdminInviteFriends] =
-    useState(false);
-  const [isSendingAdminInvite, setIsSendingAdminInvite] = useState(false);
   const [addAdminSuccess, setAddAdminSuccess] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
@@ -384,21 +365,21 @@ export default function Community() {
       ]),
     [community],
   );
-  const pendingAdminInviteeIds = useMemo(
+  const registeredCommunityAdminCandidates = useMemo(
     () =>
-      new Set(
-        community?.adminInvites
-          .filter((invite) => invite.status === "pending")
-          .map((invite) => invite.inviteeId) ?? [],
-      ),
-    [community],
-  );
-  const adminInviteCandidates = useMemo(
-    () =>
-      adminInviteFriends.filter(
-        (friendship) => !adminAccountIds.has(friendship.friend.id),
-      ),
-    [adminAccountIds, adminInviteFriends],
+      communityPlayers
+        .filter(
+          (communityPlayer) =>
+            communityPlayer.status === "accepted" &&
+            Boolean(communityPlayer.player.id) &&
+            !communityPlayer.player.isStatic,
+        )
+        .sort((firstPlayer, secondPlayer) =>
+          firstPlayer.player.username.localeCompare(
+            secondPlayer.player.username,
+          ),
+        ),
+    [communityPlayers],
   );
   const selectedPointsRecord = selectedPointsHistoryPlayer
     ? winPointsByCommunityPlayerId.get(selectedPointsHistoryPlayer.id)
@@ -646,82 +627,94 @@ export default function Community() {
   };
 
   const closeAddAdminModal = () => {
-    if (togglingAdminPlayerId || isSendingAdminInvite) return;
+    if (togglingAdminPlayerId || updatingNewAdminAccountId) return;
     setIsAddAdminModalOpen(false);
     setPlayerError(null);
     setAddAdminSuccess(null);
-    setSelectedNewAdminFriendId(null);
   };
 
-  const loadAdminInviteFriends = async () => {
-    setIsLoadingAdminInviteFriends(true);
-    setPlayerError(null);
-
-    try {
-      const response = await api.get("/api/friends");
-      setAdminInviteFriends(response.data.friends as FriendItem[]);
-    } catch (error) {
-      setPlayerError("Unable to load friends.");
-
-      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
-      else console.error("Load friends api failed", error);
-    } finally {
-      setIsLoadingAdminInviteFriends(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isCommunityOwner && isAddAdminModalOpen && addAdminMode === "newAdmin") {
-      const timeoutId = window.setTimeout(() => {
-        void loadAdminInviteFriends();
-      }, 0);
-
-      return () => window.clearTimeout(timeoutId);
-    }
-  }, [isCommunityOwner, isAddAdminModalOpen, addAdminMode]);
-
-  const handleSendAdminInvite = async () => {
+  const handleToggleCommunityPlayerAdmin = async (
+    communityPlayer: CommunityPlayerRecord,
+    shouldBeAdmin: boolean,
+  ) => {
     if (!isCommunityOwner) {
       setPlayerError("Only the community owner can add new admins.");
       return;
     }
 
-    if (!id || isSendingAdminInvite) return;
+    const accountId = communityPlayer.player.id;
 
-    if (!selectedNewAdminFriendId) {
-      setPlayerError("Select a friend first.");
+    if (!id || !community || !accountId || updatingNewAdminAccountId) return;
+
+    if (accountId === community.master.id) {
+      setPlayerError("The community owner is already an admin.");
       return;
     }
 
-    setIsSendingAdminInvite(true);
+    setUpdatingNewAdminAccountId(accountId);
     setPlayerError(null);
     setAddAdminSuccess(null);
 
     try {
-      await api.post(`/api/community/${id}/admin-invites`, {
-        accountId: selectedNewAdminFriendId,
-      });
-      const invitedFriend = adminInviteFriends.find(
-        (friendship) => friendship.friend.id === selectedNewAdminFriendId,
-      );
+      if (shouldBeAdmin) {
+        const response = await api.post(`/api/community/${id}/admins`, {
+          accountId,
+        });
+        const admin = response.data.admin as CommunityAdminType;
+
+        setCommunity((currentCommunity) =>
+          currentCommunity
+            ? {
+                ...currentCommunity,
+                admins: [
+                  ...currentCommunity.admins.filter(
+                    (currentAdmin) =>
+                      currentAdmin.account.id !== admin.account.id,
+                  ),
+                  admin,
+                ].sort((firstAdmin, secondAdmin) =>
+                  firstAdmin.account.username.localeCompare(
+                    secondAdmin.account.username,
+                  ),
+                ),
+              }
+            : currentCommunity,
+        );
+      } else {
+        const response = await api.delete(
+          `/api/community/${id}/admins/${accountId}`,
+        );
+        const player = response.data.player as CommunityPlayerRecord;
+
+        setCommunity((currentCommunity) =>
+          currentCommunity
+            ? {
+                ...currentCommunity,
+                admins: currentCommunity.admins.filter(
+                  (currentAdmin) => currentAdmin.account.id !== accountId,
+                ),
+              }
+            : currentCommunity,
+        );
+        updateCommunityPlayerInState(player);
+      }
+
       setAddAdminSuccess(
-        invitedFriend
-          ? `Admin invite sent to ${invitedFriend.friend.username}.`
-          : "Admin invite sent.",
+        shouldBeAdmin
+          ? `${communityPlayer.player.username} is now an admin.`
+          : `${communityPlayer.player.username} is now a player.`,
       );
-      setSelectedNewAdminFriendId(null);
-      void getCommunityAPI();
     } catch (error) {
       setPlayerError(
         axios.isAxiosError(error)
-          ? (error.response?.data?.message ?? "Unable to send admin invite.")
-          : "Unable to send admin invite.",
+          ? (error.response?.data?.message ?? "Unable to update admin status.")
+          : "Unable to update admin status.",
       );
 
       if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
-      else console.error("Send admin invite api failed", error);
+      else console.error("Update community admin api failed", error);
     } finally {
-      setIsSendingAdminInvite(false);
+      setUpdatingNewAdminAccountId(null);
     }
   };
 
@@ -1428,7 +1421,9 @@ export default function Community() {
               <button
                 type="button"
                 onClick={closeAddAdminModal}
-                disabled={Boolean(togglingAdminPlayerId)}
+                disabled={Boolean(
+                  togglingAdminPlayerId || updatingNewAdminAccountId,
+                )}
                 className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Close modal"
               >
@@ -1583,57 +1578,60 @@ export default function Community() {
                         Select
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
-                        Friend
+                        User
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
-                        Invite
+                        Status
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-orange-100 bg-white">
-                    {isLoadingAdminInviteFriends ? (
+                    {isCommunityPlayersLoading ? (
                       <tr>
                         <td
                           colSpan={3}
                           className="px-4 py-8 text-center text-sm text-stone-500"
                         >
-                          Loading friends...
+                          Loading players...
                         </td>
                       </tr>
-                    ) : adminInviteCandidates.length === 0 ? (
+                    ) : registeredCommunityAdminCandidates.length === 0 ? (
                       <tr>
                         <td
                           colSpan={3}
                           className="px-4 py-8 text-center text-sm text-stone-500"
                         >
-                          No friends available to invite.
+                          No registered community players available.
                         </td>
                       </tr>
                     ) : (
-                      adminInviteCandidates.map((friendship) => {
-                        const friend = friendship.friend;
-                        const isSelected =
-                          selectedNewAdminFriendId === friend.id;
-                        const hasPendingInvite = pendingAdminInviteeIds.has(
-                          friend.id,
-                        );
+                      registeredCommunityAdminCandidates.map(
+                        (communityPlayer) => {
+                          const accountId = communityPlayer.player.id;
+                          if (!accountId) return null;
+
+                          const isOwner = accountId === community?.master.id;
+                          const isAdmin = adminAccountIds.has(accountId);
+                          const isUpdating =
+                            updatingNewAdminAccountId === accountId;
 
                         return (
                           <tr
-                            key={friendship.friendshipId}
+                            key={communityPlayer.id}
                             className="transition hover:bg-orange-50/40"
                           >
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
-                                checked={isSelected}
+                                checked={isAdmin}
                                 onChange={(event) =>
-                                  setSelectedNewAdminFriendId(
-                                    event.target.checked ? friend.id : null,
+                                  void handleToggleCommunityPlayerAdmin(
+                                    communityPlayer,
+                                    event.target.checked,
                                   )
                                 }
                                 disabled={
-                                  isSendingAdminInvite || hasPendingInvite
+                                  Boolean(updatingNewAdminAccountId) || isOwner
                                 }
                                 className="h-4 w-4 accent-primary"
                               />
@@ -1641,31 +1639,38 @@ export default function Community() {
                             <td className="px-4 py-3">
                               <div className="flex min-w-0 items-center gap-3">
                                 <img
-                                  src={friend.profileUrl}
-                                  alt={friend.username}
+                                  src={communityPlayer.player.profileUrl}
+                                  alt={communityPlayer.player.username}
                                   className="h-10 w-10 shrink-0 rounded-full object-cover"
                                 />
                                 <p className="truncate font-semibold text-text">
-                                  {friend.username}
+                                  {communityPlayer.player.username}
                                 </p>
                               </div>
                             </td>
                             <td className="px-4 py-3">
                               <span
                                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                  hasPendingInvite
-                                    ? "bg-yellow-50 text-yellow-700"
-                                    : "bg-stone-100 text-stone-600"
+                                  isOwner
+                                    ? "bg-orange-50 text-primary"
+                                    : isAdmin
+                                      ? "bg-green-50 text-green-700"
+                                      : "bg-stone-100 text-stone-600"
                                 }`}
                               >
-                                {hasPendingInvite
-                                  ? "Pending acceptance"
-                                  : "Ready to invite"}
+                                {isUpdating
+                                  ? "Saving..."
+                                  : isOwner
+                                    ? "Owner"
+                                    : isAdmin
+                                      ? "Admin"
+                                      : "Player"}
                               </span>
                             </td>
                           </tr>
                         );
-                      })
+                        },
+                      )
                     )}
                   </tbody>
                 </table>
@@ -1686,23 +1691,10 @@ export default function Community() {
                   <button
                     type="button"
                     onClick={closeAddAdminModal}
-                    disabled={isSendingAdminInvite}
+                    disabled={Boolean(updatingNewAdminAccountId)}
                     className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleSendAdminInvite()}
-                    disabled={
-                      isSendingAdminInvite ||
-                      isLoadingAdminInviteFriends ||
-                      !selectedNewAdminFriendId ||
-                      pendingAdminInviteeIds.has(selectedNewAdminFriendId)
-                    }
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
-                  >
-                    {isSendingAdminInvite ? "Sending..." : "Send admin invite"}
+                    Done
                   </button>
                 </div>
               </div>

@@ -1184,6 +1184,129 @@ export const removeCommunityAdminRole = async (
   }
 };
 
+export const createCommunityAdminRole = async (
+  request: Request<CommunityPlayerParams, unknown, CommunityAdminPlayerBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const accountId = request.body.accountId?.trim();
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !accountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: { id: communityId, masterId: user.sub },
+      select: {
+        id: true,
+        masterId: true,
+      },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    if (accountId === community.masterId)
+      return response.status(409).json({
+        success: false,
+        message: "The community owner is already an admin",
+      });
+
+    const communityPlayer = await prisma.communityPlayer.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId: community.id,
+          accountId,
+        },
+      },
+      select: {
+        status: true,
+        account: {
+          select: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!communityPlayer)
+      return response.status(400).json({
+        success: false,
+        message: "Only registered community players can become admins",
+      });
+
+    if (communityPlayer.status !== PlayerHostStatuses.accepted)
+      return response.status(400).json({
+        success: false,
+        message: "Only accepted community players can become admins",
+      });
+
+    if (communityPlayer.account.role === UserRoles.static)
+      return response.status(400).json({
+        success: false,
+        message: "Static players cannot become admins",
+      });
+
+    const [admin] = await prisma.$transaction([
+      prisma.communityAdmin.upsert({
+        where: {
+          communityId_accountId: {
+            communityId: community.id,
+            accountId,
+          },
+        },
+        update: {},
+        create: {
+          communityId: community.id,
+          accountId,
+        },
+        select: {
+          id: true,
+          account: {
+            select: {
+              id: true,
+              profileUrl: true,
+              username: true,
+            },
+          },
+        },
+      }),
+      prisma.communityAdminInvite.updateMany({
+        where: {
+          communityId: community.id,
+          inviteeId: accountId,
+          status: CommunityAdminInviteStatus.pending,
+        },
+        data: {
+          status: CommunityAdminInviteStatus.accepted,
+        },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "Admin role added",
+      admin,
+    });
+  } catch (error) {
+    console.error("Error creating community admin role:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const createCommunityAdminInvite = async (
   request: Request<CommunityPlayerParams, unknown, CreateCommunityAdminInviteBody>,
   response: Response,
