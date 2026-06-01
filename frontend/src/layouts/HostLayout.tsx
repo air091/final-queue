@@ -74,12 +74,34 @@ export default function HostLayout() {
   >({});
   const [openSidebar, setOpenSidebar] = useState<boolean>(true);
   const isRefreshingHostDataRef = useRef(false);
+  const hostLiveSyncPauseCountRef = useRef(0);
+  const hostDataVersionRef = useRef(0);
+
+  const pauseHostLiveSync = useCallback(() => {
+    hostLiveSyncPauseCountRef.current += 1;
+    hostDataVersionRef.current += 1;
+    let isReleased = false;
+
+    return () => {
+      if (isReleased) return;
+
+      isReleased = true;
+      hostLiveSyncPauseCountRef.current = Math.max(
+        0,
+        hostLiveSyncPauseCountRef.current - 1,
+      );
+      hostDataVersionRef.current += 1;
+    };
+  }, []);
 
   const loadHostData = useCallback(async (options?: { silent?: boolean }) => {
     if (!communityId || !hostId) return;
     if (isRefreshingHostDataRef.current) return;
 
     const isSilent = options?.silent ?? false;
+    if (isSilent && hostLiveSyncPauseCountRef.current > 0) return;
+
+    const startedHostDataVersion = hostDataVersionRef.current;
     isRefreshingHostDataRef.current = true;
 
     if (!isSilent) {
@@ -165,6 +187,10 @@ export default function HostLayout() {
         ...hostData
       } = hostResponse.data;
 
+      if (isSilent && startedHostDataVersion !== hostDataVersionRef.current) {
+        return;
+      }
+
       delete hostData.success;
       delete hostData.message;
 
@@ -218,7 +244,7 @@ export default function HostLayout() {
       if (document.visibilityState !== "visible") return;
 
       void loadHostData({ silent: true });
-    }, 2500);
+    }, 1000);
 
     return () => window.clearInterval(intervalId);
   }, [communityId, hostId, loadHostData]);
@@ -711,6 +737,7 @@ export default function HostLayout() {
     closePlayerHistory,
     addFinishedMatchToPlayerHistory,
     refreshHostData: loadHostData,
+    pauseHostLiveSync,
   };
   return (
     <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden">

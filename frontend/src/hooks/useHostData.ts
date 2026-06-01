@@ -30,6 +30,7 @@ export type HostOutletContext = {
   closePlayerHistory: () => void;
   addFinishedMatchToPlayerHistory: (match: FinishedMatchHistoryPayload) => void;
   refreshHostData: () => Promise<void>;
+  pauseHostLiveSync: () => () => void;
 };
 
 export const useHostData = () => useOutletContext<HostOutletContext>();

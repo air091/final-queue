@@ -695,6 +695,7 @@ export default function Match() {
     setPaymentsData,
     addFinishedMatchToPlayerHistory,
     refreshHostData,
+    pauseHostLiveSync,
     playerSearchTerm,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
@@ -812,6 +813,7 @@ export default function Match() {
     hostedPlayerId: string,
     operation: () => Promise<void>,
   ) => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousOperation =
       pendingCourtPlayerOperationsRef.current.get(hostedPlayerId) ??
       Promise.resolve();
@@ -825,6 +827,7 @@ export default function Match() {
         if (currentOperation === nextOperation) {
           pendingCourtPlayerOperationsRef.current.delete(hostedPlayerId);
         }
+        resumeHostLiveSync();
       });
 
     pendingCourtPlayerOperationsRef.current.set(hostedPlayerId, nextOperation);
@@ -835,6 +838,7 @@ export default function Match() {
     hostedPlayerId: string,
     operation: () => Promise<void>,
   ) => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousOperation =
       pendingQueuePlayerOperationsRef.current.get(hostedPlayerId) ??
       Promise.resolve();
@@ -848,6 +852,7 @@ export default function Match() {
         if (currentOperation === nextOperation) {
           pendingQueuePlayerOperationsRef.current.delete(hostedPlayerId);
         }
+        resumeHostLiveSync();
       });
 
     pendingQueuePlayerOperationsRef.current.set(hostedPlayerId, nextOperation);
@@ -1338,6 +1343,7 @@ export default function Match() {
     const targetCourt = getFirstAvailableEmptyCourt(courts);
     if (!queue || !queue.entries.length || !targetCourt) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const previousQueues = queues;
     const previousPlayers = players;
@@ -1410,10 +1416,12 @@ export default function Match() {
     } finally {
       setQueueBusy(queueId, false);
       setCourtBusy(targetCourt.id, false);
+      resumeHostLiveSync();
     }
   };
 
   const handleDeleteQueue = async (queueId: string) => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousQueues = queues;
     const previousPlayers = players;
     const deletedQueue = previousQueues.find((queue) => queue.id === queueId);
@@ -1441,6 +1449,8 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
@@ -1449,6 +1459,7 @@ export default function Match() {
     if (!cleanName) return;
 
     const previousQueues = queues;
+    const resumeHostLiveSync = pauseHostLiveSync();
 
     setQueues((currentQueues) =>
       currentQueues.map((queue) =>
@@ -1471,10 +1482,13 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
   const handleAddQueue = async () => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const tempQueueId = `temp-queue-${Date.now()}`;
     const optimisticQueue: QueueType = {
       id: tempQueueId,
@@ -1507,6 +1521,8 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
@@ -1539,6 +1555,7 @@ export default function Match() {
   const handleStartCourtGame = async (courtId: string) => {
     if (busyCourtActions[courtId]) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const startedCourt = previousCourts.find((court) => court.id === courtId);
     const playerIds =
@@ -1561,12 +1578,14 @@ export default function Match() {
       else console.error(error);
     } finally {
       setCourtBusy(courtId, false);
+      resumeHostLiveSync();
     }
   };
 
   const handlePauseCourtGame = async (courtId: string) => {
     if (busyCourtActions[courtId]) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const previousPlayers = players;
     const pausedCourt = previousCourts.find((court) => court.id === courtId);
@@ -1590,12 +1609,14 @@ export default function Match() {
       else console.error(error);
     } finally {
       setCourtBusy(courtId, false);
+      resumeHostLiveSync();
     }
   };
 
   const handleResumeCourtGame = async (courtId: string) => {
     if (busyCourtActions[courtId]) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const resumedCourt = previousCourts.find((court) => court.id === courtId);
     const playerIds =
@@ -1618,12 +1639,14 @@ export default function Match() {
       else console.error(error);
     } finally {
       setCourtBusy(courtId, false);
+      resumeHostLiveSync();
     }
   };
 
   const handleEndCourtGame = async (courtId: string, teamWinner: "A" | "B") => {
     if (busyCourtActions[courtId]) return;
 
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const previousPlayers = players;
     const previousPaymentsData = paymentsData;
@@ -1704,10 +1727,12 @@ export default function Match() {
       else console.error(error);
     } finally {
       setCourtBusy(courtId, false);
+      resumeHostLiveSync();
     }
   };
 
   const handleDeleteCourt = async (courtId: string) => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const previousCourts = courts;
     const previousPlayers = players;
     const deletedCourt = previousCourts.find((court) => court.id === courtId);
@@ -1735,6 +1760,8 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
@@ -1743,6 +1770,7 @@ export default function Match() {
     if (!cleanName) return;
 
     const previousCourts = courts;
+    const resumeHostLiveSync = pauseHostLiveSync();
 
     setCourts((currentCourts) =>
       currentCourts.map((court) =>
@@ -1765,10 +1793,13 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
   const handleAddCourt = async () => {
+    const resumeHostLiveSync = pauseHostLiveSync();
     const tempCourtId = `temp-court-${Date.now()}`;
     const optimisticCourt: CourtType = {
       id: tempCourtId,
@@ -1803,6 +1834,8 @@ export default function Match() {
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
+    } finally {
+      resumeHostLiveSync();
     }
   };
 
