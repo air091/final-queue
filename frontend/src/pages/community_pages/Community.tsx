@@ -245,9 +245,6 @@ export default function Community() {
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
-  const [togglingAdminPlayerId, setTogglingAdminPlayerId] = useState<
-    string | null
-  >(null);
   const [isLoadingWinPoints, setIsLoadingWinPoints] = useState(false);
   const [savingCommunityPlayerId, setSavingCommunityPlayerId] = useState<
     string | null
@@ -256,9 +253,17 @@ export default function Community() {
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
   const [addAdminMode, setAddAdminMode] = useState<AddAdminMode>("asPlayer");
-  const [updatingNewAdminAccountId, setUpdatingNewAdminAccountId] = useState<
-    string | null
-  >(null);
+  const [selectedAdminPlayerIds, setSelectedAdminPlayerIds] = useState<
+    string[]
+  >([]);
+  const [isApplyingAdminPlayerSelection, setIsApplyingAdminPlayerSelection] =
+    useState(false);
+  const [selectedNewAdminIds, setSelectedNewAdminIds] = useState<string[]>([]);
+  const [isApplyingNewAdminSelection, setIsApplyingNewAdminSelection] =
+    useState(false);
+  const [removingAdminRoleId, setRemovingAdminRoleId] = useState<string | null>(
+    null,
+  );
   const [addAdminSuccess, setAddAdminSuccess] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
@@ -381,6 +386,15 @@ export default function Community() {
       ]),
     [community],
   );
+  const adminPlayerAccountIds = useMemo(
+    () =>
+      new Set(
+        communityPlayers
+          .map((communityPlayer) => communityPlayer.player.id)
+          .filter((playerId): playerId is string => Boolean(playerId)),
+      ),
+    [communityPlayers],
+  );
   const registeredCommunityAdminCandidates = useMemo(
     () =>
       communityPlayers
@@ -388,6 +402,7 @@ export default function Community() {
           (communityPlayer) =>
             communityPlayer.status === "accepted" &&
             Boolean(communityPlayer.player.id) &&
+            communityPlayer.player.id !== community?.master.id &&
             !communityPlayer.player.isStatic,
         )
         .sort((firstPlayer, secondPlayer) =>
@@ -395,11 +410,36 @@ export default function Community() {
             secondPlayer.player.username,
           ),
         ),
-    [communityPlayers],
+    [community, communityPlayers],
   );
   const selectedPointsRecord = selectedPointsHistoryPlayer
     ? winPointsByCommunityPlayerId.get(selectedPointsHistoryPlayer.id)
     : null;
+  const hasAdminPlayerSelectionChanges = useMemo(() => {
+    const selectedIds = new Set(selectedAdminPlayerIds);
+
+    return adminCandidates.some((admin) => {
+      const isSelected = selectedIds.has(admin.id);
+      const isAlreadyPlayer = adminPlayerAccountIds.has(admin.id);
+
+      return isSelected !== isAlreadyPlayer;
+    });
+  }, [adminCandidates, adminPlayerAccountIds, selectedAdminPlayerIds]);
+  const hasNewAdminSelectionChanges = useMemo(() => {
+    const selectedIds = new Set(selectedNewAdminIds);
+
+    return registeredCommunityAdminCandidates.some((communityPlayer) => {
+      const accountId = communityPlayer.player.id;
+      if (!accountId || accountId === community?.master.id) return false;
+
+      return selectedIds.has(accountId) !== adminAccountIds.has(accountId);
+    });
+  }, [
+    adminAccountIds,
+    community,
+    registeredCommunityAdminCandidates,
+    selectedNewAdminIds,
+  ]);
   const pointsFilterLabel = useMemo(() => {
     if (pointsFilterMode === "all") return "All time";
 
@@ -638,88 +678,269 @@ export default function Community() {
     if (!canAddAdminAsPlayer) return;
 
     setAddAdminMode("asPlayer");
+    setSelectedAdminPlayerIds(
+      adminCandidates
+        .filter((admin) => adminPlayerAccountIds.has(admin.id))
+        .map((admin) => admin.id),
+    );
+    setSelectedNewAdminIds(
+      registeredCommunityAdminCandidates
+        .map((communityPlayer) => communityPlayer.player.id)
+        .filter(
+          (accountId): accountId is string =>
+            typeof accountId === "string" && adminAccountIds.has(accountId),
+        ),
+    );
     setPlayerError(null);
+    setAddAdminSuccess(null);
     setIsAddAdminModalOpen(true);
   };
 
   const closeAddAdminModal = () => {
-    if (togglingAdminPlayerId || updatingNewAdminAccountId) return;
+    if (
+      isApplyingNewAdminSelection ||
+      isApplyingAdminPlayerSelection ||
+      removingAdminRoleId
+    )
+      return;
     setIsAddAdminModalOpen(false);
+    setPlayerError(null);
+    setAddAdminSuccess(null);
+    setSelectedAdminPlayerIds([]);
+    setSelectedNewAdminIds([]);
+  };
+
+  const canManageAdminAsPlayer = (adminId: string) =>
+    isCommunityOwner || adminId === user?.id || adminId === community?.master.id;
+
+  const handleSelectAdminPlayer = (adminId: string, isSelected: boolean) => {
+    setSelectedAdminPlayerIds((currentIds) => {
+      if (isSelected) {
+        return currentIds.includes(adminId)
+          ? currentIds
+          : [...currentIds, adminId];
+      }
+
+      return currentIds.filter((currentId) => currentId !== adminId);
+    });
     setPlayerError(null);
     setAddAdminSuccess(null);
   };
 
-  const handleToggleCommunityPlayerAdmin = async (
-    communityPlayer: CommunityPlayerRecord,
-    shouldBeAdmin: boolean,
-  ) => {
+  const handleSelectNewAdmin = (accountId: string, isSelected: boolean) => {
+    setSelectedNewAdminIds((currentIds) => {
+      if (isSelected) {
+        return currentIds.includes(accountId)
+          ? currentIds
+          : [...currentIds, accountId];
+      }
+
+      return currentIds.filter((currentId) => currentId !== accountId);
+    });
+    setPlayerError(null);
+    setAddAdminSuccess(null);
+  };
+
+  const handleApplyAdminPlayerSelection = async () => {
+    if (!id || isApplyingAdminPlayerSelection) return;
+
+    const selectedIds = new Set(selectedAdminPlayerIds);
+    const manageableAdminIds = new Set(
+      adminCandidates
+        .filter((admin) => canManageAdminAsPlayer(admin.id))
+        .map((admin) => admin.id),
+    );
+    const adminIdsToAdd = adminCandidates
+      .filter(
+        (admin) =>
+          manageableAdminIds.has(admin.id) &&
+          selectedIds.has(admin.id) &&
+          !adminPlayerAccountIds.has(admin.id),
+      )
+      .map((admin) => admin.id);
+    const adminIdsToRemove = adminCandidates
+      .filter(
+        (admin) =>
+          manageableAdminIds.has(admin.id) &&
+          !selectedIds.has(admin.id) &&
+          adminPlayerAccountIds.has(admin.id),
+      )
+      .map((admin) => admin.id);
+
+    if (adminIdsToAdd.length === 0 && adminIdsToRemove.length === 0) {
+      setPlayerError("Select at least one change first.");
+      return;
+    }
+
+    setIsApplyingAdminPlayerSelection(true);
+    setPlayerError(null);
+    setAddAdminSuccess(null);
+
+    try {
+      const addedPlayers = await Promise.all(
+        adminIdsToAdd.map(async (adminId) => {
+          const response = await api.post(`/api/community/${id}/players/admin`, {
+            accountId: adminId,
+          });
+
+          return response.data.player as CommunityPlayerRecord;
+        }),
+      );
+
+      const removedCommunityPlayerIds: Array<{
+        adminId: string;
+        communityPlayerId?: string;
+      }> = await Promise.all(
+        adminIdsToRemove.map(async (adminId) => {
+          const response = await api.delete(
+            `/api/community/${id}/players/admin`,
+            {
+              data: { accountId: adminId },
+            },
+          );
+
+          return {
+            adminId,
+            communityPlayerId: response.data.communityPlayerId as
+              | string
+              | undefined,
+          };
+        }),
+      );
+
+      if (addedPlayers.length > 0) {
+        setCommunityPlayers((currentPlayers) => [
+          ...addedPlayers,
+          ...currentPlayers.filter(
+            (currentPlayer) =>
+              !addedPlayers.some(
+                (addedPlayer) => addedPlayer.id === currentPlayer.id,
+              ),
+          ),
+        ]);
+      }
+
+      if (removedCommunityPlayerIds.length > 0) {
+        setCommunityPlayers((currentPlayers) =>
+          currentPlayers.filter(
+            (currentPlayer) =>
+              !removedCommunityPlayerIds.some((removedPlayer) =>
+                removedPlayer.communityPlayerId
+                  ? currentPlayer.id === removedPlayer.communityPlayerId
+                  : currentPlayer.player.id === removedPlayer.adminId,
+              ),
+          ),
+        );
+        setCommunityPlayerWinPoints((currentPlayers) =>
+          currentPlayers.filter(
+            (currentPlayer) =>
+              !removedCommunityPlayerIds.some(
+                (removedPlayer) =>
+                  removedPlayer.communityPlayerId &&
+                  currentPlayer.communityPlayerId ===
+                    removedPlayer.communityPlayerId,
+              ),
+          ),
+        );
+      }
+
+      setAddAdminSuccess("Admin player selection updated.");
+      void getCommunityPlayerWinPointsAPI();
+    } catch (error) {
+      setPlayerError("Unable to update admin players.");
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Apply admin player selection api failed", error);
+    } finally {
+      setIsApplyingAdminPlayerSelection(false);
+    }
+  };
+
+  const handleApplyNewAdminSelection = async () => {
     if (!isCommunityOwner) {
       setPlayerError("Only the community owner can add new admins.");
       return;
     }
 
-    const accountId = communityPlayer.player.id;
+    if (!id || !community || isApplyingNewAdminSelection) return;
 
-    if (!id || !community || !accountId || updatingNewAdminAccountId) return;
+    const selectedIds = new Set(selectedNewAdminIds);
+    const candidateAccountIds = registeredCommunityAdminCandidates
+      .map((communityPlayer) => communityPlayer.player.id)
+      .filter((accountId): accountId is string => Boolean(accountId));
+    const accountIdsToAdd = candidateAccountIds.filter(
+      (accountId) =>
+        accountId !== community.master.id &&
+        selectedIds.has(accountId) &&
+        !adminAccountIds.has(accountId),
+    );
+    const accountIdsToRemove = candidateAccountIds.filter(
+      (accountId) =>
+        accountId !== community.master.id &&
+        !selectedIds.has(accountId) &&
+        adminAccountIds.has(accountId),
+    );
 
-    if (accountId === community.master.id) {
-      setPlayerError("The community owner is already an admin.");
+    if (accountIdsToAdd.length === 0 && accountIdsToRemove.length === 0) {
+      setPlayerError("Select at least one change first.");
       return;
     }
 
-    setUpdatingNewAdminAccountId(accountId);
+    setIsApplyingNewAdminSelection(true);
     setPlayerError(null);
     setAddAdminSuccess(null);
 
     try {
-      if (shouldBeAdmin) {
-        const response = await api.post(`/api/community/${id}/admins`, {
-          accountId,
-        });
-        const admin = response.data.admin as CommunityAdminType;
+      const addedAdmins = await Promise.all(
+        accountIdsToAdd.map(async (accountId) => {
+          const response = await api.post(`/api/community/${id}/admins`, {
+            accountId,
+          });
 
-        setCommunity((currentCommunity) =>
-          currentCommunity
-            ? {
-                ...currentCommunity,
-                admins: [
-                  ...currentCommunity.admins.filter(
-                    (currentAdmin) =>
-                      currentAdmin.account.id !== admin.account.id,
-                  ),
-                  admin,
-                ].sort((firstAdmin, secondAdmin) =>
-                  firstAdmin.account.username.localeCompare(
-                    secondAdmin.account.username,
-                  ),
-                ),
-              }
-            : currentCommunity,
-        );
-      } else {
-        const response = await api.delete(
-          `/api/community/${id}/admins/${accountId}`,
-        );
-        const player = response.data.player as CommunityPlayerRecord;
-
-        setCommunity((currentCommunity) =>
-          currentCommunity
-            ? {
-                ...currentCommunity,
-                admins: currentCommunity.admins.filter(
-                  (currentAdmin) => currentAdmin.account.id !== accountId,
-                ),
-              }
-            : currentCommunity,
-        );
-        updateCommunityPlayerInState(player);
-      }
-
-      setAddAdminSuccess(
-        shouldBeAdmin
-          ? `${communityPlayer.player.username} is now an admin.`
-          : `${communityPlayer.player.username} is now a player.`,
+          return response.data.admin as CommunityAdminType;
+        }),
       );
+      const removedPlayers = await Promise.all(
+        accountIdsToRemove.map(async (accountId) => {
+          const response = await api.delete(
+            `/api/community/${id}/admins/${accountId}`,
+          );
+
+          return {
+            accountId,
+            player: response.data.player as CommunityPlayerRecord,
+          };
+        }),
+      );
+
+      setCommunity((currentCommunity) =>
+        currentCommunity
+          ? {
+              ...currentCommunity,
+              admins: [
+                ...currentCommunity.admins.filter(
+                  (currentAdmin) =>
+                    !accountIdsToRemove.includes(currentAdmin.account.id) &&
+                    !addedAdmins.some(
+                      (admin) =>
+                        admin.account.id === currentAdmin.account.id,
+                    ),
+                ),
+                ...addedAdmins,
+              ].sort((firstAdmin, secondAdmin) =>
+                firstAdmin.account.username.localeCompare(
+                  secondAdmin.account.username,
+                ),
+              ),
+            }
+          : currentCommunity,
+      );
+
+      removedPlayers.forEach(({ player }) =>
+        updateCommunityPlayerInState(player),
+      );
+      setAddAdminSuccess("New admin selection updated.");
     } catch (error) {
       setPlayerError(
         axios.isAxiosError(error)
@@ -728,84 +949,69 @@ export default function Community() {
       );
 
       if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
-      else console.error("Update community admin api failed", error);
+      else console.error("Apply new admin selection api failed", error);
     } finally {
-      setUpdatingNewAdminAccountId(null);
+      setIsApplyingNewAdminSelection(false);
     }
   };
 
-  const handleToggleAdminAsPlayer = async (
-    adminId: string,
-    shouldIncludeAsPlayer: boolean,
-  ) => {
-    if (!id || togglingAdminPlayerId) {
+  const handleRemoveAdminRole = async (admin: AdminCandidate) => {
+    if (!id || removingAdminRoleId) return;
+
+    if (!isCommunityOwner) {
+      setPlayerError("Only the community owner can remove admins.");
       return;
     }
 
-    const isTargetCommunityOwner = adminId === community?.master.id;
-
-    if (
-      !isCommunityOwner &&
-      adminId !== user?.id &&
-      !isTargetCommunityOwner
-    ) {
-      setPlayerError("Only the community owner can update other admins.");
+    if (admin.id === community?.master.id) {
+      setPlayerError("The community owner cannot be removed as admin.");
       return;
     }
 
-    setTogglingAdminPlayerId(adminId);
+    setRemovingAdminRoleId(admin.id);
     setPlayerError(null);
+    setAddAdminSuccess(null);
 
     try {
-      if (shouldIncludeAsPlayer) {
-        const response = await api.post(`/api/community/${id}/players/admin`, {
-          accountId: adminId,
-        });
-        const adminPlayer = response.data.player as CommunityPlayerRecord;
+      const response = await api.delete(
+        `/api/community/${id}/admins/${admin.id}`,
+      );
+      const player = response.data.player as CommunityPlayerRecord;
 
-        setCommunityPlayers((currentPlayers) => [
-          adminPlayer,
-          ...currentPlayers.filter(
-            (currentPlayer) => currentPlayer.id !== adminPlayer.id,
-          ),
-        ]);
-      } else {
-        const response = await api.delete(`/api/community/${id}/players/admin`, {
-          data: { accountId: adminId },
-        });
-        const removedCommunityPlayerId = response.data.communityPlayerId as
-          | string
-          | undefined;
-
-        setCommunityPlayers((currentPlayers) =>
-          currentPlayers.filter((currentPlayer) =>
-            removedCommunityPlayerId
-              ? currentPlayer.id !== removedCommunityPlayerId
-              : currentPlayer.player.id !== adminId,
-          ),
-        );
-        setCommunityPlayerWinPoints((currentPlayers) =>
-          currentPlayers.filter((currentPlayer) =>
-            removedCommunityPlayerId
-              ? currentPlayer.communityPlayerId !== removedCommunityPlayerId
-              : true,
-          ),
-        );
-      }
-
-      void getCommunityPlayerWinPointsAPI();
+      setCommunity((currentCommunity) =>
+        currentCommunity
+          ? {
+              ...currentCommunity,
+              admins: currentCommunity.admins.filter(
+                (currentAdmin) => currentAdmin.account.id !== admin.id,
+              ),
+            }
+          : currentCommunity,
+      );
+      setCommunityPlayers((currentPlayers) => [
+        player,
+        ...currentPlayers.filter(
+          (currentPlayer) => currentPlayer.id !== player.id,
+        ),
+      ]);
+      setSelectedAdminPlayerIds((currentIds) =>
+        currentIds.includes(admin.id) ? currentIds : [...currentIds, admin.id],
+      );
+      setSelectedNewAdminIds((currentIds) =>
+        currentIds.filter((currentId) => currentId !== admin.id),
+      );
+      setAddAdminSuccess(`${admin.username} is now a player.`);
     } catch (error) {
       setPlayerError(
-        shouldIncludeAsPlayer
-          ? "Unable to add this admin as a community player."
-          : "Unable to remove this admin as a community player.",
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to remove admin role.")
+          : "Unable to remove admin role.",
       );
 
-      if (axios.isAxiosError(error))
-        console.error(error.response?.data ?? error);
-      else console.error("Toggle admin as community player api failed", error);
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error("Remove community admin role api failed", error);
     } finally {
-      setTogglingAdminPlayerId(null);
+      setRemovingAdminRoleId(null);
     }
   };
 
@@ -1436,7 +1642,7 @@ export default function Community() {
               <div>
                 <h4 className="text-lg font-semibold text-text">Add admin</h4>
                 <p className="mt-1 text-sm text-stone-500">
-                  Choose how this admin should be added.
+                  Select rows first, then apply the changes.
                 </p>
               </div>
 
@@ -1444,7 +1650,9 @@ export default function Community() {
                 type="button"
                 onClick={closeAddAdminModal}
                 disabled={Boolean(
-                  togglingAdminPlayerId || updatingNewAdminAccountId,
+                  isApplyingAdminPlayerSelection ||
+                    isApplyingNewAdminSelection ||
+                    removingAdminRoleId,
                 )}
                 className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Close modal"
@@ -1459,6 +1667,11 @@ export default function Community() {
                   type="button"
                   onClick={() => {
                     setAddAdminMode("asPlayer");
+                    setSelectedAdminPlayerIds(
+                      adminCandidates
+                        .filter((admin) => adminPlayerAccountIds.has(admin.id))
+                        .map((admin) => admin.id),
+                    );
                     setPlayerError(null);
                     setAddAdminSuccess(null);
                   }}
@@ -1474,6 +1687,15 @@ export default function Community() {
                   type="button"
                   onClick={() => {
                     setAddAdminMode("newAdmin");
+                    setSelectedNewAdminIds(
+                      registeredCommunityAdminCandidates
+                        .map((communityPlayer) => communityPlayer.player.id)
+                        .filter(
+                          (accountId): accountId is string =>
+                            typeof accountId === "string" &&
+                            adminAccountIds.has(accountId),
+                        ),
+                    );
                     setPlayerError(null);
                     setAddAdminSuccess(null);
                   }}
@@ -1502,6 +1724,9 @@ export default function Community() {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-500">
                         Status
                       </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-500">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-orange-100 bg-white">
@@ -1516,8 +1741,10 @@ export default function Community() {
                         isCommunityOwner ||
                         admin.id === user?.id ||
                         isOwner;
-                      const isTogglingThisAdmin =
-                        togglingAdminPlayerId === admin.id;
+                      const isSelected =
+                        selectedAdminPlayerIds.includes(admin.id);
+                      const isRemovingAdminRole =
+                        removingAdminRoleId === admin.id;
 
                       return (
                         <tr
@@ -1527,15 +1754,15 @@ export default function Community() {
                           <td className="px-4 py-3">
                             <input
                               type="checkbox"
-                              checked={isAlreadyPlayer}
+                              checked={isSelected}
                               onChange={(event) =>
-                                void handleToggleAdminAsPlayer(
+                                handleSelectAdminPlayer(
                                   admin.id,
                                   event.target.checked,
                                 )
                               }
                               disabled={
-                                Boolean(togglingAdminPlayerId) ||
+                                isApplyingAdminPlayerSelection ||
                                 !canToggleAdmin
                               }
                               className="h-4 w-4 accent-primary"
@@ -1561,15 +1788,41 @@ export default function Community() {
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                 isAlreadyPlayer
                                   ? "bg-green-50 text-green-700"
-                                  : "bg-stone-100 text-stone-600"
+                                  : isSelected
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "bg-stone-100 text-stone-600"
                               }`}
                             >
-                              {isTogglingThisAdmin
+                              {isApplyingAdminPlayerSelection
                                 ? "Saving..."
                                 : isAlreadyPlayer
-                                  ? "Player"
-                                  : "Admin only"}
+                                  ? isSelected
+                                    ? "Player"
+                                    : "Will remove"
+                                  : isSelected
+                                    ? "Selected"
+                                    : "Admin only"}
                             </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              title="Remove as Admin."
+                              aria-label={`Remove ${admin.username} as admin`}
+                              onClick={() => void handleRemoveAdminRole(admin)}
+                              disabled={
+                                !isCommunityOwner ||
+                                isOwner ||
+                                Boolean(removingAdminRoleId) ||
+                                isApplyingAdminPlayerSelection
+                              }
+                              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Trash size={15} />
+                            </button>
+                            {isRemovingAdminRole ? (
+                              <span className="sr-only">Removing...</span>
+                            ) : null}
                           </td>
                         </tr>
                       );
@@ -1583,14 +1836,37 @@ export default function Community() {
                   </p>
                 ) : null}
 
+                {addAdminSuccess ? (
+                  <p className="border-t border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    {addAdminSuccess}
+                  </p>
+                ) : null}
+
                 <div className="flex justify-end gap-3 border-t border-orange-100 bg-orange-50/30 px-4 py-3">
                   <button
                     type="button"
                     onClick={closeAddAdminModal}
-                    disabled={Boolean(togglingAdminPlayerId)}
+                    disabled={
+                      isApplyingAdminPlayerSelection ||
+                      Boolean(removingAdminRoleId)
+                    }
                     className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                   >
-                    Done
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyAdminPlayerSelection()}
+                    disabled={
+                      isApplyingAdminPlayerSelection ||
+                      Boolean(removingAdminRoleId) ||
+                      !hasAdminPlayerSelectionChanges
+                    }
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    {isApplyingAdminPlayerSelection
+                      ? "Adding..."
+                      : "Add as players"}
                   </button>
                 </div>
               </div>
@@ -1637,8 +1913,8 @@ export default function Community() {
 
                           const isOwner = accountId === community?.master.id;
                           const isAdmin = adminAccountIds.has(accountId);
-                          const isUpdating =
-                            updatingNewAdminAccountId === accountId;
+                          const isSelected =
+                            selectedNewAdminIds.includes(accountId);
 
                         return (
                           <tr
@@ -1648,15 +1924,15 @@ export default function Community() {
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
-                                checked={isAdmin}
+                                checked={isSelected}
                                 onChange={(event) =>
-                                  void handleToggleCommunityPlayerAdmin(
-                                    communityPlayer,
+                                  handleSelectNewAdmin(
+                                    accountId,
                                     event.target.checked,
                                   )
                                 }
                                 disabled={
-                                  Boolean(updatingNewAdminAccountId) || isOwner
+                                  isApplyingNewAdminSelection || isOwner
                                 }
                                 className="h-4 w-4 accent-primary"
                               />
@@ -1680,16 +1956,22 @@ export default function Community() {
                                     ? "bg-orange-50 text-primary"
                                     : isAdmin
                                       ? "bg-green-50 text-green-700"
-                                      : "bg-stone-100 text-stone-600"
+                                      : isSelected
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "bg-stone-100 text-stone-600"
                                 }`}
                               >
-                                {isUpdating
+                                {isApplyingNewAdminSelection
                                   ? "Saving..."
                                   : isOwner
                                     ? "Owner"
                                     : isAdmin
-                                      ? "Admin"
-                                      : "Player"}
+                                      ? isSelected
+                                        ? "Admin"
+                                        : "Will remove"
+                                      : isSelected
+                                        ? "Selected"
+                                        : "Player"}
                               </span>
                             </td>
                           </tr>
@@ -1716,10 +1998,21 @@ export default function Community() {
                   <button
                     type="button"
                     onClick={closeAddAdminModal}
-                    disabled={Boolean(updatingNewAdminAccountId)}
+                    disabled={isApplyingNewAdminSelection}
                     className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                   >
-                    Done
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyNewAdminSelection()}
+                    disabled={
+                      isApplyingNewAdminSelection ||
+                      !hasNewAdminSelectionChanges
+                    }
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    {isApplyingNewAdminSelection ? "Adding..." : "Add as admins"}
                   </button>
                 </div>
               </div>

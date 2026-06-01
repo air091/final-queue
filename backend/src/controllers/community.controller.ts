@@ -86,7 +86,10 @@ const mapCommunityPlayerRecord = (communityPlayer: {
   id: communityPlayer.id,
   status: communityPlayer.status,
   addedAt: communityPlayer.addedAt,
-  player: buildCommunityPlayerProfile(communityPlayer.account),
+  player: {
+    ...buildCommunityPlayerProfile(communityPlayer.account),
+    isAdmin: false,
+  },
 });
 
 const getMatchPlayerStatus = (player: {
@@ -2245,13 +2248,6 @@ export const deleteCommunityPlayer = async (
       return response
         .status(404)
         .json({ success: false, message: "Community player not found" });
-
-    if (communityPlayer.account.role === UserRoles.master) {
-      return response.status(400).json({
-        success: false,
-        message: "Community admins cannot be removed from the roster",
-      });
-    }
 
     await prisma.$transaction([
       prisma.player.deleteMany({
