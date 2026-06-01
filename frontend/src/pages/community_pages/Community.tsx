@@ -1690,7 +1690,7 @@ export default function Community() {
                   setPlayerError(null);
                   setPlayerInviteSuccess(null);
                 }}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
                   addPlayerMode === "static"
                     ? "bg-primary text-white"
                     : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
@@ -1705,7 +1705,7 @@ export default function Community() {
                   setPlayerError(null);
                   setPlayerInviteSuccess(null);
                 }}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
                   addPlayerMode === "invite"
                     ? "bg-primary text-white"
                     : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
@@ -1869,7 +1869,7 @@ export default function Community() {
                       isSendingPlayerInvites ||
                       selectedPlayerInviteIds.length === 0
                     }
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                    className="rounded-xl cursor-pointer bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
                   >
                     {isSendingPlayerInvites
                       ? "Inviting..."
@@ -1927,7 +1927,7 @@ export default function Community() {
                     setPlayerError(null);
                     setAddAdminSuccess(null);
                   }}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
                     addAdminMode === "asPlayer"
                       ? "bg-primary text-white"
                       : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
@@ -1951,7 +1951,7 @@ export default function Community() {
                     setPlayerError(null);
                     setAddAdminSuccess(null);
                   }}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
                     addAdminMode === "newAdmin"
                       ? "bg-primary text-white"
                       : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
@@ -2114,11 +2114,11 @@ export default function Community() {
                       Boolean(removingAdminRoleId) ||
                       !hasAdminPlayerSelectionChanges
                     }
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 cursor-pointer"
                   >
                     {isApplyingAdminPlayerSelection
-                      ? "Adding..."
-                      : "Add as players"}
+                      ? "Saving..."
+                      : "Save"}
                   </button>
                 </div>
               </div>
@@ -2262,9 +2262,9 @@ export default function Community() {
                       isApplyingNewAdminSelection ||
                       !hasNewAdminSelectionChanges
                     }
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold cursor-pointer text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
                   >
-                    {isApplyingNewAdminSelection ? "Adding..." : "Add as admins"}
+                    {isApplyingNewAdminSelection ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
