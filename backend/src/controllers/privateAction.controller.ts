@@ -16,13 +16,21 @@ type HostedPlayerParams = {
   playerId: string;
 };
 
+const communityMemberWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+  ],
+});
+
 const getAuthorizedHost = async (
   communityId: string,
   hostId: string,
-  masterId: string,
+  accountId: string,
 ) => {
   const community = await prisma.community.findFirst({
-    where: { id: communityId, masterId },
+    where: communityMemberWhere(communityId, accountId),
     select: { id: true },
   });
 
@@ -1038,7 +1046,7 @@ export const assignPlayerToCourt = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -1180,7 +1188,7 @@ export const removePlayerFromCourt = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -1293,7 +1301,7 @@ export const assignPlayerToQueue = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -1429,7 +1437,7 @@ export const removePlayerFromQueue = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 

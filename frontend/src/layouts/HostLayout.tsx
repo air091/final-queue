@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
 import PlayerHistoryModal, {
   summarizePlayerHistory,
@@ -73,12 +73,19 @@ export default function HostLayout() {
     Record<string, PlayerMatchHistoryItem[]>
   >({});
   const [openSidebar, setOpenSidebar] = useState<boolean>(true);
+  const isRefreshingHostDataRef = useRef(false);
 
-  const loadHostData = useCallback(async () => {
+  const loadHostData = useCallback(async (options?: { silent?: boolean }) => {
     if (!communityId || !hostId) return;
+    if (isRefreshingHostDataRef.current) return;
 
-    setIsHostLoading(true);
-    setHostLoadError(null);
+    const isSilent = options?.silent ?? false;
+    isRefreshingHostDataRef.current = true;
+
+    if (!isSilent) {
+      setIsHostLoading(true);
+      setHostLoadError(null);
+    }
 
     const normalizePaymentsData = (
       pricing: HostPaymentsData["pricing"],
@@ -151,14 +158,15 @@ export default function HostLayout() {
       ]);
 
       const {
-        success: _success,
-        message: _message,
         requestedPlayers,
         acceptedPlayers: acceptedPlayersFromHost,
         rejectedPlayers,
         bannedPlayers,
         ...hostData
       } = hostResponse.data;
+
+      delete hostData.success;
+      delete hostData.message;
 
       setHost(hostData as HostMeta);
       setPlayersInHost([
@@ -179,19 +187,41 @@ export default function HostLayout() {
         ),
       );
     } catch (error) {
-      setHostLoadError("Unable to load host data.");
+      if (!isSilent) {
+        setHostLoadError("Unable to load host data.");
+      }
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
       else console.error(error);
     } finally {
-      setIsHostLoading(false);
+      isRefreshingHostDataRef.current = false;
+
+      if (!isSilent) {
+        setIsHostLoading(false);
+      }
     }
   }, [communityId, hostId]);
 
   useEffect(() => {
-    void loadHostData();
+    const timeoutId = window.setTimeout(() => {
+      void loadHostData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadHostData]);
+
+  useEffect(() => {
+    if (!communityId || !hostId) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+
+      void loadHostData({ silent: true });
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
+  }, [communityId, hostId, loadHostData]);
 
   const handleEndHostSession = useCallback(async () => {
     if (!communityId || !hostId || isEndingHostSession) return;

@@ -3,6 +3,14 @@ import prisma from "../lib/prisma.js";
 import type { Params } from "./community.controller.js";
 import { MatchStatus } from "../generated/prisma/enums.js";
 
+const communityMemberWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+  ],
+});
+
 export const getMatchCourts = async (
   request: Request<Params>,
   response: Response,
@@ -21,7 +29,7 @@ export const getMatchCourts = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
@@ -104,7 +112,7 @@ export const startMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -210,7 +218,7 @@ export const pauseMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -293,7 +301,7 @@ export const resumeMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -418,7 +426,7 @@ export const endMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -608,7 +616,7 @@ export const createMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -679,7 +687,7 @@ export const renameMatchCourt = async (
         .json({ success: false, message: "Court name is required" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -751,7 +759,7 @@ export const deleteMatchCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -832,7 +840,7 @@ export const getQueueCourts = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
@@ -883,7 +891,7 @@ export const createQueueCourt = async (
         .json({ success: false, message: "Community not found" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -941,7 +949,7 @@ export const deleteQueueCourt = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -1019,7 +1027,7 @@ export const renameQueueCourt = async (
         .json({ success: false, message: "Invalid queue name" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -1098,7 +1106,7 @@ export const transferQueueToCourtAndStart = async (
         .json({ success: false, message: "Missing params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 

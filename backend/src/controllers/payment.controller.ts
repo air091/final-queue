@@ -26,6 +26,14 @@ type UpsertPlayerPaymentBody = {
   paymentStatus?: PaymentStatuses;
 };
 
+const communityMemberWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+  ],
+});
+
 const isNonNegativeNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0;
 
@@ -62,10 +70,10 @@ const calculateExpectedFee = (
 const getAuthorizedHost = async (
   communityId: string,
   hostId: string,
-  masterId: string,
+  accountId: string,
 ) => {
   const community = await prisma.community.findFirst({
-    where: { id: communityId, masterId },
+    where: communityMemberWhere(communityId, accountId),
     select: { id: true },
   });
 

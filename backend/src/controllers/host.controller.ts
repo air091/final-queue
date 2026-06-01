@@ -242,7 +242,7 @@ export const getHostById = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
@@ -453,7 +453,7 @@ export const endHostSession = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -514,7 +514,7 @@ export const startHostSession = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -574,7 +574,7 @@ export const getHostWithPlayers = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -864,7 +864,7 @@ export const getPlayerMatchHistory = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -991,7 +991,7 @@ export const deleteHost = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
     });
 
     if (!community)
@@ -1486,7 +1486,7 @@ export const createStaticPlayer = async (
         .json({ success: false, message: "Invalid skill level" });
 
     const community = await prisma.community.findFirst({
-      where: { id: communityId, masterId: user.sub },
+      where: communityMemberWhere(communityId, user.sub),
       select: { id: true },
     });
 
