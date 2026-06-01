@@ -22,7 +22,10 @@ import { api } from "../lib/api";
 
 type NotificationItem = {
   id: string;
-  type: "community_admin_invite" | "community_player_request";
+  type:
+    | "community_admin_invite"
+    | "community_player_request"
+    | "community_player_invite";
   status: "pending" | "requested" | "accepted" | "rejected";
   message: string;
   createdAt: string;

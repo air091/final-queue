@@ -4,6 +4,7 @@ import prisma from "../lib/prisma.js";
 import type { Request, Response } from "express";
 import { uploadImageToCloudinary } from "../lib/cloudinary.js";
 import {
+  AccountStatuses,
   CommunityAdminInviteStatus,
   FriendRequestStatus,
   MatchStatus,
@@ -442,6 +443,10 @@ type AddCommunityPlayersToHostBody = {
 };
 
 type CreateCommunityAdminInviteBody = {
+  accountId?: string;
+};
+
+type CreateCommunityPlayerInviteBody = {
   accountId?: string;
 };
 
@@ -1429,6 +1434,216 @@ export const createCommunityAdminInvite = async (
     });
   } catch (error) {
     console.error("Error creating community admin invite:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const getCommunityPlayerInviteCandidates = async (
+  request: Request<CommunityPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+    const query =
+      typeof request.query.query === "string" ? request.query.query.trim() : "";
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: communityMemberWhere(communityId, user.sub),
+      select: { id: true, masterId: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    const existingCommunityPlayers = await prisma.communityPlayer.findMany({
+      where: { communityId: community.id },
+      select: { accountId: true },
+    });
+    let pendingInvites: Array<{ inviteeId: string }> = [];
+
+    try {
+      pendingInvites = await prisma.$queryRaw<Array<{ inviteeId: string }>>`
+        SELECT "inviteeId"
+        FROM "CommunityPlayerInvite"
+        WHERE "communityId" = ${community.id}
+          AND "status" = 'pending'::"CommunityAdminInviteStatus"
+      `;
+    } catch (error) {
+      console.warn(
+        "Unable to read community player invites while loading candidates:",
+        error,
+      );
+    }
+
+    const excludedAccountIds = new Set([
+      community.masterId,
+      ...existingCommunityPlayers.map((player) => player.accountId),
+      ...pendingInvites.map((invite) => invite.inviteeId),
+    ]);
+
+    const users = await prisma.account.findMany({
+      where: {
+        id: { notIn: Array.from(excludedAccountIds) },
+        role: { not: UserRoles.static },
+        status: AccountStatuses.active,
+        ...(query
+          ? {
+              username: {
+                contains: query,
+                mode: "insensitive",
+              },
+            }
+          : {}),
+      },
+      orderBy: { username: "asc" },
+      take: 20,
+      select: {
+        id: true,
+        username: true,
+        profileUrl: true,
+      },
+    });
+
+    return response.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error("Error getting community player invite candidates:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const createCommunityPlayerInvite = async (
+  request: Request<CommunityPlayerParams, unknown, CreateCommunityPlayerInviteBody>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const accountId = request.body.accountId?.trim();
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !accountId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findFirst({
+      where: communityMemberWhere(communityId, user.sub),
+      select: { id: true, masterId: true },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    if (accountId === community.masterId)
+      return response.status(400).json({
+        success: false,
+        message: "The community owner is already part of this community",
+      });
+
+    const [invitee, existingPlayer, existingInvite] = await Promise.all([
+      prisma.account.findFirst({
+        where: {
+          id: accountId,
+          role: { not: UserRoles.static },
+          status: AccountStatuses.active,
+        },
+        select: { id: true },
+      }),
+      prisma.communityPlayer.findUnique({
+        where: {
+          communityId_accountId: {
+            communityId: community.id,
+            accountId,
+          },
+        },
+        select: { id: true },
+      }),
+      prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "CommunityPlayerInvite"
+        WHERE "communityId" = ${community.id}
+          AND "inviteeId" = ${accountId}
+          AND "status" = 'pending'::"CommunityAdminInviteStatus"
+        LIMIT 1
+      `,
+    ]);
+
+    if (!invitee)
+      return response
+        .status(404)
+        .json({ success: false, message: "User not found" });
+
+    if (existingPlayer)
+      return response.status(409).json({
+        success: false,
+        message: "This user is already a community player",
+      });
+
+    if (existingInvite.length > 0)
+      return response.status(409).json({
+        success: false,
+        message: "This user already has a pending community invite",
+      });
+
+    const inviteId = crypto.randomUUID();
+
+    await prisma.$executeRaw`
+      INSERT INTO "CommunityPlayerInvite" (
+        "id",
+        "communityId",
+        "inviterId",
+        "inviteeId",
+        "status",
+        "createdAt",
+        "updatedAt"
+      )
+      VALUES (
+        ${inviteId},
+        ${community.id},
+        ${user.sub},
+        ${accountId},
+        'pending'::"CommunityAdminInviteStatus",
+        NOW(),
+        NOW()
+      )
+    `;
+
+    return response.status(201).json({
+      success: true,
+      message: "Community player invite sent",
+      inviteId,
+      accountId,
+    });
+  } catch (error) {
+    console.error("Error creating community player invite:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

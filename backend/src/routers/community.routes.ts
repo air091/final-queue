@@ -3,6 +3,7 @@ import {
   createCommunity,
   createCommunityAdminRole,
   createCommunityAdminInvite,
+  createCommunityPlayerInvite,
   createCommunityStaticPlayer,
   createCommunityStaticPlayers,
   createHostStaticPlayers,
@@ -10,6 +11,7 @@ import {
   deleteCommunityPlayer,
   getCommunities,
   getCommunityPlayers,
+  getCommunityPlayerInviteCandidates,
   getCommunityPlayerWinPoints,
   includeCommunityAdminAsPlayer,
   removeCommunityAdminRole,
@@ -66,9 +68,19 @@ router.patch("/:communityId", authenticate, updateCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
 router.get("/:communityId/players", authenticate, getCommunityPlayers);
 router.get(
+  "/:communityId/players/invite-candidates",
+  authenticate,
+  getCommunityPlayerInviteCandidates,
+);
+router.get(
   "/:communityId/players/win-points",
   authenticate,
   getCommunityPlayerWinPoints,
+);
+router.post(
+  "/:communityId/players/invites",
+  authenticate,
+  createCommunityPlayerInvite,
 );
 router.post(
   "/:communityId/players/admin",

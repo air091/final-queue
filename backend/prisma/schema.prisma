@@ -22,6 +22,8 @@ model Account {
   communityPlayers  CommunityPlayer[]
   receivedCommunityAdminInvites CommunityAdminInvite[] @relation("ReceivedCommunityAdminInvites")
   sentCommunityAdminInvites     CommunityAdminInvite[] @relation("SentCommunityAdminInvites")
+  receivedCommunityPlayerInvites CommunityPlayerInvite[] @relation("ReceivedCommunityPlayerInvites")
+  sentCommunityPlayerInvites     CommunityPlayerInvite[] @relation("SentCommunityPlayerInvites")
   receivedFriendRequests FriendRequest[]   @relation("ReceivedFriendRequests")
   sentFriendRequests     FriendRequest[]   @relation("SentFriendRequests")
   matchParticipants MatchParticipant[]
@@ -51,6 +53,7 @@ model Community {
   hosts         Host[]
   admins        CommunityAdmin[]
   adminInvites  CommunityAdminInvite[]
+  playerInvites CommunityPlayerInvite[]
   players       CommunityPlayer[]
 
   @@index([masterId])
@@ -94,6 +97,23 @@ model CommunityAdminInvite {
   community   Community                  @relation(fields: [communityId], references: [id], onDelete: Cascade)
   inviter     Account                    @relation("SentCommunityAdminInvites", fields: [inviterId], references: [id], onDelete: Cascade)
   invitee     Account                    @relation("ReceivedCommunityAdminInvites", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@index([inviteeId, status])
+  @@index([inviterId])
+  @@index([communityId])
+}
+
+model CommunityPlayerInvite {
+  id          String                     @id @default(uuid())
+  communityId String
+  inviterId   String
+  inviteeId   String
+  status      CommunityAdminInviteStatus @default(pending)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  community   Community                  @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  inviter     Account                    @relation("SentCommunityPlayerInvites", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee     Account                    @relation("ReceivedCommunityPlayerInvites", fields: [inviteeId], references: [id], onDelete: Cascade)
 
   @@index([inviteeId, status])
   @@index([inviterId])

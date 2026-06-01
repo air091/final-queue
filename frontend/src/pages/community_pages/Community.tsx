@@ -6,6 +6,7 @@ import LoadingState from "../../components/LoadingState";
 import {
   EllipsisVertical,
   Plus,
+  Search,
   SquarePen,
   Trophy,
   Trash,
@@ -75,6 +76,7 @@ type PlayerFormState = {
   skillLevel: SkillLevelType;
 };
 
+type AddPlayerMode = "static" | "invite";
 type PointsFilterMode = "all" | "month" | "day";
 
 type CommunityPlayerPointHistoryItem = {
@@ -251,6 +253,20 @@ export default function Community() {
   >(null);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [addPlayerMode, setAddPlayerMode] = useState<AddPlayerMode>("static");
+  const [playerInviteSearchTerm, setPlayerInviteSearchTerm] = useState("");
+  const [playerInviteCandidates, setPlayerInviteCandidates] = useState<
+    MasterType[]
+  >([]);
+  const [selectedPlayerInviteIds, setSelectedPlayerInviteIds] = useState<
+    string[]
+  >([]);
+  const [isLoadingPlayerInviteCandidates, setIsLoadingPlayerInviteCandidates] =
+    useState(false);
+  const [isSendingPlayerInvites, setIsSendingPlayerInvites] = useState(false);
+  const [playerInviteSuccess, setPlayerInviteSuccess] = useState<string | null>(
+    null,
+  );
   const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
   const [addAdminMode, setAddAdminMode] = useState<AddAdminMode>("asPlayer");
   const [selectedAdminPlayerIds, setSelectedAdminPlayerIds] = useState<
@@ -671,6 +687,118 @@ export default function Community() {
       else console.error("Create community players api failed", error);
     } finally {
       setIsCreatingPlayers(false);
+    }
+  };
+
+  const closeAddPlayerModal = () => {
+    if (isCreatingPlayers || isSendingPlayerInvites) return;
+
+    setIsAddPlayerModalOpen(false);
+    setPlayerError(null);
+    setPlayerInviteSuccess(null);
+    setSelectedPlayerInviteIds([]);
+    setPlayerInviteSearchTerm("");
+    setAddPlayerMode("static");
+  };
+
+  const loadPlayerInviteCandidates = async (query = playerInviteSearchTerm) => {
+    if (!id) return;
+
+    setIsLoadingPlayerInviteCandidates(true);
+    setPlayerError(null);
+
+    try {
+      const response = await api.get(
+        `/api/community/${id}/players/invite-candidates`,
+        {
+          params: {
+            query: query.trim(),
+          },
+        },
+      );
+
+      setPlayerInviteCandidates(response.data.users as MasterType[]);
+    } catch (error) {
+      setPlayerError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ??
+              "Unable to load registered players.")
+          : "Unable to load registered players.",
+      );
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error("Load player invite candidates api failed", error);
+    } finally {
+      setIsLoadingPlayerInviteCandidates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAddPlayerModalOpen || addPlayerMode !== "invite") return;
+
+    const timeoutId = window.setTimeout(() => {
+      void loadPlayerInviteCandidates(playerInviteSearchTerm);
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [addPlayerMode, id, isAddPlayerModalOpen, playerInviteSearchTerm]);
+
+  const handleSelectPlayerInvite = (accountId: string, isSelected: boolean) => {
+    setSelectedPlayerInviteIds((currentIds) => {
+      if (isSelected) {
+        return currentIds.includes(accountId)
+          ? currentIds
+          : [...currentIds, accountId];
+      }
+
+      return currentIds.filter((currentId) => currentId !== accountId);
+    });
+    setPlayerError(null);
+    setPlayerInviteSuccess(null);
+  };
+
+  const handleSendPlayerInvites = async () => {
+    if (!id || isSendingPlayerInvites) return;
+
+    if (selectedPlayerInviteIds.length === 0) {
+      setPlayerError("Select at least one registered player.");
+      return;
+    }
+
+    setIsSendingPlayerInvites(true);
+    setPlayerError(null);
+    setPlayerInviteSuccess(null);
+
+    try {
+      await Promise.all(
+        selectedPlayerInviteIds.map((accountId) =>
+          api.post(`/api/community/${id}/players/invites`, { accountId }),
+        ),
+      );
+      const inviteCount = selectedPlayerInviteIds.length;
+
+      setSelectedPlayerInviteIds([]);
+      setPlayerInviteCandidates((currentCandidates) =>
+        currentCandidates.filter(
+          (candidate) => !selectedPlayerInviteIds.includes(candidate.id),
+        ),
+      );
+      setPlayerInviteSuccess(
+        inviteCount === 1
+          ? "Community invite sent."
+          : `${inviteCount} community invites sent.`,
+      );
+    } catch (error) {
+      setPlayerError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to send invite.")
+          : "Unable to send invite.",
+      );
+
+      if (axios.isAxiosError(error)) console.error(error.response?.data ?? error);
+      else console.error("Send player invite api failed", error);
+    } finally {
+      setIsSendingPlayerInvites(false);
     }
   };
 
@@ -1529,32 +1657,24 @@ export default function Community() {
       {isAddPlayerModalOpen ? (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
-          onClick={() => {
-            if (isCreatingPlayers) return;
-            setIsAddPlayerModalOpen(false);
-            setPlayerError(null);
-          }}
+          onClick={closeAddPlayerModal}
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
+            className="w-full max-w-lg rounded-3xl border border-orange-100 bg-white p-5 shadow-2xl"
           >
             <header className="flex items-start justify-between gap-4">
               <div>
                 <h4 className="text-lg font-semibold text-text">Add players</h4>
                 <p className="mt-1 text-sm text-stone-500">
-                  Create static players for this community.
+                  Create static players or invite registered users.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  if (isCreatingPlayers) return;
-                  setIsAddPlayerModalOpen(false);
-                  setPlayerError(null);
-                }}
-                disabled={isCreatingPlayers}
+                onClick={closeAddPlayerModal}
+                disabled={isCreatingPlayers || isSendingPlayerInvites}
                 className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Close modal"
               >
@@ -1562,6 +1682,41 @@ export default function Community() {
               </button>
             </header>
 
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAddPlayerMode("static");
+                  setPlayerError(null);
+                  setPlayerInviteSuccess(null);
+                }}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  addPlayerMode === "static"
+                    ? "bg-primary text-white"
+                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                }`}
+              >
+                Static players
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddPlayerMode("invite");
+                  setPlayerError(null);
+                  setPlayerInviteSuccess(null);
+                }}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  addPlayerMode === "invite"
+                    ? "bg-primary text-white"
+                    : "border border-orange-100 bg-white text-stone-700 hover:bg-orange-50"
+                }`}
+              >
+                <UserPlus size={15} />
+                Invite registered players
+              </button>
+            </div>
+
+            {addPlayerMode === "static" ? (
             <form onSubmit={handleCreatePlayers} className="mt-5 grid gap-4">
               <label className="grid gap-2 text-sm">
                 <span className="font-medium text-stone-700">Player names</span>
@@ -1602,11 +1757,7 @@ export default function Community() {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isCreatingPlayers) return;
-                    setIsAddPlayerModalOpen(false);
-                    setPlayerError(null);
-                  }}
+                  onClick={closeAddPlayerModal}
                   disabled={isCreatingPlayers}
                   className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                 >
@@ -1626,6 +1777,107 @@ export default function Community() {
                 </button>
               </div>
             </form>
+            ) : (
+              <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100">
+                <div className="border-b border-orange-100 bg-orange-50/30 p-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 py-2">
+                    <Search size={17} className="shrink-0 text-stone-400" />
+                    <input
+                      type="text"
+                      value={playerInviteSearchTerm}
+                      onChange={(event) =>
+                        setPlayerInviteSearchTerm(event.target.value)
+                      }
+                      placeholder="Search registered players"
+                      disabled={isSendingPlayerInvites}
+                      className="min-w-0 flex-1 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-orange-100 bg-white">
+                  {isLoadingPlayerInviteCandidates ? (
+                    <div className="px-4 py-8 text-center text-sm text-stone-500">
+                      Loading registered players...
+                    </div>
+                  ) : playerInviteCandidates.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-stone-500">
+                      No registered players available to invite.
+                    </div>
+                  ) : (
+                    playerInviteCandidates.map((candidate) => {
+                      const isSelected = selectedPlayerInviteIds.includes(
+                        candidate.id,
+                      );
+
+                      return (
+                        <label
+                          key={candidate.id}
+                          className="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-orange-50/40"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(event) =>
+                              handleSelectPlayerInvite(
+                                candidate.id,
+                                event.target.checked,
+                              )
+                            }
+                            disabled={isSendingPlayerInvites}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <img
+                            src={candidate.profileUrl}
+                            alt={candidate.username}
+                            className="h-10 w-10 shrink-0 rounded-full object-cover"
+                          />
+                          <span className="min-w-0 truncate text-sm font-semibold text-text">
+                            {candidate.username}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                {playerError ? (
+                  <p className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {playerError}
+                  </p>
+                ) : null}
+
+                {playerInviteSuccess ? (
+                  <p className="border-t border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    {playerInviteSuccess}
+                  </p>
+                ) : null}
+
+                <div className="flex justify-end gap-3 border-t border-orange-100 bg-orange-50/30 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={closeAddPlayerModal}
+                    disabled={isSendingPlayerInvites}
+                    className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSendPlayerInvites()}
+                    disabled={
+                      isSendingPlayerInvites ||
+                      selectedPlayerInviteIds.length === 0
+                    }
+                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                  >
+                    {isSendingPlayerInvites
+                      ? "Inviting..."
+                      : `Send invites (${selectedPlayerInviteIds.length})`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -2461,6 +2713,9 @@ export default function Community() {
                 <button
                   type="button"
                   onClick={() => {
+                    setAddPlayerMode("static");
+                    setPlayerInviteSuccess(null);
+                    setSelectedPlayerInviteIds([]);
                     setPlayerError(null);
                     setIsAddPlayerModalOpen(true);
                   }}

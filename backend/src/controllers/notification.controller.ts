@@ -6,6 +6,7 @@ import {
 import prisma from "../lib/prisma.js";
 
 const COMMUNITY_PLAYER_REQUEST_PREFIX = "community_player_request:";
+const COMMUNITY_PLAYER_INVITE_PREFIX = "community_player_invite:";
 
 const selectAdminInviteNotification = {
   id: true,
@@ -79,6 +80,40 @@ const mapCommunityPlayerRequestNotification = (communityPlayer: {
   message: `${communityPlayer.account.username} requested to join ${communityPlayer.community.communityName}.`,
 });
 
+type CommunityPlayerInviteNotificationRow = {
+  id: string;
+  status: CommunityAdminInviteStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  communityId: string;
+  communityName: string;
+  communityProfileUrl: string;
+  inviterId: string;
+  inviterUsername: string;
+  inviterProfileUrl: string;
+};
+
+const mapCommunityPlayerInviteNotification = (
+  invite: CommunityPlayerInviteNotificationRow,
+) => ({
+  id: `${COMMUNITY_PLAYER_INVITE_PREFIX}${invite.id}`,
+  type: "community_player_invite",
+  status: invite.status,
+  createdAt: invite.createdAt,
+  updatedAt: invite.updatedAt,
+  community: {
+    id: invite.communityId,
+    communityName: invite.communityName,
+    profileUrl: invite.communityProfileUrl,
+  },
+  actor: {
+    id: invite.inviterId,
+    username: invite.inviterUsername,
+    profileUrl: invite.inviterProfileUrl,
+  },
+  message: `${invite.inviterUsername} invited you to join ${invite.communityName}.`,
+});
+
 export const getNotifications = async (
   request: Request,
   response: Response,
@@ -129,9 +164,31 @@ export const getNotifications = async (
       },
     });
 
+    const communityPlayerInvites =
+      await prisma.$queryRaw<CommunityPlayerInviteNotificationRow[]>`
+        SELECT
+          invite."id",
+          invite."status",
+          invite."createdAt",
+          invite."updatedAt",
+          community."id" AS "communityId",
+          community."communityName",
+          community."profileUrl" AS "communityProfileUrl",
+          inviter."id" AS "inviterId",
+          inviter."username" AS "inviterUsername",
+          inviter."profileUrl" AS "inviterProfileUrl"
+        FROM "CommunityPlayerInvite" invite
+        JOIN "Community" community ON community."id" = invite."communityId"
+        JOIN "Account" inviter ON inviter."id" = invite."inviterId"
+        WHERE invite."inviteeId" = ${user.sub}
+          AND invite."status" = 'pending'::"CommunityAdminInviteStatus"
+        ORDER BY invite."createdAt" DESC
+      `;
+
     const notifications = [
       ...adminInvites.map(mapAdminInviteNotification),
       ...communityPlayerRequests.map(mapCommunityPlayerRequestNotification),
+      ...communityPlayerInvites.map(mapCommunityPlayerInviteNotification),
     ].sort(
       (firstNotification, secondNotification) =>
         new Date(secondNotification.createdAt).getTime() -
@@ -194,6 +251,57 @@ export const acceptNotification = async (
       return response.status(200).json({
         success: true,
         message: "Community player request accepted",
+        notificationId,
+      });
+    }
+
+    if (notificationId.startsWith(COMMUNITY_PLAYER_INVITE_PREFIX)) {
+      const inviteId = notificationId.slice(COMMUNITY_PLAYER_INVITE_PREFIX.length);
+      const invites = await prisma.$queryRaw<
+        Array<{ id: string; communityId: string; inviteeId: string }>
+      >`
+        SELECT "id", "communityId", "inviteeId"
+        FROM "CommunityPlayerInvite"
+        WHERE "id" = ${inviteId}
+          AND "inviteeId" = ${user.sub}
+          AND "status" = 'pending'::"CommunityAdminInviteStatus"
+        LIMIT 1
+      `;
+      const invite = invites[0];
+
+      if (!invite)
+        return response
+          .status(404)
+          .json({ success: false, message: "Notification not found" });
+
+      await prisma.$transaction([
+        prisma.communityPlayer.upsert({
+          where: {
+            communityId_accountId: {
+              communityId: invite.communityId,
+              accountId: invite.inviteeId,
+            },
+          },
+          update: {
+            status: PlayerHostStatuses.accepted,
+          },
+          create: {
+            communityId: invite.communityId,
+            accountId: invite.inviteeId,
+            status: PlayerHostStatuses.accepted,
+          },
+        }),
+        prisma.$executeRaw`
+          UPDATE "CommunityPlayerInvite"
+          SET "status" = 'accepted'::"CommunityAdminInviteStatus",
+              "updatedAt" = NOW()
+          WHERE "id" = ${invite.id}
+        `,
+      ]);
+
+      return response.status(200).json({
+        success: true,
+        message: "Community invite accepted",
         notificationId,
       });
     }
@@ -292,6 +400,37 @@ export const rejectNotification = async (
       return response.status(200).json({
         success: true,
         message: "Community player request rejected",
+        notificationId,
+      });
+    }
+
+    if (notificationId.startsWith(COMMUNITY_PLAYER_INVITE_PREFIX)) {
+      const inviteId = notificationId.slice(COMMUNITY_PLAYER_INVITE_PREFIX.length);
+      const invites = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "CommunityPlayerInvite"
+        WHERE "id" = ${inviteId}
+          AND "inviteeId" = ${user.sub}
+          AND "status" = 'pending'::"CommunityAdminInviteStatus"
+        LIMIT 1
+      `;
+      const invite = invites[0];
+
+      if (!invite)
+        return response
+          .status(404)
+          .json({ success: false, message: "Notification not found" });
+
+      await prisma.$executeRaw`
+        UPDATE "CommunityPlayerInvite"
+        SET "status" = 'rejected'::"CommunityAdminInviteStatus",
+            "updatedAt" = NOW()
+        WHERE "id" = ${invite.id}
+      `;
+
+      return response.status(200).json({
+        success: true,
+        message: "Community invite rejected",
         notificationId,
       });
     }
