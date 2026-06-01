@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import LoadingState from "../../components/LoadingState";
 import {
-  ArrowDown,
-  ArrowUp,
+  AArrowDown,
+  AArrowUp,
   EllipsisVertical,
   LoaderCircle,
   Plus,
@@ -116,6 +116,7 @@ type CommunityPlayerWinPointsRecord = {
 type CommunityPanel = "host" | "players" | null;
 type AddAdminMode = "asPlayer" | "newAdmin";
 type HostScheduleSortDirection = "asc" | "desc";
+type CommunityPlayerNameSortDirection = "asc" | "desc";
 type CommunityPlayerEditForm = {
   username: string;
   skillLevel: SkillLevelType;
@@ -312,6 +313,8 @@ export default function Community() {
   const [playerInviteSearchTerm, setPlayerInviteSearchTerm] = useState("");
   const [communityPlayerSearchTerm, setCommunityPlayerSearchTerm] =
     useState("");
+  const [communityPlayerNameSortDirection, setCommunityPlayerNameSortDirection] =
+    useState<CommunityPlayerNameSortDirection>("asc");
   const [playerInviteCandidates, setPlayerInviteCandidates] = useState<
     MasterType[]
   >([]);
@@ -388,11 +391,22 @@ export default function Community() {
 
         if (secondPoints !== firstPoints) return secondPoints - firstPoints;
 
-        return firstPlayer.player.username.localeCompare(
-          secondPlayer.player.username,
+        const nameMultiplier =
+          communityPlayerNameSortDirection === "asc" ? 1 : -1;
+
+        return (
+          firstPlayer.player.username.localeCompare(
+            secondPlayer.player.username,
+            undefined,
+            { sensitivity: "base" },
+          ) * nameMultiplier
         );
       }),
-    [communityPlayers, winPointsByCommunityPlayerId],
+    [
+      communityPlayerNameSortDirection,
+      communityPlayers,
+      winPointsByCommunityPlayerId,
+    ],
   );
 
   const requestedCommunityPlayers = useMemo(
@@ -2939,6 +2953,30 @@ export default function Community() {
 
                 <button
                   type="button"
+                  title={`Sort players ${
+                    communityPlayerNameSortDirection === "asc"
+                      ? "descending"
+                      : "ascending"
+                  }`}
+                  onClick={() =>
+                    setCommunityPlayerNameSortDirection((currentDirection) =>
+                      currentDirection === "asc" ? "desc" : "asc",
+                    )
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-stone-600 transition hover:bg-orange-50 cursor-pointer"
+                >
+                  {communityPlayerNameSortDirection === "asc" ? (
+                    <AArrowUp size={17} />
+                  ) : (
+                    <AArrowDown size={17} />
+                  )}
+                  {communityPlayerNameSortDirection === "asc"
+                    ? "Ascending"
+                    : "Descending"}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setAddPlayerMode("static");
                     setPlayerInviteSuccess(null);
@@ -3378,8 +3416,34 @@ export default function Community() {
               <p className="text-sm text-gray-500">Manage match queues</p>
             </div>
 
-            <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              {communityHosts.length}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setHostScheduleSortDirection((currentDirection) =>
+                    currentDirection === "asc" ? "desc" : "asc",
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-stone-600 transition hover:bg-orange-50 cursor-pointer"
+                aria-label={`Sort hosts ${
+                  hostScheduleSortDirection === "asc"
+                    ? "descending"
+                    : "ascending"
+                }`}
+              >
+                {hostScheduleSortDirection === "asc" ? (
+                  <AArrowUp size={17} aria-hidden="true" />
+                ) : (
+                  <AArrowDown size={17} aria-hidden="true" />
+                )}
+                {hostScheduleSortDirection === "asc"
+                  ? "Ascending"
+                  : "Descending"}
+              </button>
+
+              <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                {communityHosts.length}
+              </div>
             </div>
           </div>
 
@@ -3414,9 +3478,9 @@ export default function Community() {
                     >
                       <span>Schedule</span>
                       {hostScheduleSortDirection === "asc" ? (
-                        <ArrowUp size={14} aria-hidden="true" />
+                        <AArrowUp size={14} aria-hidden="true" />
                       ) : (
-                        <ArrowDown size={14} aria-hidden="true" />
+                        <AArrowDown size={14} aria-hidden="true" />
                       )}
                     </button>
                   </th>

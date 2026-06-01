@@ -1748,7 +1748,17 @@ export default function Players() {
         communityPlayer.player.username
           .toLowerCase()
           .includes(normalizedPlayerSearchTerm)),
-  );
+  ).sort((firstPlayer, secondPlayer) => {
+    const nameMultiplier = nameSortDirection === "asc" ? 1 : -1;
+
+    return (
+      firstPlayer.player.username.localeCompare(
+        secondPlayer.player.username,
+        undefined,
+        { sensitivity: "base" },
+      ) * nameMultiplier
+    );
+  });
 
   const statusPriority: Record<string, number> = {
     accepted: 0,
@@ -1894,18 +1904,21 @@ export default function Players() {
 
               <button
                 type="button"
-                title="Sort by player name"
+                title={`Sort players ${
+                  nameSortDirection === "asc" ? "descending" : "ascending"
+                }`}
                 aria-pressed={primarySortField === "name"}
                 onClick={() => togglePlayerSort("name")}
-                className={`flex items-center rounded-full border border-orange-100 px-3 py-1 outline-orange-100 transition hover:bg-orange-50 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-xl border border-orange-100 px-3 py-2 text-xs font-semibold text-stone-600 outline-orange-100 transition hover:bg-orange-50 cursor-pointer ${
                   primarySortField === "name" ? "bg-orange-50" : "bg-white"
                 }`}
               >
-                {nameSortDirection === "desc" ? (
-                  <AArrowUp size={22} />
+                {nameSortDirection === "asc" ? (
+                  <AArrowUp size={18} />
                 ) : (
-                  <AArrowDown size={22} />
+                  <AArrowDown size={18} />
                 )}
+                {nameSortDirection === "asc" ? "Ascending" : "Descending"}
               </button>
 
               <button
