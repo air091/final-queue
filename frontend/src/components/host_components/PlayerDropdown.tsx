@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
 import { useHostData } from "../../hooks/useHostData";
-import type { AcceptedPlayers } from "../../lib/host";
+import { buildPaymentsSummary, type AcceptedPlayers } from "../../lib/host";
 import type { RefObject } from "react";
 import { api } from "../../lib/api";
 import { SkillLevelBadge } from "../../lib/skillLevels";
@@ -32,6 +32,10 @@ export default function PlayerSettingsDropdown({
     setAcceptedPlayers,
     courts,
     setCourts,
+    queues,
+    setQueues,
+    paymentsData,
+    setPaymentsData,
     historyLoadingPlayerId,
     openPlayerHistory,
   } = useHostData();
@@ -93,29 +97,28 @@ export default function PlayerSettingsDropdown({
     };
   }, [anchorRef]);
 
-  const banAPI = async () => {
-    await api.post(
-      `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/players/${player.id}`,
-      {},
+  const removeFromHostAPI = async () => {
+    await api.delete(
+      `/api/private/actions/remove/community/${communityId}/hosts/${hostId}/players/${player.id}`,
     );
   };
 
-  const handleBanClick = async () => {
+  const handleRemoveClick = async () => {
     if (isPlayerInGame) return;
+
+    const shouldRemove = window.confirm(
+      `Remove ${player.player.username} from this hosted match? This will also remove their match history for this session.`,
+    );
+    if (!shouldRemove) return;
 
     const previousPlayersInHost = playersInHost;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
-    const bannedPlayerRecord = {
-      id: player.id,
-      status: "banned" as const,
-      player: player.player,
-    };
+    const previousQueues = queues;
+    const previousPaymentsData = paymentsData;
 
     setPlayersInHost((currentPlayers) =>
-      currentPlayers.map((currentPlayer) =>
-        currentPlayer.id === player.id ? bannedPlayerRecord : currentPlayer,
-      ),
+      currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
     );
     setAcceptedPlayers((currentPlayers) =>
       currentPlayers.filter((currentPlayer) => currentPlayer.id !== player.id),
@@ -128,13 +131,33 @@ export default function PlayerSettingsDropdown({
         ),
       })),
     );
+    setQueues((currentQueues) =>
+      currentQueues.map((queue) => ({
+        ...queue,
+        entries: queue.entries.filter((entry) => entry.playerId !== player.id),
+      })),
+    );
+    setPaymentsData((currentPaymentsData) => {
+      const nextPlayers = currentPaymentsData.players.filter(
+        (currentPlayer) => currentPlayer.id !== player.id,
+      );
+
+      return {
+        ...currentPaymentsData,
+        players: nextPlayers,
+        summary: buildPaymentsSummary(nextPlayers),
+      };
+    });
+    onCloseDropdown();
 
     try {
-      await banAPI();
+      await removeFromHostAPI();
     } catch (error) {
       setPlayersInHost(previousPlayersInHost);
       setAcceptedPlayers(previousAcceptedPlayers);
       setCourts(previousCourts);
+      setQueues(previousQueues);
+      setPaymentsData(previousPaymentsData);
 
       if (axios.isAxiosError(error))
         console.error(error.response?.data ?? error);
@@ -228,7 +251,7 @@ export default function PlayerSettingsDropdown({
 
         <button
           type="button"
-          onClick={handleBanClick}
+          onClick={handleRemoveClick}
           disabled={isPlayerInGame}
           className={`
         w-full rounded-2xl px-3 py-2.5 text-sm font-medium text-white transition-all duration-200
@@ -239,7 +262,7 @@ export default function PlayerSettingsDropdown({
         }
       `}
         >
-          {isPlayerInGame ? "Ban unavailable" : "Ban player"}
+          {isPlayerInGame ? "Remove unavailable" : "Remove Player"}
         </button>
       </div>
     </div>,

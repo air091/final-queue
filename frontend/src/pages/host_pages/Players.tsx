@@ -76,7 +76,7 @@ type PlayerSectionProps = {
   savingStaticProfileUrlId: string | null;
   onAcceptPlayer: (hostedPlayerId: string) => void;
   onRejectPlayer: (hostedPlayerId: string) => void;
-  onBanPlayer: (hostedPlayerId: string) => void;
+  onRemovePlayerFromHost: (hostedPlayerId: string) => void;
   onUnbanPlayer: (hostedPlayerId: string) => void;
   onDeletePlayer: (hostedPlayerId: string) => void;
   onViewHistory: (player: HostPlayerRecord) => void;
@@ -104,7 +104,7 @@ function PlayerSection({
   historyLoadingPlayerId,
   onAcceptPlayer,
   onRejectPlayer,
-  onBanPlayer,
+  onRemovePlayerFromHost,
   onUnbanPlayer,
   onDeletePlayer,
   onViewHistory,
@@ -146,7 +146,7 @@ function PlayerSection({
               (a) => a.id === playerRecord.id,
             );
 
-            const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
+            const isRemoveDisabled = acceptedPlayer?.matchStatus === "playing";
             const canUpdateStaticProfile =
               playerRecord.player.isStatic && onStaticProfileImageChange;
             const isSavingProfile =
@@ -299,21 +299,21 @@ function PlayerSection({
                         {playerRecord.status === "accepted" ? (
                           <button
                             type="button"
-                            disabled={isBanDisabled}
+                            disabled={isRemoveDisabled}
                             onClick={(event) => {
                               event.preventDefault();
                               event.currentTarget
                                 .closest("details")
                                 ?.removeAttribute("open");
-                              onBanPlayer(playerRecord.id);
+                              onRemovePlayerFromHost(playerRecord.id);
                             }}
                             className={`block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
-                              isBanDisabled
+                              isRemoveDisabled
                                 ? "cursor-not-allowed bg-gray-100 text-gray-400"
                                 : "bg-white text-red-600 hover:bg-red-50"
                             }`}
                           >
-                            Ban
+                            Remove
                           </button>
                         ) : null}
 
@@ -378,7 +378,7 @@ function PlayerSection({
               (a) => a.id === playerRecord.id,
             );
 
-            const isBanDisabled = acceptedPlayer?.matchStatus === "playing";
+            const isRemoveDisabled = acceptedPlayer?.matchStatus === "playing";
 
             const canUpdateStaticProfile =
               playerRecord.player.isStatic && onStaticProfileImageChange;
@@ -516,21 +516,21 @@ function PlayerSection({
                         {playerRecord.status === "accepted" ? (
                           <button
                             type="button"
-                            disabled={isBanDisabled}
+                            disabled={isRemoveDisabled}
                             onClick={(event) => {
                               event.preventDefault();
                               event.currentTarget
                                 .closest("details")
                                 ?.removeAttribute("open");
-                              onBanPlayer(playerRecord.id);
+                              onRemovePlayerFromHost(playerRecord.id);
                             }}
                             className={`block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
-                              isBanDisabled
+                              isRemoveDisabled
                                 ? "cursor-not-allowed bg-gray-100 text-gray-400"
                                 : "bg-white text-red-600 hover:bg-red-50"
                             }`}
                           >
-                            Ban
+                            Remove
                           </button>
                         ) : null}
 
@@ -1116,7 +1116,13 @@ export default function Players() {
     }
   };
 
-  const handleBanPlayer = async (hostedPlayerId: string) => {
+  const handleRemovePlayerFromHost = async (hostedPlayerId: string) => {
+    const playerToRemove = players.find((player) => player.id === hostedPlayerId);
+    const shouldRemove = window.confirm(
+      `Remove ${playerToRemove?.player.username ?? "this player"} from this hosted match? This will also remove their match history for this session.`,
+    );
+    if (!shouldRemove) return;
+
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
@@ -1124,10 +1130,8 @@ export default function Players() {
     const previousPaymentsData = paymentsData;
 
     setPlayersInHost((currentPlayers) =>
-      currentPlayers.map((currentPlayer) =>
-        currentPlayer.id === hostedPlayerId
-          ? { ...currentPlayer, status: "banned" }
-          : currentPlayer,
+      currentPlayers.filter(
+        (currentPlayer) => currentPlayer.id !== hostedPlayerId,
       ),
     );
     setAcceptedPlayers((currentPlayers) =>
@@ -1164,9 +1168,8 @@ export default function Players() {
     });
 
     try {
-      await api.post(
-        `/api/private/actions/ban/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
-        {},
+      await api.delete(
+        `/api/private/actions/remove/community/${communityId}/hosts/${hostId}/players/${hostedPlayerId}`,
       );
     } catch (error) {
       setPlayersInHost(previousPlayers);
@@ -1182,6 +1185,14 @@ export default function Players() {
   };
 
   const handleDeletePlayer = async (hostedPlayerId: string) => {
+    const playerToDelete = players.find(
+      (player) => player.id === hostedPlayerId,
+    );
+    const shouldDelete = window.confirm(
+      `Delete ${playerToDelete?.player.username ?? "this player"}? This will remove them from community players and delete all history for this hosted match.`,
+    );
+    if (!shouldDelete) return;
+
     const previousPlayers = players;
     const previousAcceptedPlayers = acceptedPlayers;
     const previousCourts = courts;
@@ -1189,9 +1200,6 @@ export default function Players() {
     const previousPaymentsData = paymentsData;
     const previousCommunityPlayers = communityPlayers;
     const previousSelectedCommunityPlayerIds = selectedCommunityPlayerIds;
-    const playerToDelete = players.find(
-      (player) => player.id === hostedPlayerId,
-    );
     const playerAccountId = playerToDelete?.player.id;
 
     setPlayersInHost((currentPlayers) =>
@@ -1839,7 +1847,7 @@ export default function Players() {
           savingStaticProfileUrlId={savingStaticProfileUrlId}
           onAcceptPlayer={handleAcceptPlayer}
           onRejectPlayer={handleRejectPlayer}
-          onBanPlayer={handleBanPlayer}
+          onRemovePlayerFromHost={handleRemovePlayerFromHost}
           onUnbanPlayer={handleUnbanPlayer}
           onDeletePlayer={handleDeletePlayer}
           onViewHistory={openPlayerHistory}

@@ -280,6 +280,81 @@ export const banPlayer = async (
   }
 };
 
+export const removePlayerFromHost = async (
+  request: Request<BanPlayerParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId, playerId } = request.params;
+    if (!communityId || !hostId || !playerId) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required parameters" });
+    }
+
+    const user = request.user;
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    const host = await getAuthorizedHost(communityId, hostId, user.sub);
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community or host not found" });
+
+    const existing = await prisma.player.findFirst({
+      where: {
+        id: playerId,
+        hostId: host.id,
+      },
+      select: {
+        id: true,
+        courtAssignment: {
+          select: {
+            court: {
+              select: {
+                startedAt: true,
+                endedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existing)
+      return response
+        .status(404)
+        .json({ success: false, message: "Player not found" });
+
+    if (
+      existing.courtAssignment?.court &&
+      isCourtActive(existing.courtAssignment.court)
+    )
+      return response.status(400).json({
+        success: false,
+        message: "Cannot remove a player while they are in an active game",
+      });
+
+    await prisma.player.delete({
+      where: { id: existing.id },
+    });
+
+    return response.status(200).json({
+      success: true,
+      message: "Player removed from host",
+    });
+  } catch (error) {
+    console.error("Error removing player from host:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
 export const deletePlayer = async (
   request: Request<BanPlayerParams>,
   response: Response,
