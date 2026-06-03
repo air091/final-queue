@@ -277,8 +277,9 @@ export const getHosts = async (
         .status(404)
         .json({ success: false, message: "Missing required params" });
 
-    const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: { id: true },
     });
 
     if (!community)

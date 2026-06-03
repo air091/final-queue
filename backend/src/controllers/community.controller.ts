@@ -270,6 +270,7 @@ export const getAllCommunities = async (
         description: true,
         master: {
           select: {
+            id: true,
             username: true,
           },
         },
