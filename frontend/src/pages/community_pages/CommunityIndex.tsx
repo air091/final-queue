@@ -1,5 +1,5 @@
 import { Link, Navigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import LoadingState from "../../components/LoadingState";
 import { useCommunities } from "../../contexts/CommunitiesContext";
@@ -34,13 +34,23 @@ export default function CommunityIndex() {
         <p className="mt-2 text-sm text-stone-500">
           Create a community to start adding hosts and players.
         </p>
-        <Link
-          to="/community/create"
-          className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent"
-        >
-          <Plus size={16} />
-          Create community
-        </Link>
+        <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            to="/community/create"
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent"
+          >
+            <Plus size={16} />
+            Create community
+          </Link>
+
+          <Link
+            to="/community/find"
+            className="inline-flex items-center gap-2 rounded-2xl border border-orange-100 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-orange-50"
+          >
+            <Search size={16} />
+            Find community
+          </Link>
+        </div>
       </div>
     </div>
   );

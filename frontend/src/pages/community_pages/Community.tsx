@@ -49,6 +49,7 @@ type CommunityType = {
   description: string;
   master: MasterType;
   admins: CommunityAdminType[];
+  isMember: boolean;
 };
 
 type HostsType = {
@@ -479,7 +480,8 @@ export default function Community() {
   const isCommunityOwner = Boolean(
     user && community && user.id === community.master.id,
   );
-  const canAddAdminAsPlayer = Boolean(user && community);
+  const canManageCommunity = Boolean(community?.isMember);
+  const canAddAdminAsPlayer = Boolean(user && community && community.isMember);
   const adminCandidates = useMemo<AdminCandidate[]>(() => {
     if (!community) return [];
 
@@ -653,8 +655,20 @@ export default function Community() {
   };
 
   useEffect(() => {
+    if (!id) {
+      setIsCommunityHostsLoading(false);
+      return;
+    }
+
+    if (!community) return;
+
+    if (!community.isMember) {
+      setIsCommunityHostsLoading(false);
+      return;
+    }
+
     void getCommunityHostsAPI();
-  }, [id]);
+  }, [id, community?.isMember]);
 
   const getCommunityPlayersAPI = async () => {
     if (!id) {
@@ -677,8 +691,20 @@ export default function Community() {
   };
 
   useEffect(() => {
+    if (!id) {
+      setIsCommunityPlayersLoading(false);
+      return;
+    }
+
+    if (!community) return;
+
+    if (!community.isMember) {
+      setIsCommunityPlayersLoading(false);
+      return;
+    }
+
     void getCommunityPlayersAPI();
-  }, [id]);
+  }, [id, community?.isMember]);
 
   const getCommunityPlayerWinPointsAPI = async () => {
     try {
@@ -707,9 +733,23 @@ export default function Community() {
   };
 
   useEffect(() => {
+    if (!id) {
+      setIsLoadingWinPoints(false);
+      return;
+    }
+
+    if (!community) return;
+
+    if (!community.isMember) {
+      setCommunityPlayerWinPoints([]);
+      setIsLoadingWinPoints(false);
+      return;
+    }
+
     void getCommunityPlayerWinPointsAPI();
   }, [
     id,
+    community?.isMember,
     pointsFilterDay,
     pointsFilterMode,
     pointsFilterMonth,
@@ -2609,6 +2649,11 @@ export default function Community() {
                   {community?.master.username}
                 </span>
               </p>
+              {community?.description?.trim() ? (
+                <p className="mt-2 max-w-2xl text-sm text-stone-500">
+                  {community.description}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -2616,13 +2661,13 @@ export default function Community() {
             <div ref={dropdownRef} className="relative">
               <div
                 onClick={() => setOpenDropdownCommunity((prev) => !prev)}
-                className="p-1 rounded-full  cursor-pointer hover:bg-primary/10"
+                className="p-1 rounded-full cursor-pointer hover:bg-primary/10"
               >
                 <EllipsisVertical size={20} />
               </div>
 
               {openDropdownCommunity && (
-                <div className="absolute border border-primary py-2 w-[240px] top-8 -left-53 rounded-lg bg-white">
+                <div className="absolute right-0 z-10 border border-primary py-2 w-[240px] top-8 rounded-lg bg-white shadow-lg">
                   <button
                     type="button"
                     onClick={() => {
@@ -2660,12 +2705,18 @@ export default function Community() {
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            onClick={openCreateHostModal}
+            onClick={() => {
+              if (!canManageCommunity) return;
+              openCreateHostModal();
+            }}
+            disabled={!canManageCommunity}
             aria-pressed={activePanel === "host"}
-            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition cursor-pointer ${
-              activePanel === "host"
-                ? "border-primary bg-primary text-white shadow-sm"
-                : "border-gray-200 bg-white text-text hover:border-primary/40 hover:bg-orange-50"
+            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition ${
+              !canManageCommunity
+                ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                : activePanel === "host"
+                ? "cursor-pointer border-primary bg-primary text-white shadow-sm"
+                : "cursor-pointer border-gray-200 bg-white text-text hover:border-primary/40 hover:bg-orange-50"
             }`}
           >
             <span className="flex items-center gap-3">
@@ -2693,14 +2744,18 @@ export default function Community() {
 
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (!canManageCommunity) return;
               setActivePanel((currentPanel) =>
                 currentPanel === "players" ? null : "players",
-              )
-            }
+              );
+            }}
+            disabled={!canManageCommunity}
             aria-pressed={activePanel === "players"}
-            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition cursor-pointer ${
-              activePanel === "players"
+            className={`flex items-center justify-between rounded-2xl border px-5 py-4 text-left transition ${
+              !canManageCommunity
+                ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                : activePanel === "players"
                 ? "border-primary bg-primary text-white shadow-sm"
                 : "border-gray-200 bg-white text-text hover:border-primary/40 hover:bg-orange-50"
             }`}

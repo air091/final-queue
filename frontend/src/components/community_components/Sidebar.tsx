@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { Plus } from "lucide-react";
 import { useCommunities } from "../../contexts/CommunitiesContext";
 
@@ -36,6 +36,31 @@ export default function Sidebar() {
             </div>
 
             <span className="block">Home</span>
+          </NavLink>
+        </li>
+
+        <li>
+          <NavLink
+            to="/community/find"
+            className={({ isActive }) =>
+              `
+             w-full
+              flex items-center
+              rounded-r-lg px-6 py-1 gap-x-2
+              text-sm font-medium transition
+
+            ${
+              isActive
+                ? "bg-primary/10 text-primary"
+                : "text-text hover:bg-gray-100"
+            }
+          `
+            }
+          >
+            <div className="flex p-1 items-center rounded-xl transition text-primary">
+              <Search size={24} />
+            </div>
+            <span className="block">Find Community</span>
           </NavLink>
         </li>
 

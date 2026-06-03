@@ -13,6 +13,9 @@ const HomeLayout = lazy(() => import("./layouts/HomeLayout"));
 const CommunityIndex = lazy(
   () => import("./pages/community_pages/CommunityIndex")
 );
+const FindCommunity = lazy(
+  () => import("./pages/community_pages/FindCommunity")
+);
 const Community = lazy(() => import("./pages/community_pages/Community"));
 const CommunityLayout = lazy(() => import("./layouts/CommunityLayout"));
 const CreateCommunity = lazy(
@@ -109,6 +112,10 @@ const router = createBrowserRouter([
           {
             path: "create",
             element: withSuspense(<CreateCommunity />),
+          },
+          {
+            path: "find",
+            element: withSuspense(<FindCommunity />),
           },
           {
             path: ":id",

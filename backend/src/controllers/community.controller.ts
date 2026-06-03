@@ -256,6 +256,39 @@ export const getCommunities = async (request: Request, response: Response) => {
   }
 };
 
+export const getAllCommunities = async (
+  request: Request,
+  response: Response,
+) => {
+  try {
+    const communities = await prisma.community.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        profileUrl: true,
+        communityName: true,
+        description: true,
+        master: {
+          select: {
+            username: true,
+          },
+        },
+      },
+    });
+
+    return response.json({ success: true, communities });
+  } catch (error) {
+    console.error("Error getting all communities:", error);
+    return response.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
+    });
+  }
+};
+
 type GetCommunityByIdParams = {
   communityId: string;
 };
@@ -276,8 +309,8 @@ export const getCommunityById = async (
         .status(400)
         .json({ success: false, message: "Missing required params" });
 
-    const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
       select: {
         id: true,
         profileUrl: true,
@@ -317,6 +350,12 @@ export const getCommunityById = async (
             status: true,
           },
         },
+        players: {
+          where: { accountId: user.sub },
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -325,10 +364,18 @@ export const getCommunityById = async (
         .status(404)
         .json({ success: false, message: "Community not found" });
 
+    const isMember =
+      community.master.id === user.sub ||
+      community.admins.some((admin) => admin.account.id === user.sub) ||
+      community.players.length > 0;
+
+    const { players, ...communityData } = community;
+    const responseCommunity = { ...communityData, isMember };
+
     return response.status(200).json({
       success: true,
       message: "Community fetched successfully",
-      community,
+      community: responseCommunity,
     });
   } catch (error) {
     console.error("Error getting community by id:", error);

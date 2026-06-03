@@ -10,6 +10,7 @@ import {
   addCommunityPlayersToHost,
   deleteCommunityPlayer,
   getCommunities,
+  getAllCommunities,
   getCommunityPlayers,
   getCommunityPlayerInviteCandidates,
   getCommunityPlayerWinPoints,
@@ -63,6 +64,7 @@ const router: Router = express.Router();
 // COMMUNITY
 
 router.post("/create", authenticate, createCommunity);
+router.get("/all", authenticate, getAllCommunities);
 router.get("/", authenticate, getCommunities);
 router.get("/:communityId", authenticate, getCommunityById);
 router.patch("/:communityId", authenticate, updateCommunity);
