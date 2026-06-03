@@ -335,20 +335,6 @@ function PlayerSection({
                             Unban
                           </button>
                         ) : null}
-
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.currentTarget
-                              .closest("details")
-                              ?.removeAttribute("open");
-                            onDeletePlayer(playerRecord.id);
-                          }}
-                          className="block w-full px-4 py-3 text-left text-xs font-medium bg-white text-red-600 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </details>
                   ) : null}
@@ -552,20 +538,6 @@ function PlayerSection({
                             Unban
                           </button>
                         ) : null}
-
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.currentTarget
-                              .closest("details")
-                              ?.removeAttribute("open");
-                            onDeletePlayer(playerRecord.id);
-                          }}
-                          className="block w-full px-4 py-3 text-left text-xs font-medium bg-white text-red-600 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </details>
                   ) : null}
