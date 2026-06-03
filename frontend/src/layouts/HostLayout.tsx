@@ -776,11 +776,6 @@ export default function HostLayout() {
           isSaving: isTogglingHostPlayer,
           onToggle: openHostAdminPlayerModal,
         }}
-        centerSearch={{
-          value: playerSearchTerm,
-          placeholder: "Search player name",
-          onChange: setPlayerSearchTerm,
-        }}
       />
 
       <main className="relative flex flex-1 overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">

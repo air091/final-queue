@@ -27,7 +27,7 @@ import {
   type MatchPlayerStatus,
   type QueueType,
 } from "../../lib/host";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 type CourtDropData = {
   type: "court-slot";
@@ -697,6 +697,7 @@ export default function Match() {
     refreshHostData,
     pauseHostLiveSync,
     playerSearchTerm,
+    setPlayerSearchTerm,
   } = useHostData();
   const [activePlayerStatus, setActivePlayerStatus] =
     useState<PlayerStatusFilter>("all");
@@ -1976,6 +1977,19 @@ export default function Match() {
                   <h5 className="text-base font-bold tracking-tight text-[var(--color-text)] min-[1280px]:text-xl">
                     Players
                   </h5>
+                </div>
+
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2">
+                    <Search size={18} className="shrink-0 text-stone-400" />
+                    <input
+                      type="text"
+                      value={playerSearchTerm}
+                      onChange={(event) => setPlayerSearchTerm(event.target.value)}
+                      placeholder="Search players"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -11,7 +11,7 @@ import {
   type PaymentStatus,
   type PaymentPlayer,
 } from "../../lib/host";
-import { AArrowDown, AArrowUp, Gamepad, MoveDown, MoveUp } from "lucide-react";
+import { AArrowDown, AArrowUp, Gamepad, MoveDown, MoveUp, Search } from "lucide-react";
 
 type PricingDraft = {
   entranceFee: string;
@@ -46,6 +46,7 @@ export default function Payments() {
     refreshHostData,
     pauseHostLiveSync,
     playerSearchTerm,
+    setPlayerSearchTerm,
   } = useHostData();
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>({
     entranceFee: "0",
@@ -500,7 +501,7 @@ export default function Payments() {
 
       {/* PLAYERS TABLE */}
       <section className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-        <header className="border-b border-orange-100 px-5 py-4">
+        <header className="flex items-center justify-between border-b border-orange-100 px-5 py-4">
           <div>
             <h4 className="text-lg font-semibold text-[var(--color-text)]">
               Player Payments
@@ -511,6 +512,17 @@ export default function Payments() {
             </p>
           </div>
           <div className="flex items-center gap-x-3">
+            <div className="flex items-center gap-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2">
+              <Search size={18} className="shrink-0 text-stone-400" />
+              <input
+                type="text"
+                value={playerSearchTerm}
+                onChange={(event) => setPlayerSearchTerm(event.target.value)}
+                placeholder="Search players"
+                className="min-w-0 flex-1 bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400"
+              />
+            </div>
+
             {/* filters */}
             <div className="flex items-center gap-x-3">
               {/* paid & unpaid */}
