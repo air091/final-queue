@@ -29,6 +29,32 @@ const communityMemberWhere = (communityId: string, accountId: string) => ({
   ],
 });
 
+const communityHostManagerWhere = (
+  communityId: string,
+  hostId: string,
+  accountId: string,
+) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+    {
+      hosts: {
+        some: {
+          id: hostId,
+          players: {
+            some: {
+              playerId: accountId,
+              isHost: true,
+              status: PlayerHostStatuses.accepted,
+            },
+          },
+        },
+      },
+    },
+  ],
+});
+
 const communityViewerWhere = (communityId: string, accountId: string) => ({
   id: communityId,
   OR: [

@@ -16,11 +16,29 @@ type HostedPlayerParams = {
   playerId: string;
 };
 
-const communityMemberWhere = (communityId: string, accountId: string) => ({
+const communityHostManagerWhere = (
+  communityId: string,
+  hostId: string,
+  accountId: string,
+) => ({
   id: communityId,
   OR: [
     { masterId: accountId },
     { admins: { some: { accountId } } },
+    {
+      hosts: {
+        some: {
+          id: hostId,
+          players: {
+            some: {
+              playerId: accountId,
+              isHost: true,
+              hostStatus: PlayerHostStatuses.accepted,
+            },
+          },
+        },
+      },
+    },
   ],
 });
 
@@ -30,7 +48,7 @@ const getAuthorizedHost = async (
   accountId: string,
 ) => {
   const community = await prisma.community.findFirst({
-    where: communityMemberWhere(communityId, accountId),
+    where: communityHostManagerWhere(communityId, hostId, accountId),
     select: { id: true },
   });
 
@@ -1121,7 +1139,7 @@ export const assignPlayerToCourt = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -1263,7 +1281,7 @@ export const removePlayerFromCourt = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -1376,7 +1394,7 @@ export const assignPlayerToQueue = async (
     }
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -1512,7 +1530,7 @@ export const removePlayerFromQueue = async (
         .json({ success: false, message: "Unauthorized" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 

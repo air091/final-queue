@@ -26,11 +26,29 @@ type UpsertPlayerPaymentBody = {
   paymentStatus?: PaymentStatuses;
 };
 
-const communityMemberWhere = (communityId: string, accountId: string) => ({
+const communityHostManagerWhere = (
+  communityId: string,
+  hostId: string,
+  accountId: string,
+) => ({
   id: communityId,
   OR: [
     { masterId: accountId },
     { admins: { some: { accountId } } },
+    {
+      hosts: {
+        some: {
+          id: hostId,
+          players: {
+            some: {
+              playerId: accountId,
+              isHost: true,
+              hostStatus: "accepted",
+            },
+          },
+        },
+      },
+    },
   ],
 });
 
@@ -73,7 +91,7 @@ const getAuthorizedHost = async (
   accountId: string,
 ) => {
   const community = await prisma.community.findFirst({
-    where: communityMemberWhere(communityId, accountId),
+    where: communityHostManagerWhere(communityId, hostId, accountId),
     select: { id: true },
   });
 

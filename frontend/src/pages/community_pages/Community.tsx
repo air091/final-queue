@@ -534,6 +534,13 @@ export default function Community() {
       ),
     [sortedCommunityHosts],
   );
+  const myCoHostSessions = useMemo(
+    () =>
+      sortedCommunityHosts.filter((communityHost) =>
+        communityHost.hosts?.some((hostPlayer) => hostPlayer.id === user?.id),
+      ),
+    [sortedCommunityHosts, user?.id],
+  );
 
   const selectedCoHostPlayer = useMemo(
     () =>
@@ -4321,12 +4328,197 @@ export default function Community() {
             ) : (
               <div className="grid gap-5">
                 <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                  <h3 className="text-lg font-semibold text-text">
-                    My Sessions
-                  </h3>
-                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
-                    My sessions will appear here.
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-text">
+                        My Sessions
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Sessions where you are selected as co-host
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                      {myCoHostSessions.length}
+                    </div>
                   </div>
+
+                  {myCoHostSessions.length > 0 ? (
+                    <>
+                      <div className="mt-4 hidden overflow-auto lg:block">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Title
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Sport
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Location
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Schedule
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Players
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Capacity
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Status
+                              </th>
+                              <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {myCoHostSessions.map((communityHost) => (
+                              <tr
+                                key={communityHost.id}
+                                className="transition hover:bg-gray-50"
+                              >
+                                <td className="px-5 py-4 font-medium text-text">
+                                  {communityHost.hostName}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                    {communityHost.sport}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4 text-gray-600">
+                                  {communityHost.location?.trim() || "TBD"}
+                                </td>
+                                <td className="px-5 py-4 text-gray-600">
+                                  <div className="min-w-[180px]">
+                                    <p>
+                                      {formatHostDateTime(
+                                        communityHost.startTime,
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      Ends{" "}
+                                      {formatHostDateTime(
+                                        communityHost.endTime,
+                                      )}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-4 text-gray-600">
+                                  {communityHost._count.players}
+                                </td>
+                                <td className="px-5 py-4 text-gray-600">
+                                  {communityHost.maxPlayers > 0
+                                    ? `${communityHost.maxPlayers} players`
+                                    : "Open"}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                      communityHost.status === "available"
+                                        ? "bg-green-50 text-green-600"
+                                        : "bg-red-50 text-red-600"
+                                    }`}
+                                  >
+                                    {communityHost.status}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      navigate(
+                                        `/community/${id}/hosts/${communityHost.id}`,
+                                      )
+                                    }
+                                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent cursor-pointer"
+                                  >
+                                    Enter
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 lg:hidden">
+                        {myCoHostSessions.map((communityHost) => (
+                          <div
+                            key={communityHost.id}
+                            className="rounded-2xl border border-gray-200 bg-white p-4"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium text-text">
+                                  {communityHost.hostName}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-600">
+                                  {communityHost.sport} -{" "}
+                                  {communityHost.location?.trim() || "TBD"}
+                                </p>
+                              </div>
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                  communityHost.status === "available"
+                                    ? "bg-green-50 text-green-600"
+                                    : "bg-red-50 text-red-600"
+                                }`}
+                              >
+                                {communityHost.status}
+                              </span>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                              <span>
+                                {communityHost._count.players} players joined
+                              </span>
+                              <span>
+                                {communityHost.maxPlayers > 0
+                                  ? `${communityHost.maxPlayers} players`
+                                  : "Open"}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 text-xs text-gray-600">
+                              <p>
+                                Starts:{" "}
+                                <span className="font-medium">
+                                  {formatHostDateTime(communityHost.startTime)}
+                                </span>
+                              </p>
+                              <p>
+                                Ends:{" "}
+                                <span className="font-medium">
+                                  {formatHostDateTime(communityHost.endTime)}
+                                </span>
+                              </p>
+                            </div>
+
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(
+                                    `/community/${id}/hosts/${communityHost.id}`,
+                                  )
+                                }
+                                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent cursor-pointer"
+                              >
+                                Enter
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+                      My sessions will appear here.
+                    </div>
+                  )}
                 </section>
 
                 <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white">

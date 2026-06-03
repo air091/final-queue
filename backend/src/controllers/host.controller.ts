@@ -82,6 +82,32 @@ const communityMemberWhere = (communityId: string, accountId: string) => ({
   ],
 });
 
+const communityHostManagerWhere = (
+  communityId: string,
+  hostId: string,
+  accountId: string,
+) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+    {
+      hosts: {
+        some: {
+          id: hostId,
+          players: {
+            some: {
+              playerId: accountId,
+              isHost: true,
+              hostStatus: PlayerHostStatuses.accepted,
+            },
+          },
+        },
+      },
+    },
+  ],
+});
+
 export const host = async (request: Request<Params>, response: Response) => {
   try {
     const { communityId } = request.params;
@@ -490,7 +516,7 @@ export const getHostById = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
     });
 
     if (!community)
@@ -701,7 +727,7 @@ export const endHostSession = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -762,7 +788,7 @@ export const startHostSession = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -822,7 +848,7 @@ export const getHostWithPlayers = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -1112,7 +1138,7 @@ export const getPlayerMatchHistory = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
@@ -1754,7 +1780,7 @@ export const createStaticPlayer = async (
         .json({ success: false, message: "Invalid skill level" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityHostManagerWhere(communityId, hostId, user.sub),
       select: { id: true },
     });
 
