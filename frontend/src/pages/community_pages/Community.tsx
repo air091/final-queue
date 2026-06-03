@@ -1623,7 +1623,7 @@ export default function Community() {
     const currentUserStatus = host.currentUserStatus ?? null;
 
     if (joiningSessionIds.includes(host.id)) return "Sending...";
-    if (currentUserStatus === "accepted") return "Joined";
+    if (currentUserStatus === "accepted") return "Accepted";
     if (currentUserStatus === "requested") return "Request sent";
     if (currentUserStatus === "rejected") return "Rejected";
     if (currentUserStatus === "banned") return "Banned";

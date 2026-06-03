@@ -320,7 +320,7 @@ function PlayerSection({
                           </button>
                         ) : null}
 
-                        {playerRecord.status === "banned" ? (
+                        {playerRecord.player.isStatic && onEditStaticPlayer ? (
                           <button
                             type="button"
                             onClick={(event) => {
@@ -328,25 +328,15 @@ function PlayerSection({
                               event.currentTarget
                                 .closest("details")
                                 ?.removeAttribute("open");
-                              onUnbanPlayer(playerRecord.id);
+                              onEditStaticPlayer(playerRecord);
                             }}
-                            className="block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium bg-white text-gray-900 hover:bg-gray-50"
+                            className="block w-full px-4 py-3 cursor-pointer text-left text-xs font-medium bg-white text-[var(--color-primary)] hover:bg-gray-100"
                           >
-                            Unban
+                            Edit
                           </button>
                         ) : null}
                       </div>
                     </details>
-                  ) : null}
-
-                  {playerRecord.player.isStatic && onEditStaticPlayer ? (
-                    <button
-                      type="button"
-                      onClick={() => onEditStaticPlayer(playerRecord)}
-                      className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-medium text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
-                    >
-                      Edit
-                    </button>
                   ) : null}
                 </div>
               </div>
@@ -513,7 +503,7 @@ function PlayerSection({
                                 ?.removeAttribute("open");
                               onRemovePlayerFromHost(playerRecord.id);
                             }}
-                            className={`block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
+                            className={`block w-full border-b cursor-pointer border-gray-100 px-4 py-3 text-left text-xs font-medium transition ${
                               isRemoveDisabled
                                 ? "cursor-not-allowed bg-gray-100 text-gray-400"
                                 : "bg-white text-red-600 hover:bg-red-50"
@@ -523,7 +513,7 @@ function PlayerSection({
                           </button>
                         ) : null}
 
-                        {playerRecord.status === "banned" ? (
+                        {playerRecord.player.isStatic && onEditStaticPlayer ? (
                           <button
                             type="button"
                             onClick={(event) => {
@@ -531,25 +521,15 @@ function PlayerSection({
                               event.currentTarget
                                 .closest("details")
                                 ?.removeAttribute("open");
-                              onUnbanPlayer(playerRecord.id);
+                              onEditStaticPlayer(playerRecord);
                             }}
-                            className="block w-full border-b border-gray-100 px-4 py-3 text-left text-xs font-medium bg-white text-gray-900 hover:bg-gray-50"
+                            className="block w-full px-4 py-3 text-left text-xs font-medium bg-white text-[var(--color-primary)] cursor-pointer hover:bg-gray-100"
                           >
-                            Unban
+                            Edit
                           </button>
                         ) : null}
                       </div>
                     </details>
-                  ) : null}
-
-                  {playerRecord.player.isStatic && onEditStaticPlayer ? (
-                    <button
-                      type="button"
-                      onClick={() => onEditStaticPlayer(playerRecord)}
-                      className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-medium text-[var(--color-primary)] hover:bg-orange-50 cursor-pointer"
-                    >
-                      Edit
-                    </button>
                   ) : null}
 
                   {playerRecord.status !== "accepted" &&

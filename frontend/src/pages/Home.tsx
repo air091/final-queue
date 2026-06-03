@@ -180,7 +180,7 @@ export default function Home() {
     if (host.currentUserCommunityStatus === "rejected")
       return "Request Rejected";
     if (host.currentUserCommunityStatus === "banned") return "Banned";
-    if (host.currentUserStatus === "accepted") return "Joined";
+    if (host.currentUserStatus === "accepted") return "Accepted";
     if (host.currentUserStatus === "requested") return "Request Sent";
     if (host.currentUserStatus === "rejected") return "Rejected";
     if (host.currentUserStatus === "banned") return "Banned";
