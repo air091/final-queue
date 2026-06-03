@@ -35,6 +35,7 @@ import {
   host,
   includeHostAsPlayer,
   removeHostAsPlayer,
+  requestCommunityPlayerToJoinHost,
   startHostSession,
   updateHost,
 } from "../controllers/host.controller.js";
@@ -134,6 +135,11 @@ router.delete(
 router.post("/:communityId/host", authenticate, host);
 router.get("/:communityId/hosts", authenticate, getHosts);
 router.get("/:communityId/hosts/:hostId", authenticate, getHostById);
+router.post(
+  "/:communityId/hosts/:hostId/players/request",
+  authenticate,
+  requestCommunityPlayerToJoinHost,
+);
 router.patch("/:communityId/hosts/:hostId", authenticate, updateHost);
 router.patch(
   "/:communityId/hosts/:hostId/end-session",

@@ -29,6 +29,22 @@ const communityMemberWhere = (communityId: string, accountId: string) => ({
   ],
 });
 
+const communityViewerWhere = (communityId: string, accountId: string) => ({
+  id: communityId,
+  OR: [
+    { masterId: accountId },
+    { admins: { some: { accountId } } },
+    {
+      players: {
+        some: {
+          accountId,
+          status: PlayerHostStatuses.accepted,
+        },
+      },
+    },
+  ],
+});
+
 const IMAGE_DATA_URI_PATTERN =
   /^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i;
 
@@ -233,6 +249,14 @@ export const getCommunities = async (request: Request, response: Response) => {
         OR: [
           { masterId: user.sub },
           { admins: { some: { accountId: user.sub } } },
+          {
+            players: {
+              some: {
+                accountId: user.sub,
+                status: PlayerHostStatuses.accepted,
+              },
+            },
+          },
         ],
       },
       orderBy: { createdAt: "desc" },
@@ -379,7 +403,10 @@ export const getCommunityById = async (
           },
         },
         players: {
-          where: { accountId: user.sub },
+          where: {
+            accountId: user.sub,
+            status: PlayerHostStatuses.accepted,
+          },
           select: {
             id: true,
           },
@@ -568,7 +595,7 @@ export const getCommunityPlayers = async (
         .json({ success: false, message: "Missing required params" });
 
     const community = await prisma.community.findFirst({
-      where: communityMemberWhere(communityId, user.sub),
+      where: communityViewerWhere(communityId, user.sub),
       select: { id: true },
     });
 
@@ -2119,6 +2146,9 @@ export const addCommunityPlayersToHost = async (
         id: { in: communityPlayerIds },
         communityId,
         status: PlayerHostStatuses.accepted,
+        account: {
+          role: UserRoles.static,
+        },
       },
       select: {
         accountId: true,
@@ -2128,7 +2158,7 @@ export const addCommunityPlayersToHost = async (
     if (communityPlayers.length === 0)
       return response
         .status(404)
-        .json({ success: false, message: "No community players found" });
+        .json({ success: false, message: "No static community players found" });
 
     const now = new Date();
 

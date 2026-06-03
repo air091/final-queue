@@ -299,6 +299,10 @@ export const getHosts = async (
         endTime: true,
         maxPlayers: true,
         status: true,
+        players: {
+          where: { playerId: user.sub },
+          select: { hostStatus: true },
+        },
         _count: { select: { players: true } },
       },
     });
@@ -306,10 +310,131 @@ export const getHosts = async (
     return response.status(200).json({
       success: true,
       message: "Hosts retrieved successfully",
-      hosts,
+      hosts: hosts.map(({ players, ...host }) => ({
+        ...host,
+        currentUserStatus: players[0]?.hostStatus ?? null,
+      })),
     });
   } catch (error) {
     console.error("Error getting hosts:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const requestCommunityPlayerToJoinHost = async (
+  request: Request<GetHostByIdParams>,
+  response: Response,
+) => {
+  try {
+    const { communityId, hostId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId || !hostId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const communityPlayer = await prisma.communityPlayer.findUnique({
+      where: {
+        communityId_accountId: {
+          communityId,
+          accountId: user.sub,
+        },
+      },
+      select: { status: true },
+    });
+
+    if (communityPlayer?.status !== PlayerHostStatuses.accepted) {
+      return response.status(403).json({
+        success: false,
+        message: "Only accepted community players can join this session",
+      });
+    }
+
+    const host = await prisma.host.findFirst({
+      where: { id: hostId, communityId },
+      select: {
+        id: true,
+        status: true,
+        maxPlayers: true,
+      },
+    });
+
+    if (!host)
+      return response
+        .status(404)
+        .json({ success: false, message: "Host not found" });
+
+    if (host.status !== HostStatus.available) {
+      return response.status(400).json({
+        success: false,
+        message: "This session is no longer accepting requests",
+      });
+    }
+
+    const existingPlayer = await prisma.player.findUnique({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: user.sub,
+        },
+      },
+      select: {
+        id: true,
+        hostStatus: true,
+      },
+    });
+
+    if (existingPlayer) {
+      return response.status(409).json({
+        success: false,
+        message: "You already requested or joined this session",
+      });
+    }
+
+    if (host.maxPlayers > 0) {
+      const acceptedPlayersCount = await prisma.player.count({
+        where: {
+          hostId: host.id,
+          hostStatus: PlayerHostStatuses.accepted,
+        },
+      });
+
+      if (acceptedPlayersCount >= host.maxPlayers) {
+        return response.status(400).json({
+          success: false,
+          message: "This session is already full",
+        });
+      }
+    }
+
+    const player = await prisma.player.create({
+      data: {
+        hostId: host.id,
+        playerId: user.sub,
+        hostStatus: PlayerHostStatuses.requested,
+      },
+      select: {
+        id: true,
+        hostStatus: true,
+      },
+    });
+
+    return response.status(201).json({
+      success: true,
+      message: "Session join request sent",
+      player,
+    });
+  } catch (error) {
+    console.error("Error requesting to join host:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",

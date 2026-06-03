@@ -62,6 +62,7 @@ type HostsType = {
   endTime: string | null;
   maxPlayers: number;
   status: string;
+  currentUserStatus?: HostPlayerStatus | null;
   _count: {
     players: number;
   };
@@ -116,6 +117,7 @@ type CommunityPlayerWinPointsRecord = {
 };
 
 type CommunityPanel = "host" | "players" | null;
+type CommunityPlayerViewTab = "players" | "sessions";
 type AddAdminMode = "asPlayer" | "newAdmin";
 type HostScheduleSortDirection = "asc" | "desc";
 type CommunityPlayerNameSortDirection = "asc" | "desc";
@@ -303,6 +305,9 @@ export default function Community() {
     String(new Date().getDay()),
   );
   const [activePanel, setActivePanel] = useState<CommunityPanel>(null);
+  const [activePlayerViewTab, setActivePlayerViewTab] =
+    useState<CommunityPlayerViewTab>("players");
+  const [joiningSessionIds, setJoiningSessionIds] = useState<string[]>([]);
   const [isCreatingHost, setIsCreatingHost] = useState(false);
   const [isCreatingPlayers, setIsCreatingPlayers] = useState(false);
   const [isLoadingWinPoints, setIsLoadingWinPoints] = useState(false);
@@ -356,6 +361,7 @@ export default function Community() {
     null,
   );
   const [hostError, setHostError] = useState<string | null>(null);
+  const [sessionJoinError, setSessionJoinError] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [editingCommunityPlayer, setEditingCommunityPlayer] =
     useState<CommunityPlayerRecord | null>(null);
@@ -479,10 +485,32 @@ export default function Community() {
     [communityHosts, hostScheduleSortDirection],
   );
 
+  const acceptedCommunityPlayers = useMemo(
+    () =>
+      rosterCommunityPlayers.filter(
+        (communityPlayer) => communityPlayer.status === "accepted",
+      ),
+    [rosterCommunityPlayers],
+  );
+
+  const availableCommunityHosts = useMemo(
+    () =>
+      sortedCommunityHosts.filter(
+        (communityHost) => communityHost.status === "available",
+      ),
+    [sortedCommunityHosts],
+  );
+
   const isCommunityOwner = Boolean(
     user && community && user.id === community.master.id,
   );
-  const canManageCommunity = Boolean(community?.isMember);
+  const isCommunityAdmin = Boolean(
+    user && community?.admins.some((admin) => admin.account.id === user.id),
+  );
+  const canManageCommunity = isCommunityOwner || isCommunityAdmin;
+  const isCommunityPlayerOnly = Boolean(
+    community?.isMember && !canManageCommunity,
+  );
   const canAddAdminAsPlayer = Boolean(user && community && community.isMember);
   const adminCandidates = useMemo<AdminCandidate[]>(() => {
     if (!community) return [];
@@ -742,7 +770,7 @@ export default function Community() {
 
     if (!community) return;
 
-    if (!community.isMember) {
+    if (!canManageCommunity) {
       setCommunityPlayerWinPoints([]);
       setIsLoadingWinPoints(false);
       return;
@@ -751,7 +779,7 @@ export default function Community() {
     void getCommunityPlayerWinPointsAPI();
   }, [
     id,
-    community?.isMember,
+    canManageCommunity,
     pointsFilterDay,
     pointsFilterMode,
     pointsFilterMonth,
@@ -1400,6 +1428,7 @@ export default function Community() {
       updateCommunityPlayerInState(
         response.data.player as CommunityPlayerRecord,
       );
+      await refetchCommunities();
     } catch (error) {
       setPlayerError("Unable to update player status.");
 
@@ -1541,6 +1570,7 @@ export default function Community() {
             currentPlayer.communityPlayerId !== communityPlayer.id,
         ),
       );
+      await refetchCommunities();
     } catch (error) {
       setPlayerError(
         communityPlayer.player.isStatic
@@ -1586,6 +1616,55 @@ export default function Community() {
       else console.error("Delete host api failed", error);
     } finally {
       setDeletingHostId(null);
+    }
+  };
+
+  const getSessionJoinLabel = (host: HostsType) => {
+    const currentUserStatus = host.currentUserStatus ?? null;
+
+    if (joiningSessionIds.includes(host.id)) return "Sending...";
+    if (currentUserStatus === "accepted") return "Joined";
+    if (currentUserStatus === "requested") return "Request sent";
+    if (currentUserStatus === "rejected") return "Rejected";
+    if (currentUserStatus === "banned") return "Banned";
+
+    return "Join";
+  };
+
+  const isSessionJoinDisabled = (host: HostsType) =>
+    joiningSessionIds.includes(host.id) ||
+    (host.currentUserStatus ?? null) !== null;
+
+  const handleRequestToJoinSession = async (host: HostsType) => {
+    if (!id || isSessionJoinDisabled(host)) return;
+
+    setJoiningSessionIds((currentIds) => [...currentIds, host.id]);
+    setSessionJoinError(null);
+
+    try {
+      await api.post(`/api/community/${id}/hosts/${host.id}/players/request`);
+      setCommunityHosts((currentHosts) =>
+        currentHosts.map((currentHost) =>
+          currentHost.id === host.id
+            ? { ...currentHost, currentUserStatus: "requested" }
+            : currentHost,
+        ),
+      );
+    } catch (error) {
+      setSessionJoinError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ??
+              "Unable to request to join this session.")
+          : "Unable to request to join this session.",
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Request session join api failed", error);
+    } finally {
+      setJoiningSessionIds((currentIds) =>
+        currentIds.filter((currentId) => currentId !== host.id),
+      );
     }
   };
 
@@ -2755,6 +2834,8 @@ export default function Community() {
           </p>
         ) : null}
 
+        {canManageCommunity ? (
+          <>
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
@@ -3798,6 +3879,284 @@ export default function Community() {
             </div>
           )}
         </div>
+          </>
+        ) : isCommunityPlayerOnly ? (
+          <div className="grid gap-5">
+            <div className="flex flex-wrap gap-2">
+              {(["players", "sessions"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActivePlayerViewTab(tab)}
+                  aria-pressed={activePlayerViewTab === tab}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold capitalize transition cursor-pointer ${
+                    activePlayerViewTab === tab
+                      ? "bg-primary text-white"
+                      : "border border-gray-200 bg-white text-stone-600 hover:border-primary/40 hover:bg-orange-50"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {activePlayerViewTab === "players" ? (
+              <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+                <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-text">
+                      Players
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Community roster
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                    {acceptedCommunityPlayers.length}
+                  </div>
+                </div>
+
+                <div className="grid content-start gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {acceptedCommunityPlayers.length > 0 ? (
+                    acceptedCommunityPlayers.map((communityPlayer) => (
+                      <div
+                        key={communityPlayer.id}
+                        className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3"
+                      >
+                        <img
+                          src={communityPlayer.player.profileUrl}
+                          alt={communityPlayer.player.username}
+                          className="h-11 w-11 shrink-0 rounded-full object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-text">
+                            {communityPlayer.player.username}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            <SkillLevelBadge
+                              skillLevel={communityPlayer.player.skillLevel}
+                            />
+                            {communityPlayer.player.isStatic ? (
+                              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
+                                Static
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2 xl:col-span-3">
+                      No community players yet.
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : (
+              <div className="grid gap-5">
+                <section className="rounded-3xl border border-gray-200 bg-white p-5">
+                  <h3 className="text-lg font-semibold text-text">
+                    My Sessions
+                  </h3>
+                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+                    My sessions will appear here.
+                  </div>
+                </section>
+
+                <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
+                  <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-text">
+                        Available Sessions
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Open sessions in this community
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                      {availableCommunityHosts.length}
+                    </div>
+                  </div>
+
+                  {sessionJoinError ? (
+                    <p className="mx-5 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                      {sessionJoinError}
+                    </p>
+                  ) : null}
+
+                  <div className="hidden lg:block overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Title
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Sport
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Location
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Schedule
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Players
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Capacity
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Status
+                          </th>
+                          <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {availableCommunityHosts.map((communityHost) => (
+                          <tr key={communityHost.id}>
+                            <td className="px-5 py-4 font-medium text-text">
+                              {communityHost.hostName}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                {communityHost.sport}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-gray-600">
+                              {communityHost.location?.trim() || "TBD"}
+                            </td>
+                            <td className="px-5 py-4 text-gray-600">
+                              <div className="min-w-[180px]">
+                                <p>
+                                  {formatHostDateTime(communityHost.startTime)}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  Ends{" "}
+                                  {formatHostDateTime(communityHost.endTime)}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-gray-600">
+                              {communityHost._count.players}
+                            </td>
+                            <td className="px-5 py-4 text-gray-600">
+                              {communityHost.maxPlayers > 0
+                                ? `${communityHost.maxPlayers} players`
+                                : "Open"}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-600">
+                                {communityHost.status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleRequestToJoinSession(
+                                    communityHost,
+                                  )
+                                }
+                                disabled={isSessionJoinDisabled(communityHost)}
+                                className={`rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
+                                  isSessionJoinDisabled(communityHost)
+                                    ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                    : "bg-primary text-white hover:bg-accent"
+                                }`}
+                              >
+                                {getSessionJoinLabel(communityHost)}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="grid gap-3 p-4 lg:hidden">
+                    {availableCommunityHosts.map((communityHost) => (
+                      <div
+                        key={communityHost.id}
+                        className="rounded-2xl border border-gray-200 bg-white p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-text">
+                              {communityHost.hostName}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-600">
+                              {communityHost.sport} -{" "}
+                              {communityHost.location?.trim() || "TBD"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-600">
+                            {communityHost.status}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                          <span>
+                            {communityHost._count.players} players joined
+                          </span>
+                          <span>
+                            {communityHost.maxPlayers > 0
+                              ? `${communityHost.maxPlayers} players`
+                              : "Open"}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 text-xs text-gray-600">
+                          <p>
+                            Starts:{" "}
+                            <span className="font-medium">
+                              {formatHostDateTime(communityHost.startTime)}
+                            </span>
+                          </p>
+                          <p>
+                            Ends:{" "}
+                            <span className="font-medium">
+                              {formatHostDateTime(communityHost.endTime)}
+                            </span>
+                          </p>
+                        </div>
+
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleRequestToJoinSession(communityHost)
+                            }
+                            disabled={isSessionJoinDisabled(communityHost)}
+                            className={`rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
+                              isSessionJoinDisabled(communityHost)
+                                ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                : "bg-primary text-white hover:bg-accent"
+                            }`}
+                          >
+                            {getSessionJoinLabel(communityHost)}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {availableCommunityHosts.length === 0 ? (
+                    <div className="px-6 py-16 text-center text-sm text-gray-500">
+                      No available sessions right now.
+                    </div>
+                  ) : null}
+                </section>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-gray-200 bg-white px-6 py-12 text-center text-sm text-gray-500">
+            You do not have access to this community yet.
+          </div>
+        )}
       </section>
     </div>
   );

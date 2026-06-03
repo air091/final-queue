@@ -1730,9 +1730,7 @@ export default function Players() {
     }
   };
 
-  const visiblePlayers = players.filter(
-    (player) => player.status !== "requested",
-  );
+  const visiblePlayers = players;
   const normalizedPlayerSearchTerm = playerSearchTerm.trim().toLowerCase();
   const searchedPlayers = visiblePlayers.filter(
     (player) =>
@@ -1745,6 +1743,7 @@ export default function Players() {
   const selectableCommunityPlayers = communityPlayers.filter(
     (communityPlayer) =>
       communityPlayer.status === "accepted" &&
+      communityPlayer.player.isStatic &&
       !hostedAccountIds.has(communityPlayer.player.id) &&
       (normalizedPlayerSearchTerm === "" ||
         communityPlayer.player.username
@@ -1965,8 +1964,8 @@ export default function Players() {
                   </h5>
                   <p className="text-sm text-stone-500">
                     {isCommunityPickerMinimized
-                      ? `${selectableCommunityPlayers.length} available community players hidden.`
-                      : "Select saved community players for this hosted match."}
+                      ? `${selectableCommunityPlayers.length} static community players hidden.`
+                      : "Select static community players for this hosted match."}
                   </p>
                 </div>
 
@@ -2068,7 +2067,7 @@ export default function Players() {
                   <div className="rounded-2xl border border-dashed border-orange-200 bg-white/70 px-4 py-6 text-center text-sm text-stone-500 sm:col-span-2 lg:col-span-3 xl:col-span-4">
                     {normalizedPlayerSearchTerm
                       ? "No community players match your search."
-                      : "All community players are already in this host, or no community players have been added yet."}
+                      : "All static community players are already in this host, or no static community players have been added yet."}
                   </div>
                 )}
               </div>
