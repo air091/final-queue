@@ -27,6 +27,7 @@ export type HostPlayerStatus = "requested" | "accepted" | "rejected" | "banned";
 export type HostPlayerRecord = {
   id: string;
   status: HostPlayerStatus;
+  isHost?: boolean;
   paymentStatus?: PaymentStatus | string;
   player: PlayerType;
   requestedAt?: string;
@@ -164,6 +165,7 @@ export const EMPTY_MATCH_HISTORY_SUMMARY: MatchHistorySummary = {
 export type AcceptedPlayers = {
   id: string;
   hostStatus: "accepted";
+  isHost?: boolean;
   matchStatus: MatchPlayerStatus;
   timerStartedAt: string | null;
   gamesPlayed: number;

@@ -108,8 +108,6 @@ function PlayerSection({
   onAcceptPlayer,
   onRejectPlayer,
   onRemovePlayerFromHost,
-  onUnbanPlayer,
-  onDeletePlayer,
   onViewHistory,
   savingStaticProfileUrlId,
   onStaticProfileImageChange,

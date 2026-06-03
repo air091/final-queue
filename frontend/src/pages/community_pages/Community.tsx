@@ -53,6 +53,12 @@ type CommunityType = {
   isMember: boolean;
 };
 
+type HostAssigneeType = {
+  id: string;
+  username: string;
+  profileUrl: string;
+};
+
 type HostsType = {
   id: string;
   hostName: string;
@@ -62,6 +68,7 @@ type HostsType = {
   endTime: string | null;
   maxPlayers: number;
   status: string;
+  hosts?: HostAssigneeType[];
   currentUserStatus?: HostPlayerStatus | null;
   _count: {
     players: number;
@@ -349,6 +356,15 @@ export default function Community() {
     null,
   );
   const [addAdminSuccess, setAddAdminSuccess] = useState<string | null>(null);
+  const [isAddCoHostModalOpen, setIsAddCoHostModalOpen] = useState(false);
+  const [selectedCoHostPlayerId, setSelectedCoHostPlayerId] = useState<
+    string | null
+  >(null);
+  const [selectedCoHostSessionId, setSelectedCoHostSessionId] = useState<
+    string | null
+  >(null);
+  const [isAddingCoHost, setIsAddingCoHost] = useState(false);
+  const [coHostError, setCoHostError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdatingCommunity, setIsUpdatingCommunity] = useState(false);
   const [isCommunityLoading, setIsCommunityLoading] = useState(true);
@@ -493,12 +509,47 @@ export default function Community() {
     [rosterCommunityPlayers],
   );
 
+  const registeredCoHostCandidates = useMemo(
+    () =>
+      acceptedCommunityPlayers
+        .filter(
+          (communityPlayer) =>
+            Boolean(communityPlayer.player.id) &&
+            !communityPlayer.player.isStatic,
+        )
+        .sort((firstPlayer, secondPlayer) =>
+          firstPlayer.player.username.localeCompare(
+            secondPlayer.player.username,
+            undefined,
+            { sensitivity: "base" },
+          ),
+        ),
+    [acceptedCommunityPlayers],
+  );
+
   const availableCommunityHosts = useMemo(
     () =>
       sortedCommunityHosts.filter(
         (communityHost) => communityHost.status === "available",
       ),
     [sortedCommunityHosts],
+  );
+
+  const selectedCoHostPlayer = useMemo(
+    () =>
+      registeredCoHostCandidates.find(
+        (communityPlayer) =>
+          communityPlayer.player.id === selectedCoHostPlayerId,
+      ) ?? null,
+    [registeredCoHostCandidates, selectedCoHostPlayerId],
+  );
+
+  const selectedCoHostSession = useMemo(
+    () =>
+      sortedCommunityHosts.find(
+        (communityHost) => communityHost.id === selectedCoHostSessionId,
+      ) ?? null,
+    [selectedCoHostSessionId, sortedCommunityHosts],
   );
 
   const isCommunityOwner = Boolean(
@@ -813,6 +864,22 @@ export default function Community() {
     setActivePanel(null);
   };
 
+  const openAddCoHostModal = () => {
+    setSelectedCoHostPlayerId(null);
+    setSelectedCoHostSessionId(null);
+    setCoHostError(null);
+    setIsAddCoHostModalOpen(true);
+  };
+
+  const closeAddCoHostModal = () => {
+    if (isAddingCoHost) return;
+
+    setIsAddCoHostModalOpen(false);
+    setSelectedCoHostPlayerId(null);
+    setSelectedCoHostSessionId(null);
+    setCoHostError(null);
+  };
+
   const openCreateHostModal = () => {
     resetHostForm();
     setActivePanel("host");
@@ -900,6 +967,43 @@ export default function Community() {
       else console.error(editingHostId ? "Update host api failed" : "Create host api failed", error);
     } finally {
       setIsCreatingHost(false);
+    }
+  };
+
+  const handleAddCoHost = async () => {
+    if (
+      !id ||
+      !selectedCoHostPlayer?.player.id ||
+      !selectedCoHostSession
+    ) {
+      setCoHostError("Select a registered player and session.");
+      return;
+    }
+
+    setIsAddingCoHost(true);
+    setCoHostError(null);
+
+    try {
+      await api.post(
+        `/api/community/${id}/hosts/${selectedCoHostSession.id}/host-player`,
+        { accountId: selectedCoHostPlayer.player.id },
+      );
+      await getCommunityHostsAPI();
+      setIsAddCoHostModalOpen(false);
+      setSelectedCoHostPlayerId(null);
+      setSelectedCoHostSessionId(null);
+    } catch (error) {
+      setCoHostError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to add co-host.")
+          : "Unable to add co-host.",
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Add co-host api failed", error);
+    } finally {
+      setIsAddingCoHost(false);
     }
   };
 
@@ -2617,6 +2721,217 @@ export default function Community() {
           </div>
         </div>
       ) : null}
+      {isAddCoHostModalOpen ? (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
+          onClick={closeAddCoHostModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-co-host-title"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-2xl"
+          >
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-orange-100 px-5 py-4">
+              <div>
+                <h4
+                  id="add-co-host-title"
+                  className="text-lg font-semibold text-text"
+                >
+                  Add Co-host
+                </h4>
+                <p className="mt-1 text-sm text-stone-500">
+                  {selectedCoHostPlayer
+                    ? "Select the session this player will host."
+                    : "Select a registered community player first."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddCoHostModal}
+                disabled={isAddingCoHost}
+                className="rounded-full p-3 text-sm font-semibold text-stone-500 hover:bg-stone-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
+              {selectedCoHostPlayer ? (
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-orange-50/50 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <img
+                        src={selectedCoHostPlayer.player.profileUrl}
+                        alt={selectedCoHostPlayer.player.username}
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-text">
+                          {selectedCoHostPlayer.player.username}
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          Registered player
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCoHostPlayerId(null);
+                        setSelectedCoHostSessionId(null);
+                        setCoHostError(null);
+                      }}
+                      disabled={isAddingCoHost}
+                      className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-stone-700 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  <div className="grid gap-2">
+                    {sortedCommunityHosts.length > 0 ? (
+                      sortedCommunityHosts.map((communityHost) => {
+                        const isSelected =
+                          selectedCoHostSessionId === communityHost.id;
+                        const isAlreadyCoHost = Boolean(
+                          communityHost.hosts?.some(
+                            (hostPlayer) =>
+                              hostPlayer.id ===
+                              selectedCoHostPlayer.player.id,
+                          ),
+                        );
+
+                        return (
+                          <button
+                            key={communityHost.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCoHostSessionId(communityHost.id);
+                              setCoHostError(null);
+                            }}
+                            disabled={isAddingCoHost || isAlreadyCoHost}
+                            className={`grid gap-2 rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${
+                              isSelected
+                                ? "border-primary bg-orange-50 shadow-sm"
+                                : "border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/40"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-text">
+                                  {communityHost.hostName}
+                                </p>
+                                <p className="mt-1 text-xs text-stone-500">
+                                  {formatHostDateTime(communityHost.startTime)}
+                                </p>
+                              </div>
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                  isAlreadyCoHost
+                                    ? "bg-green-50 text-green-700"
+                                    : isSelected
+                                      ? "bg-primary text-white"
+                                      : "bg-stone-100 text-stone-600"
+                                }`}
+                              >
+                                {isAlreadyCoHost
+                                  ? "Already co-host"
+                                  : isSelected
+                                    ? "Selected"
+                                    : communityHost.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-stone-500">
+                              {communityHost.location?.trim() || "TBD"}
+                            </p>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
+                        No sessions available.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {registeredCoHostCandidates.length > 0 ? (
+                    registeredCoHostCandidates.map((communityPlayer) => (
+                      <button
+                        key={communityPlayer.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCoHostPlayerId(
+                            communityPlayer.player.id,
+                          );
+                          setSelectedCoHostSessionId(null);
+                          setCoHostError(null);
+                        }}
+                        disabled={isAddingCoHost}
+                        className="flex min-w-0 items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 text-left transition hover:border-orange-200 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                      >
+                        <img
+                          src={communityPlayer.player.profileUrl}
+                          alt={communityPlayer.player.username}
+                          className="h-11 w-11 shrink-0 rounded-full object-cover"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-text">
+                            {communityPlayer.player.username}
+                          </span>
+                          <SkillLevelBadge
+                            skillLevel={communityPlayer.player.skillLevel}
+                            showLabel
+                            className="mt-1"
+                          />
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 sm:col-span-2">
+                      No registered community players available.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {coHostError ? (
+              <p className="border-t border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600">
+                {coHostError}
+              </p>
+            ) : null}
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-orange-100 bg-orange-50/30 px-5 py-4">
+              <button
+                type="button"
+                onClick={closeAddCoHostModal}
+                disabled={isAddingCoHost}
+                className="rounded-xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleAddCoHost()}
+                disabled={
+                  isAddingCoHost ||
+                  !selectedCoHostPlayer ||
+                  !selectedCoHostSession
+                }
+                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 cursor-pointer"
+              >
+                {isAddingCoHost ? "Adding..." : "Add Co-host"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {selectedPointsHistoryPlayer ? (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-4"
@@ -3608,6 +3923,18 @@ export default function Community() {
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
+                onClick={openAddCoHostModal}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 cursor-pointer"
+                disabled={
+                  isCommunityHostsLoading || isCommunityPlayersLoading
+                }
+              >
+                <UserPlus size={15} />
+                Add Co-host
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
                   setHostScheduleSortDirection((currentDirection) =>
                     currentDirection === "asc" ? "desc" : "asc",
@@ -3645,7 +3972,7 @@ export default function Community() {
                     Host
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
-                    Sport
+                    Hosts
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase text-gray-500">
                     Location
@@ -3702,9 +4029,29 @@ export default function Community() {
                     </td>
 
                     <td className="px-5 py-4">
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                        {communityHost.sport}
-                      </span>
+                      {communityHost.hosts?.length ? (
+                        <div className="flex min-w-[160px] flex-wrap gap-2">
+                          {communityHost.hosts.map((hostPlayer) => (
+                            <span
+                              key={hostPlayer.id}
+                              className="inline-flex max-w-[180px] items-center gap-2 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                            >
+                              <img
+                                src={hostPlayer.profileUrl}
+                                alt={hostPlayer.username}
+                                className="h-5 w-5 shrink-0 rounded-full object-cover"
+                              />
+                              <span className="truncate">
+                                {hostPlayer.username}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-stone-400">
+                          No co-host
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-5 py-4 text-gray-600">
@@ -3788,9 +4135,6 @@ export default function Community() {
                         <p className="font-medium text-text">
                           {communityHost.hostName}
                         </p>
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-primary text-[12px]">
-                          {communityHost.sport}
-                        </span>
                       </div>
 
                       <span
@@ -3810,6 +4154,28 @@ export default function Community() {
                         {communityHost.location?.trim() || "TBD"}
                       </span>
                     </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-gray-600">
+                      <span className="font-medium text-stone-700">
+                        Hosts:
+                      </span>
+                      {communityHost.hosts?.length ? (
+                        communityHost.hosts.map((hostPlayer) => (
+                          <span
+                            key={hostPlayer.id}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-primary"
+                          >
+                            <img
+                              src={hostPlayer.profileUrl}
+                              alt={hostPlayer.username}
+                              className="h-4 w-4 rounded-full object-cover"
+                            />
+                            {hostPlayer.username}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-stone-400">No co-host</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

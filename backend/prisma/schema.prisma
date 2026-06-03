@@ -149,6 +149,7 @@ model Player {
   paymentStatus       PaymentStatuses    @default(unpaid)
   gamesPlayed         Int                @default(0)
   hostStatus          PlayerHostStatuses @default(requested)
+  isHost              Boolean            @default(false)
   timerStartedAt      DateTime?
   updatedAt           DateTime           @updatedAt
   requestedAt         DateTime           @default(now())
