@@ -33,7 +33,7 @@ type HostAdminCandidate = {
   id: string;
   username: string;
   profileUrl: string;
-  roleLabel: "Owner" | "Admin";
+  roleLabel: "Owner" | "Admin" | "Co-host";
 };
 
 const preserveCurrentOrder = <Item extends { id: string }>(
@@ -111,12 +111,16 @@ export default function HostLayout() {
     };
   }, []);
 
-  const loadHostData = useCallback(async (options?: { silent?: boolean }) => {
+  const loadHostData = useCallback(async (options?: {
+    silent?: boolean;
+    force?: boolean;
+  }) => {
     if (!communityId || !hostId) return;
-    if (isRefreshingHostDataRef.current) return;
+    if (isRefreshingHostDataRef.current && !options?.force) return;
 
     const isSilent = options?.silent ?? false;
-    if (isSilent && hostLiveSyncPauseCountRef.current > 0) return;
+    const isForced = options?.force ?? false;
+    if (isSilent && hostLiveSyncPauseCountRef.current > 0 && !isForced) return;
 
     const startedHostDataVersion = hostDataVersionRef.current;
     isRefreshingHostDataRef.current = true;
@@ -211,11 +215,24 @@ export default function HostLayout() {
       delete hostData.success;
       delete hostData.message;
 
-      setHost(hostData as HostMeta);
+      const nextHost = hostData as HostMeta;
+      const hiddenRejectedHostAdminIds = new Set(
+        [
+          nextHost.community.master.id,
+          ...nextHost.community.admins.map((admin) => admin.account.id),
+          ...nextHost.hosts.map((hostPlayer) => hostPlayer.id),
+        ].filter(Boolean),
+      );
+      const visibleRejectedPlayers = rejectedPlayers.filter(
+        (player: HostPlayerRecord) =>
+          !hiddenRejectedHostAdminIds.has(player.player.id ?? ""),
+      );
+
+      setHost(nextHost);
       setPlayersInHost([
         ...acceptedPlayersFromHost,
         ...requestedPlayers,
-        ...rejectedPlayers,
+        ...visibleRejectedPlayers,
         ...bannedPlayers,
       ]);
       setAcceptedPlayers(
@@ -351,6 +368,17 @@ export default function HostLayout() {
       candidates.push({
         ...admin.account,
         roleLabel: "Admin",
+      });
+    });
+
+    host.hosts.forEach((coHost) => {
+      if (candidates.some((candidate) => candidate.id === coHost.id)) {
+        return;
+      }
+
+      candidates.push({
+        ...coHost,
+        roleLabel: "Co-host",
       });
     });
 
@@ -493,6 +521,31 @@ export default function HostLayout() {
           summary: buildPaymentsSummary(players),
         };
       });
+      const accountId = normalizedPlayer.player.id;
+      if (normalizedPlayer.isHost && accountId) {
+        setHost((currentHost) => {
+          if (!currentHost) return currentHost;
+          if (
+            currentHost.hosts.some(
+              (hostPlayer) => hostPlayer.id === accountId,
+            )
+          ) {
+            return currentHost;
+          }
+
+          return {
+            ...currentHost,
+            hosts: [
+              ...currentHost.hosts,
+              {
+                id: accountId,
+                username: normalizedPlayer.player.username,
+                profileUrl: normalizedPlayer.player.profileUrl,
+              },
+            ],
+          };
+        });
+      }
     },
     [],
   );
@@ -514,11 +567,12 @@ export default function HostLayout() {
   }, [isTogglingHostPlayer]);
 
   const canManageHostAdminAsPlayer = useCallback(
-    (adminId: string) =>
-      user?.id === host?.community.master.id ||
-      adminId === user?.id ||
-      adminId === host?.community.master.id,
-    [host?.community.master.id, user?.id],
+    (_adminId: string) =>
+      Boolean(
+        user &&
+          hostAdminCandidates.some((candidate) => candidate.id === user.id),
+      ),
+    [hostAdminCandidates, user],
   );
 
   const handleSelectHostAdminPlayer = useCallback(
@@ -570,31 +624,33 @@ export default function HostLayout() {
 
     setIsTogglingHostPlayer(true);
     setHostAdminPlayerError(null);
+    const resumeHostLiveSync = pauseHostLiveSync();
 
     try {
       const addedPlayers = await Promise.all(
         adminIdsToAdd.map(async (accountId) => {
           const response = await api.post(
             `/api/community/${communityId}/hosts/${hostId}/host-player`,
-            { accountId },
+            { accountId, playerOnly: true },
           );
 
           return response.data.hostedPlayer as AcceptedPlayers | undefined;
         }),
       );
-      const removedHostedPlayerIds = await Promise.all(
+      const removedHostedPlayers = await Promise.all(
         adminIdsToRemove.map(async (accountId) => {
           const response = await api.delete(
             `/api/community/${communityId}/hosts/${hostId}/host-player`,
             {
-              data: { accountId },
+              data: { accountId, playerOnly: true },
             },
           );
 
-          return (
+          const hostedPlayerId =
             response.data.hostedPlayerId ??
-            acceptedPlayers.find((player) => player.player.id === accountId)?.id
-          );
+            acceptedPlayers.find((player) => player.player.id === accountId)?.id;
+
+          return hostedPlayerId;
         }),
       );
 
@@ -603,11 +659,12 @@ export default function HostLayout() {
           addHostedPlayerToLocalState(hostedPlayer);
         }
       });
-      removedHostedPlayerIds.forEach((hostedPlayerId) => {
+      removedHostedPlayers.forEach((hostedPlayerId) => {
         if (hostedPlayerId) {
           removeHostedPlayerFromLocalState(hostedPlayerId);
         }
       });
+      await loadHostData({ silent: true, force: true });
       setIsHostAdminPlayerModalOpen(false);
       setSelectedHostAdminPlayerIds([]);
     } catch (error) {
@@ -621,6 +678,7 @@ export default function HostLayout() {
         console.error(error.response?.data ?? error);
       else console.error(error);
     } finally {
+      resumeHostLiveSync();
       setIsTogglingHostPlayer(false);
     }
   }, [
@@ -632,6 +690,8 @@ export default function HostLayout() {
     hostedAdminPlayerIds,
     hostId,
     isTogglingHostPlayer,
+    loadHostData,
+    pauseHostLiveSync,
     removeHostedPlayerFromLocalState,
     selectedHostAdminPlayerIds,
   ]);
@@ -824,7 +884,7 @@ export default function HostLayout() {
                         Host players
                       </h4>
                       <p className="mt-1 text-sm text-stone-500">
-                        Select community admins to include in this match.
+                        Select community admins and co-hosts to include in this match.
                       </p>
                     </div>
 
@@ -919,7 +979,9 @@ export default function HostLayout() {
                                         : "Will remove"
                                       : isSelected
                                         ? "Selected"
-                                        : "Admin only"}
+                                        : admin.roleLabel === "Co-host"
+                                          ? "Co-host only"
+                                          : "Admin only"}
                                 </span>
                               </td>
                             </tr>
@@ -930,7 +992,7 @@ export default function HostLayout() {
 
                     {hostAdminCandidates.length === 0 ? (
                       <p className="px-4 py-4 text-sm text-stone-500">
-                        No community admins found.
+                        No community admins or co-hosts found.
                       </p>
                     ) : null}
 

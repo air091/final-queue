@@ -33,7 +33,6 @@ const communityHostManagerWhere = (
             some: {
               playerId: accountId,
               isHost: true,
-              hostStatus: PlayerHostStatuses.accepted,
             },
           },
         },

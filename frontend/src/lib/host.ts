@@ -51,6 +51,11 @@ export type HostMeta = {
   maxPlayers: number;
   status: string;
   createdAt: string;
+  hosts: Array<{
+    id: string;
+    username: string;
+    profileUrl: string;
+  }>;
   community: {
     profileUrl: string;
     communityName: string;

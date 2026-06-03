@@ -99,7 +99,6 @@ const communityHostManagerWhere = (
             some: {
               playerId: accountId,
               isHost: true,
-              hostStatus: PlayerHostStatuses.accepted,
             },
           },
         },
@@ -329,7 +328,7 @@ export const getHosts = async (
           where: {
             OR: [
               { playerId: user.sub },
-              { isHost: true, hostStatus: PlayerHostStatuses.accepted },
+              { isHost: true },
             ],
           },
           select: {
@@ -352,19 +351,24 @@ export const getHosts = async (
     return response.status(200).json({
       success: true,
       message: "Hosts retrieved successfully",
-      hosts: hosts.map(({ players, ...host }) => ({
-        ...host,
-        currentUserStatus:
-          players.find((player) => player.playerId === user.sub)?.hostStatus ??
-          null,
-        hosts: players
-          .filter(
-            (player) =>
-              player.isHost &&
-              player.hostStatus === PlayerHostStatuses.accepted,
-          )
-          .map((player) => player.player),
-      })),
+      hosts: hosts.map(({ players, ...host }) => {
+        const currentUserPlayer = players.find(
+          (player) => player.playerId === user.sub,
+        );
+        const currentUserStatus =
+          currentUserPlayer?.isHost &&
+          currentUserPlayer.hostStatus !== PlayerHostStatuses.accepted
+            ? null
+            : (currentUserPlayer?.hostStatus ?? null);
+
+        return {
+          ...host,
+          currentUserStatus,
+          hosts: players
+            .filter((player) => player.isHost)
+            .map((player) => player.player),
+        };
+      }),
     });
   } catch (error) {
     console.error("Error getting hosts:", error);
@@ -544,6 +548,20 @@ export const getHostById = async (
           maxPlayers: true,
           status: true,
           createdAt: true,
+          players: {
+            where: {
+              isHost: true,
+            },
+            select: {
+              player: {
+                select: {
+                  id: true,
+                  username: true,
+                  profileUrl: true,
+                },
+              },
+            },
+          },
           community: {
             select: {
               profileUrl: true,
@@ -577,6 +595,7 @@ export const getHostById = async (
         where: {
           hostId,
           hostStatus: PlayerHostStatuses.requested,
+          isHost: false,
         },
         select: {
           id: true,
@@ -633,6 +652,7 @@ export const getHostById = async (
         where: {
           hostId,
           hostStatus: PlayerHostStatuses.rejected,
+          isHost: false,
         },
         select: {
           id: true,
@@ -661,6 +681,7 @@ export const getHostById = async (
         where: {
           hostId,
           hostStatus: PlayerHostStatuses.banned,
+          isHost: false,
         },
         select: {
           id: true,
@@ -690,13 +711,23 @@ export const getHostById = async (
         .status(404)
         .json({ success: false, message: "Host not found" });
 
+    const hiddenRejectedHostAdminIds = new Set([
+      host.community.master.id,
+      ...host.community.admins.map((admin) => admin.account.id),
+    ]);
+    const visibleRejectedPlayers = rejectedPlayers.filter(
+      (player) => !hiddenRejectedHostAdminIds.has(player.player?.id ?? ""),
+    );
+    const { players: hostPlayers, ...hostData } = host;
+
     return response.status(200).json({
       success: true,
       message: "Host retrieved successfully",
-      ...host,
+      ...hostData,
+      hosts: hostPlayers.map((hostPlayer) => hostPlayer.player),
       requestedPlayers: requestedPlayers.map(mapHostPlayerRecord),
       acceptedPlayers: acceptedPlayers.map(mapHostPlayerRecord),
-      rejectedPlayers: rejectedPlayers.map(mapHostPlayerRecord),
+      rejectedPlayers: visibleRejectedPlayers.map(mapHostPlayerRecord),
       bannedPlayers: bannedPlayers.map(mapHostPlayerRecord),
     });
   } catch (error) {
@@ -1318,6 +1349,7 @@ type CreateStaticPlayerBody = {
 
 type HostAdminPlayerBody = {
   accountId?: string;
+  playerOnly?: boolean;
 };
 
 const selectAcceptedPlayerForResponse = {
@@ -1424,6 +1456,7 @@ export const includeHostAsPlayer = async (
     const { communityId, hostId } = request.params;
     const user = request.user;
     const targetAccountId = request.body.accountId?.trim() || user?.sub;
+    const playerOnly = request.body.playerOnly ?? false;
 
     if (!user)
       return response
@@ -1438,7 +1471,7 @@ export const includeHostAsPlayer = async (
     const host = await prisma.host.findFirst({
       where: {
         id: hostId,
-        community: communityMemberWhere(communityId, user.sub),
+        community: communityHostManagerWhere(communityId, hostId, user.sub),
       },
       select: {
         id: true,
@@ -1471,7 +1504,7 @@ export const includeHostAsPlayer = async (
       (admin) => admin.accountId === user.sub,
     );
 
-    if (!isCommunityOwner && !isCommunityAdmin)
+    if (!playerOnly && !isCommunityOwner && !isCommunityAdmin)
       return response.status(403).json({
         success: false,
         message: "Only community admins can update co-hosts",
@@ -1507,6 +1540,19 @@ export const includeHostAsPlayer = async (
         message: "Only registered community players can be added as co-hosts",
       });
 
+    const existingHostedPlayer = await prisma.player.findUnique({
+      where: {
+        hostId_playerId: {
+          hostId: host.id,
+          playerId: targetAccountId,
+        },
+      },
+      select: { isHost: true },
+    });
+    const shouldBeCoHost = playerOnly
+      ? existingHostedPlayer?.isHost === true
+      : true;
+
     await prisma.player.upsert({
       where: {
         hostId_playerId: {
@@ -1516,14 +1562,14 @@ export const includeHostAsPlayer = async (
       },
       update: {
         hostStatus: PlayerHostStatuses.accepted,
-        isHost: true,
+        isHost: shouldBeCoHost,
         timerStartedAt: new Date(),
       },
       create: {
         hostId: host.id,
         playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
-        isHost: true,
+        isHost: shouldBeCoHost,
         timerStartedAt: new Date(),
       },
     });
@@ -1533,7 +1579,6 @@ export const includeHostAsPlayer = async (
         hostId: host.id,
         playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
-        isHost: true,
       },
       select: selectAcceptedPlayerForResponse,
     });
@@ -1628,6 +1673,7 @@ export const removeHostAsPlayer = async (
     const { communityId, hostId } = request.params;
     const user = request.user;
     const targetAccountId = request.body.accountId?.trim() || user?.sub;
+    const playerOnly = request.body.playerOnly ?? false;
 
     if (!user)
       return response
@@ -1642,7 +1688,7 @@ export const removeHostAsPlayer = async (
     const host = await prisma.host.findFirst({
       where: {
         id: hostId,
-        community: communityMemberWhere(communityId, user.sub),
+        community: communityHostManagerWhere(communityId, hostId, user.sub),
       },
       select: {
         id: true,
@@ -1674,7 +1720,7 @@ export const removeHostAsPlayer = async (
       (admin) => admin.accountId === user.sub,
     );
 
-    if (!isCommunityOwner && !isCommunityAdmin)
+    if (!playerOnly && !isCommunityOwner && !isCommunityAdmin)
       return response.status(403).json({
         success: false,
         message: "Only community admins can update co-hosts",
@@ -1685,10 +1731,11 @@ export const removeHostAsPlayer = async (
         hostId: host.id,
         playerId: targetAccountId,
         hostStatus: PlayerHostStatuses.accepted,
-        isHost: true,
+        ...(playerOnly ? {} : { isHost: true }),
       },
       select: {
         id: true,
+        isHost: true,
         courtAssignment: {
           select: {
             court: {
@@ -1722,7 +1769,7 @@ export const removeHostAsPlayer = async (
         where: { id: hostedPlayer.id },
         data: {
           hostStatus: PlayerHostStatuses.rejected,
-          isHost: false,
+          isHost: playerOnly ? hostedPlayer.isHost : false,
           timerStartedAt: null,
         },
       }),
