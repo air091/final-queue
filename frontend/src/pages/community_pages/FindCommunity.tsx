@@ -29,6 +29,7 @@ type ActiveSessionType = {
   sport: string;
   location: string | null;
   startTime: string | null;
+  endTime: string | null;
   maxPlayers: number;
   status: string;
   _count: {
@@ -37,6 +38,24 @@ type ActiveSessionType = {
 };
 
 type TabType = "details" | "sessions";
+
+const DEFAULT_COMMUNITY_SPORT = "badminton";
+
+const formatSportLabel = (sport: string) => {
+  const cleanSport = sport.trim();
+  if (!cleanSport) return "";
+
+  return cleanSport.charAt(0).toUpperCase() + cleanSport.slice(1);
+};
+
+const formatSessionDateTime = (value: string | null) => {
+  if (!value) return "Any time";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Any time";
+
+  return date.toLocaleString();
+};
 
 export default function FindCommunity() {
   const { user } = useAuth();
@@ -55,6 +74,29 @@ export default function FindCommunity() {
     () => communities.filter((community) => community.master.id !== user?.id),
     [communities, user?.id],
   );
+
+  const selectedCommunitySportLabel = useMemo(() => {
+    if (!selectedCommunity) return formatSportLabel(DEFAULT_COMMUNITY_SPORT);
+
+    const sportNames = Array.from(
+      new Set(
+        [
+          ...activeSessions.map((session) => session.sport),
+          ...(selectedCommunity.master.sports?.map(({ sport }) => sport) ?? []),
+        ]
+          .map((sport) => sport.trim())
+          .filter(Boolean),
+      ),
+    );
+
+    if (sportNames.length > 0) {
+      return sportNames.map(formatSportLabel).join(", ");
+    }
+
+    return isLoadingSessions
+      ? "Loading..."
+      : formatSportLabel(DEFAULT_COMMUNITY_SPORT);
+  }, [activeSessions, isLoadingSessions, selectedCommunity]);
 
   useEffect(() => {
     const loadCommunities = async () => {
@@ -97,6 +139,7 @@ export default function FindCommunity() {
   const handleOpenCommunityModal = (community: CommunityType) => {
     setSelectedCommunity(community);
     setActiveTab("details");
+    setActiveSessions([]);
     setJoinError(null);
     setJoinSuccess(null);
     void loadActiveSessions(community.id);
@@ -158,6 +201,12 @@ export default function FindCommunity() {
         </div>
       </div>
 
+      {error ? (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
       {filteredCommunities.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-orange-200 bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-medium text-stone-700">
@@ -213,10 +262,6 @@ export default function FindCommunity() {
                       <span className="font-bold">
                         {community.master.username}
                       </span>
-                    </p>
-
-                    <p className="mt-1 text-sm text-stone-500">
-                      {community.description}
                     </p>
                   </div>
                 </div>
@@ -301,37 +346,34 @@ export default function FindCommunity() {
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6">
                   {activeTab === "details" && (
                     <div className="space-y-6">
+                        <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-lg bg-orange-50 p-2 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Sport</p>
+                          <p className="mt-2 text-lg font-bold text-primary">
+                            {selectedCommunitySportLabel}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-orange-50 p-2 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Total Players</p>
+                          <p className="mt-2 text-lg font-bold text-primary">
+                            {selectedCommunity._count?.players || 0}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-orange-50 p-2 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Total Sessions</p>
+                          <p className="mt-2 text-lg font-bold text-primary">
+                            {activeSessions.length}
+                          </p>
+                        </div>
+                      </div>
+
                       <div>
                         <h3 className="text-sm font-semibold text-stone-600">Description</h3>
                         <p className="mt-2 text-sm text-text">
                           {selectedCommunity.description || "No description provided."}
                         </p>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-lg bg-orange-50 p-4 text-center">
-                          <p className="text-xs font-semibold text-stone-600">Sport</p>
-                          <p className="mt-3 text-2xl font-bold text-primary">
-                            {selectedCommunity.master.sports?.[0]?.sport
-                              ? selectedCommunity.master.sports[0].sport.charAt(0).toUpperCase() +
-                                selectedCommunity.master.sports[0].sport.slice(1)
-                              : "—"}
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg bg-orange-50 p-4 text-center">
-                          <p className="text-xs font-semibold text-stone-600">Total Players</p>
-                          <p className="mt-3 text-2xl font-bold text-primary">
-                            {selectedCommunity._count?.players || 0}
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg bg-orange-50 p-4 text-center">
-                          <p className="text-xs font-semibold text-stone-600">Total Sessions</p>
-                          <p className="mt-3 text-2xl font-bold text-primary">
-                            {activeSessions.length}
-                          </p>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -359,20 +401,28 @@ export default function FindCommunity() {
                                     {session.hostName}
                                   </h4>
                                   <p className="text-xs text-stone-500">
-                                    {session.sport.charAt(0).toUpperCase() +
-                                      session.sport.slice(1)}
-                                    {session.location && ` • ${session.location}`}
+                                    {formatSportLabel(session.sport)}
+                                    {session.location && ` - ${session.location}`}
                                   </p>
                                 </div>
                                 <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shrink-0">
-                                  {session._count.players}/{session.maxPlayers || "∞"}
+                                  {session._count.players}/{session.maxPlayers || "Open"}
                                 </div>
                               </div>
-                              {session.startTime && (
-                                <p className="mt-2 text-xs text-stone-500">
-                                  {new Date(session.startTime).toLocaleString()}
+                              <div className="text-xs text-stone-500 flex items-center gap-x-4">
+                                <p>
+                                  Starts:{" "}
+                                  <span className="font-medium">
+                                    {formatSessionDateTime(session.startTime)}
+                                  </span>
                                 </p>
-                              )}
+                                <p>
+                                  Ends:{" "}
+                                  <span className="font-medium">
+                                    {formatSessionDateTime(session.endTime)}
+                                  </span>
+                                </p>
+                              </div>
                             </div>
                           ))}
                         </div>
