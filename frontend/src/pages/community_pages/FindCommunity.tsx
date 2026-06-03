@@ -14,6 +14,12 @@ type CommunityType = {
   master: {
     id: string;
     username: string;
+    sports?: Array<{
+      sport: string;
+    }>;
+  };
+  _count?: {
+    players: number;
   };
 };
 
@@ -260,7 +266,7 @@ export default function FindCommunity() {
                   </div>
                   <button
                     onClick={handleCloseCommunityModal}
-                    className="rounded-full p-2 text-stone-500 hover:bg-stone-100"
+                    className="rounded-full p-2 text-stone-500 hover:bg-stone-100 cursor-pointer"
                     aria-label="Close modal"
                   >
                     <X size={20} />
@@ -271,7 +277,7 @@ export default function FindCommunity() {
                 <div className="flex gap-0 border-b border-gray-200 px-5 sm:px-6">
                   <button
                     onClick={() => setActiveTab("details")}
-                    className={`px-4 py-3 text-sm font-semibold transition ${
+                    className={`px-4 py-3 text-sm font-semibold transition cursor-pointer ${
                       activeTab === "details"
                         ? "border-b-2 border-primary text-primary"
                         : "text-stone-600 hover:text-text"
@@ -281,7 +287,7 @@ export default function FindCommunity() {
                   </button>
                   <button
                     onClick={() => setActiveTab("sessions")}
-                    className={`px-4 py-3 text-sm font-semibold transition ${
+                    className={`px-4 py-3 text-sm font-semibold transition cursor-pointer ${
                       activeTab === "sessions"
                         ? "border-b-2 border-primary text-primary"
                         : "text-stone-600 hover:text-text"
@@ -294,12 +300,38 @@ export default function FindCommunity() {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6">
                   {activeTab === "details" && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div>
                         <h3 className="text-sm font-semibold text-stone-600">Description</h3>
                         <p className="mt-2 text-sm text-text">
                           {selectedCommunity.description || "No description provided."}
                         </p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-lg bg-orange-50 p-4 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Sport</p>
+                          <p className="mt-3 text-2xl font-bold text-primary">
+                            {selectedCommunity.master.sports?.[0]?.sport
+                              ? selectedCommunity.master.sports[0].sport.charAt(0).toUpperCase() +
+                                selectedCommunity.master.sports[0].sport.slice(1)
+                              : "—"}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-orange-50 p-4 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Total Players</p>
+                          <p className="mt-3 text-2xl font-bold text-primary">
+                            {selectedCommunity._count?.players || 0}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-orange-50 p-4 text-center">
+                          <p className="text-xs font-semibold text-stone-600">Total Sessions</p>
+                          <p className="mt-3 text-2xl font-bold text-primary">
+                            {activeSessions.length}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -371,7 +403,7 @@ export default function FindCommunity() {
                   <button
                     onClick={() => void handleRequestJoin()}
                     disabled={isRequestingJoin || joinSuccess !== null}
-                    className={`w-full rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                    className={`w-full rounded-xl px-5 py-3 text-sm cursor-pointer font-semibold transition ${
                       isRequestingJoin || joinSuccess
                         ? "cursor-not-allowed bg-gray-100 text-gray-400"
                         : "bg-primary text-white hover:bg-accent cursor-pointer"

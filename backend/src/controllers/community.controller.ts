@@ -272,6 +272,17 @@ export const getAllCommunities = async (
           select: {
             id: true,
             username: true,
+            sports: {
+              select: {
+                sport: true,
+              },
+              take: 1,
+            },
+          },
+        },
+        _count: {
+          select: {
+            players: true,
           },
         },
       },
