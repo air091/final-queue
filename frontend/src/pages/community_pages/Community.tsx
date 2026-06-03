@@ -13,6 +13,7 @@ import {
   SquarePen,
   Trophy,
   Trash,
+  UserMinus,
   UserPlus,
   UsersRound,
   X,
@@ -309,6 +310,7 @@ export default function Community() {
     string | null
   >(null);
   const [isDeletingCommunity, setIsDeletingCommunity] = useState(false);
+  const [isLeavingCommunity, setIsLeavingCommunity] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [addPlayerMode, setAddPlayerMode] = useState<AddPlayerMode>("static");
   const [playerInviteSearchTerm, setPlayerInviteSearchTerm] = useState("");
@@ -1620,6 +1622,43 @@ export default function Community() {
     }
   };
 
+  const handleLeaveCommunity = async () => {
+    if (isCommunityOwner) {
+      setCommunityError("Community owners cannot leave their own community.");
+      return;
+    }
+
+    if (!id || !community || isLeavingCommunity) return;
+
+    const confirmed = window.confirm(
+      `Leave "${community.communityName}"? You will lose access to this community and its hosts.`,
+    );
+
+    if (!confirmed) return;
+
+    setIsLeavingCommunity(true);
+    setCommunityError(null);
+    setOpenDropdownCommunity(false);
+
+    try {
+      await api.delete(`/api/community/${id}/leave`);
+      await refetchCommunities();
+      navigate("/community", { replace: true });
+    } catch (error) {
+      setCommunityError(
+        axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? "Unable to leave community.")
+          : "Unable to leave community.",
+      );
+
+      if (axios.isAxiosError(error))
+        console.error(error.response?.data ?? error);
+      else console.error("Leave community api failed", error);
+    } finally {
+      setIsLeavingCommunity(false);
+    }
+  };
+
   const handleEditCommunity = async (form: {
     profileUrl: string;
     communityName: string;
@@ -2657,7 +2696,7 @@ export default function Community() {
             </div>
           </div>
 
-          {isCommunityOwner ? (
+          {community?.isMember ? (
             <div ref={dropdownRef} className="relative">
               <div
                 onClick={() => setOpenDropdownCommunity((prev) => !prev)}
@@ -2668,26 +2707,40 @@ export default function Community() {
 
               {openDropdownCommunity && (
                 <div className="absolute right-0 z-10 border border-primary py-2 w-[240px] top-8 rounded-lg bg-white shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenDropdownCommunity(false);
-                      setEditCommunityError(null);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]"
-                  >
-                    <SquarePen size={18} /> Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDeleteCommunity()}
-                    disabled={isDeletingCommunity}
-                    className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Trash size={18} />
-                    {isDeletingCommunity ? "Deleting..." : "Delete"}
-                  </button>
+                  {isCommunityOwner ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenDropdownCommunity(false);
+                          setEditCommunityError(null);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="flex items-center px-[16px] gap-x-[16px] cursor-pointer hover:bg-blue-400 hover:text-white w-full text-start py-1 text-[14px]"
+                      >
+                        <SquarePen size={18} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteCommunity()}
+                        disabled={isDeletingCommunity}
+                        className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash size={18} />
+                        {isDeletingCommunity ? "Deleting..." : "Delete"}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleLeaveCommunity()}
+                      disabled={isLeavingCommunity}
+                      className="flex w-full items-center gap-x-[16px] px-[16px] py-1 text-start text-[14px] cursor-pointer hover:bg-red-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <UserMinus size={18} />
+                      {isLeavingCommunity ? "Leaving..." : "Leave community"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

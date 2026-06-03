@@ -15,6 +15,7 @@ import {
   getCommunityPlayerInviteCandidates,
   getCommunityPlayerWinPoints,
   includeCommunityAdminAsPlayer,
+  leaveCommunity,
   removeCommunityAdminRole,
   removeCommunityAdminAsPlayer,
   updateCommunity,
@@ -68,6 +69,7 @@ router.get("/all", authenticate, getAllCommunities);
 router.get("/", authenticate, getCommunities);
 router.get("/:communityId", authenticate, getCommunityById);
 router.patch("/:communityId", authenticate, updateCommunity);
+router.delete("/:communityId/leave", authenticate, leaveCommunity);
 router.delete("/:communityId", authenticate, deleteCommunity);
 router.get("/:communityId/players", authenticate, getCommunityPlayers);
 router.get(

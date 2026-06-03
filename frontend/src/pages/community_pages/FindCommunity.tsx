@@ -161,6 +161,11 @@ export default function FindCommunity() {
 
     try {
       await api.post(`/api/community/${selectedCommunity.id}/players/invites`, {});
+      setCommunities((currentCommunities) =>
+        currentCommunities.filter(
+          (community) => community.id !== selectedCommunity.id,
+        ),
+      );
       setJoinSuccess("Join request sent successfully!");
     } catch (joinError) {
       if (axios.isAxiosError(joinError)) {

@@ -261,7 +261,23 @@ export const getAllCommunities = async (
   response: Response,
 ) => {
   try {
+    const user = request.user;
+    if (!user) {
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+    }
+
     const communities = await prisma.community.findMany({
+      where: {
+        NOT: {
+          OR: [
+            { masterId: user.sub },
+            { admins: { some: { accountId: user.sub } } },
+            { players: { some: { accountId: user.sub } } },
+          ],
+        },
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -1664,10 +1680,69 @@ export const createCommunityPlayerInvite = async (
         .status(401)
         .json({ success: false, message: "Unauthorized" });
 
-    if (!communityId || !accountId)
+    if (!communityId)
       return response
         .status(400)
         .json({ success: false, message: "Missing required params" });
+
+    if (!accountId) {
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: {
+          id: true,
+          masterId: true,
+          admins: {
+            where: { accountId: user.sub },
+            select: { id: true },
+          },
+        },
+      });
+
+      if (!community)
+        return response
+          .status(404)
+          .json({ success: false, message: "Community not found" });
+
+      if (community.masterId === user.sub || community.admins.length > 0)
+        return response.status(409).json({
+          success: false,
+          message: "You are already part of this community",
+        });
+
+      const existingPlayer = await prisma.communityPlayer.findUnique({
+        where: {
+          communityId_accountId: {
+            communityId: community.id,
+            accountId: user.sub,
+          },
+        },
+        select: { id: true, status: true },
+      });
+
+      if (existingPlayer)
+        return response.status(409).json({
+          success: false,
+          message:
+            existingPlayer.status === PlayerHostStatuses.requested
+              ? "You already requested to join this community"
+              : "You are already part of this community",
+        });
+
+      const communityPlayer = await prisma.communityPlayer.create({
+        data: {
+          communityId: community.id,
+          accountId: user.sub,
+          status: PlayerHostStatuses.requested,
+        },
+        select: { id: true },
+      });
+
+      return response.status(201).json({
+        success: true,
+        message: "Join request sent",
+        communityPlayerId: communityPlayer.id,
+      });
+    }
 
     const community = await prisma.community.findFirst({
       where: communityMemberWhere(communityId, user.sub),
@@ -2601,6 +2676,93 @@ export const deleteCommunityPlayer = async (
     });
   } catch (error) {
     console.error("Error deleting community player:", error);
+    return response.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
+  }
+};
+
+export const leaveCommunity = async (
+  request: Request<Pick<Params, "communityId">>,
+  response: Response,
+) => {
+  try {
+    const { communityId } = request.params;
+    const user = request.user;
+
+    if (!user)
+      return response
+        .status(401)
+        .json({ success: false, message: "Unauthorized" });
+
+    if (!communityId)
+      return response
+        .status(400)
+        .json({ success: false, message: "Missing required params" });
+
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: {
+        id: true,
+        masterId: true,
+        admins: {
+          where: { accountId: user.sub },
+          select: { id: true },
+        },
+        players: {
+          where: { accountId: user.sub },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!community)
+      return response
+        .status(404)
+        .json({ success: false, message: "Community not found" });
+
+    if (community.masterId === user.sub)
+      return response.status(400).json({
+        success: false,
+        message: "Community owners cannot leave their own community",
+      });
+
+    if (community.admins.length === 0 && community.players.length === 0)
+      return response.status(404).json({
+        success: false,
+        message: "You are not a member of this community",
+      });
+
+    await prisma.$transaction([
+      prisma.player.deleteMany({
+        where: {
+          playerId: user.sub,
+          host: {
+            communityId: community.id,
+          },
+        },
+      }),
+      prisma.communityPlayer.deleteMany({
+        where: {
+          communityId: community.id,
+          accountId: user.sub,
+        },
+      }),
+      prisma.communityAdmin.deleteMany({
+        where: {
+          communityId: community.id,
+          accountId: user.sub,
+        },
+      }),
+    ]);
+
+    return response.status(200).json({
+      success: true,
+      message: "You left the community",
+    });
+  } catch (error) {
+    console.error("Error leaving community:", error);
     return response.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal server error",
