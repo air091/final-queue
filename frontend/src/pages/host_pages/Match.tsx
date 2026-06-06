@@ -144,8 +144,49 @@ const getUpdatedCourts = (
   playerId: string,
   courtId: string,
   position: number,
-) =>
-  currentCourts.map((court) => {
+) => {
+  const sourceCourt = currentCourts.find((court) =>
+    court.assignments.some((assignment) => assignment.playerId === playerId),
+  );
+  const sourceAssignment = sourceCourt?.assignments.find(
+    (assignment) => assignment.playerId === playerId,
+  );
+  const targetCourt = currentCourts.find((court) => court.id === courtId);
+  const targetAssignment = targetCourt?.assignments.find(
+    (assignment) =>
+      assignment.position === position && assignment.playerId !== playerId,
+  );
+
+  if (sourceCourt && sourceAssignment && targetAssignment) {
+    return currentCourts.map((court) => {
+      const nextAssignments = court.assignments.filter(
+        (assignment) =>
+          assignment.playerId !== playerId &&
+          assignment.playerId !== targetAssignment.playerId,
+      );
+
+      if (court.id === sourceCourt.id) {
+        nextAssignments.push({
+          ...targetAssignment,
+          position: sourceAssignment.position,
+        });
+      }
+
+      if (court.id === courtId) {
+        nextAssignments.push({
+          ...sourceAssignment,
+          position,
+        });
+      }
+
+      return {
+        ...court,
+        assignments: nextAssignments.sort((a, b) => a.position - b.position),
+      };
+    });
+  }
+
+  return currentCourts.map((court) => {
     const assignmentsWithoutDraggedPlayer = court.assignments.filter(
       (assignment) => assignment.playerId !== playerId,
     );
@@ -176,6 +217,7 @@ const getUpdatedCourts = (
       ].sort((a, b) => a.position - b.position),
     };
   });
+};
 
 const getCourtsWithoutPlayer = (
   currentCourts: CourtType[],
@@ -450,8 +492,48 @@ const getUpdatedQueues = (
   playerId: string,
   queueId: string,
   position: number,
-) =>
-  currentQueues.map((queue) => {
+) => {
+  const sourceQueue = currentQueues.find((queue) =>
+    (queue.entries || []).some((entry) => entry.playerId === playerId),
+  );
+  const sourceEntry = sourceQueue?.entries.find(
+    (entry) => entry.playerId === playerId,
+  );
+  const targetQueue = currentQueues.find((queue) => queue.id === queueId);
+  const targetEntry = targetQueue?.entries.find(
+    (entry) => entry.position === position && entry.playerId !== playerId,
+  );
+
+  if (sourceQueue && sourceEntry && targetEntry) {
+    return currentQueues.map((queue) => {
+      const nextEntries = (queue.entries || []).filter(
+        (entry) =>
+          entry.playerId !== playerId &&
+          entry.playerId !== targetEntry.playerId,
+      );
+
+      if (queue.id === sourceQueue.id) {
+        nextEntries.push({
+          ...targetEntry,
+          position: sourceEntry.position,
+        });
+      }
+
+      if (queue.id === queueId) {
+        nextEntries.push({
+          ...sourceEntry,
+          position,
+        });
+      }
+
+      return {
+        ...queue,
+        entries: nextEntries.sort((a, b) => a.position - b.position),
+      };
+    });
+  }
+
+  return currentQueues.map((queue) => {
     const entriesWithoutDraggedPlayer = (queue.entries || []).filter(
       (entry) => entry.playerId !== playerId,
     );
@@ -482,6 +564,7 @@ const getUpdatedQueues = (
       ].sort((a, b) => a.position - b.position),
     };
   });
+};
 
 const getQueuesWithoutPlayer = (
   currentQueues: QueueType[],
@@ -1127,6 +1210,7 @@ export default function Match() {
 
       // Check if player is coming from a queue and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
+      const sourceCourtAssignment = player?.courtAssignment;
       let updatedQueues = queues;
       if (player?.queueEntry) {
         updatedQueues = getQueuesWithoutPlayer(
@@ -1140,9 +1224,17 @@ export default function Match() {
       setQueues(updatedQueues);
       setPlayers(
         getPlayersWithCourtAssignment(
-          replacedPlayerId
-            ? getPlayersWithoutCourtAssignment(players, replacedPlayerId)
-            : players,
+          replacedPlayerId && sourceCourtAssignment
+            ? getPlayersWithCourtAssignment(
+                players,
+                replacedPlayerId,
+                sourceCourtAssignment.courtId,
+                sourceCourtAssignment.position,
+                false,
+              )
+            : replacedPlayerId
+              ? getPlayersWithoutCourtAssignment(players, replacedPlayerId)
+              : players,
           hostedPlayerId,
           dropData.courtId,
           dropData.position,
@@ -1209,6 +1301,7 @@ export default function Match() {
 
       // Check if player is coming from a court and remove them from it
       const player = players.find((p) => p.id === hostedPlayerId);
+      const sourceQueueEntry = player?.queueEntry;
       const sourceCourt = player?.courtAssignment
         ? courts.find((court) => court.id === player.courtAssignment?.courtId)
         : null;
@@ -1226,9 +1319,16 @@ export default function Match() {
       setCourts(updatedCourts);
       setPlayers(
         getPlayersWithQueueAssignment(
-          replacedPlayerId
-            ? getPlayersWithoutQueueAssignment(players, replacedPlayerId)
-            : players,
+          replacedPlayerId && sourceQueueEntry
+            ? getPlayersWithQueueAssignment(
+                players,
+                replacedPlayerId,
+                sourceQueueEntry.queueId,
+                sourceQueueEntry.position,
+              )
+            : replacedPlayerId
+              ? getPlayersWithoutQueueAssignment(players, replacedPlayerId)
+              : players,
           hostedPlayerId,
           dropData.queueId,
           dropData.position,
@@ -2138,7 +2238,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(340px,1fr))]">
+                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(368px,1fr))]">
                     {queues.map((queue) => (
                       <QueueCard
                         key={queue.id}

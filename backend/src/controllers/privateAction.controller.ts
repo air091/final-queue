@@ -62,6 +62,9 @@ const getAuthorizedHost = async (
 const isCourtActive = (court: { startedAt: Date | null; endedAt: Date | null }) =>
   Boolean(court.startedAt && !court.endedAt);
 
+const getTemporarySwapPosition = () =>
+  -Math.floor(Math.random() * 1_000_000) - 1;
+
 export const acceptPlayer = async (
   request: Request<HostedPlayerParams>,
   response: Response,
@@ -1190,7 +1193,10 @@ export const assignPlayerToCourt = async (
     const existingAssignment = await prisma.courtAssignment.findFirst({
       where: { playerId: player.id },
       select: {
+        id: true,
         playerId: true,
+        courtId: true,
+        position: true,
         court: {
           select: {
             startedAt: true,
@@ -1221,6 +1227,33 @@ export const assignPlayerToCourt = async (
     });
 
     await prisma.$transaction(async (transaction) => {
+      if (occupied && occupied.playerId !== player.id && existingAssignment) {
+        const temporaryPosition = getTemporarySwapPosition();
+
+        await transaction.courtAssignment.update({
+          where: { id: existingAssignment.id },
+          data: { position: temporaryPosition },
+        });
+
+        await transaction.courtAssignment.update({
+          where: { id: occupied.id },
+          data: {
+            courtId: existingAssignment.courtId,
+            position: existingAssignment.position,
+          },
+        });
+
+        await transaction.courtAssignment.update({
+          where: { id: existingAssignment.id },
+          data: {
+            courtId: court.id,
+            position,
+          },
+        });
+
+        return;
+      }
+
       if (occupied && occupied.playerId !== player.id) {
         await transaction.courtAssignment.delete({
           where: { id: occupied.id },
@@ -1449,6 +1482,15 @@ export const assignPlayerToQueue = async (
       },
     });
 
+    const existingQueueAssignment = await prisma.queueAssignment.findFirst({
+      where: { playerId: player.id },
+      select: {
+        id: true,
+        queueId: true,
+        position: true,
+      },
+    });
+
     const occupied = await prisma.queueAssignment.findFirst({
       where: {
         queueId: queue.id,
@@ -1461,24 +1503,49 @@ export const assignPlayerToQueue = async (
     });
 
     await prisma.$transaction(async (transaction) => {
-      if (occupied && occupied.playerId !== player.id) {
-        await transaction.queueAssignment.delete({
+      if (occupied && occupied.playerId !== player.id && existingQueueAssignment) {
+        const temporaryPosition = getTemporarySwapPosition();
+
+        await transaction.queueAssignment.update({
+          where: { id: existingQueueAssignment.id },
+          data: { position: temporaryPosition },
+        });
+
+        await transaction.queueAssignment.update({
           where: { id: occupied.id },
+          data: {
+            queueId: existingQueueAssignment.queueId,
+            position: existingQueueAssignment.position,
+          },
+        });
+
+        await transaction.queueAssignment.update({
+          where: { id: existingQueueAssignment.id },
+          data: {
+            queueId: queue.id,
+            position,
+          },
+        });
+      } else {
+        if (occupied && occupied.playerId !== player.id) {
+          await transaction.queueAssignment.delete({
+            where: { id: occupied.id },
+          });
+        }
+
+        await transaction.queueAssignment.upsert({
+          where: { playerId: player.id },
+          update: {
+            queueId: queue.id,
+            position,
+          },
+          create: {
+            playerId: player.id,
+            queueId: queue.id,
+            position,
+          },
         });
       }
-
-      await transaction.queueAssignment.upsert({
-        where: { playerId: player.id },
-        update: {
-          queueId: queue.id,
-          position,
-        },
-        create: {
-          playerId: player.id,
-          queueId: queue.id,
-          position,
-        },
-      });
 
       if (
         existingCourtAssignment &&
