@@ -1841,7 +1841,7 @@ export default function Players() {
           onEditStaticPlayer={openEditStaticPlayerModal}
           headerActions={
             <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="flex min-w-[220px] items-center gap-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2">
+            <div className="relative flex min-w-[220px] items-center gap-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2">
               <Search size={18} className="shrink-0 text-stone-400" />
               <input
                 type="text"
@@ -1850,6 +1850,15 @@ export default function Players() {
                 placeholder="Search players"
                 className="min-w-0 flex-1 bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400"
               />
+              {playerSearchTerm.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setPlayerSearchTerm("")}
+                  className="absolute flex items-center justify-center top-[3px] right-[6px] cursor-pointer w-[30px] h-[30px] text-stone-400 hover:bg-stone-200 rounded-full"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
 
             <button
