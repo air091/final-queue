@@ -817,7 +817,8 @@ export default function HostLayout() {
     addFinishedMatchToPlayerHistory,
     refreshHostData: loadHostData,
     pauseHostLiveSync,
-  };
+  }; 
+  
   return (
     <div className="mx-auto flex h-screen w-full max-w-[1920px] flex-col overflow-hidden">
       <Header
@@ -839,7 +840,9 @@ export default function HostLayout() {
       />
 
       <main className="relative flex flex-1 overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">
-        {openSidebar && <Sidebar />}
+        {openSidebar && (
+            <Sidebar />
+        )}
 
         {isHostLoading ? (
           <LoadingState
@@ -860,7 +863,20 @@ export default function HostLayout() {
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div
+            className="flex-1 overflow-y-auto"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+
+              const isInteractive = target.closest(
+                "button, a, input, textarea, select, [role='button']"
+              );
+
+              if (!isInteractive) {
+                setOpenSidebar(false);
+              }
+            }}
+          >
             <Outlet context={outletContext} />
 
             {isHostAdminPlayerModalOpen ? (

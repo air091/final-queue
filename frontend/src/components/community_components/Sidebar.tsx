@@ -9,14 +9,13 @@ export default function Sidebar() {
   return (
     <nav
       className="
-    h-full w-[274px] bg-white py-2
-
-    xl:relative
-    max-xl:absolute
-    max-xl:left-0
-    max-xl:top-0
-    max-xl:z-50
-  "
+        h-full w-[274px] bg-white py-2
+        xl:relative
+        max-xl:absolute
+        max-xl:left-0
+        max-xl:top-0
+        max-xl:z-50
+      "
     >
       {/* Navigation */}
       <ul className="flex flex-col w-full gap-2">

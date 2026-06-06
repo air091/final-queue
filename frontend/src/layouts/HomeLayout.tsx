@@ -12,7 +12,20 @@ export default function HomeLayout() {
       <main className="relative flex flex-1 overflow-hidden bg-gradient-to-br from-white via-orange-50 to-white">
         {openSidebar && <Sidebar />}
 
-        <div className="flex-1 overflow-y-auto">
+        <div
+          className="flex-1 overflow-y-auto"
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+
+            const isInteractive = target.closest(
+              "button, a, input, textarea, select, [role='button']"
+            );
+
+            if (!isInteractive) {
+              setOpenSidebar(false);
+            }
+          }}
+        >
           <Outlet />
         </div>
       </main>
