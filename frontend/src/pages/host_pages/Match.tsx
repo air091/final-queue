@@ -2081,7 +2081,7 @@ export default function Match() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(340px,1fr))]">
+                  <div className="grid grid-cols-1 gap-3 min-[1201px]:grid-cols-[repeat(auto-fit,minmax(368px,1fr))]">
                     {courts.map((court) => (
                       <CourtCard
                         key={court.id}
@@ -2106,14 +2106,14 @@ export default function Match() {
                       type="button"
                       onClick={() => void handleAddCourt()}
                       className="
-                    flex h-[100px] w-full items-center justify-center cursor-pointer sm:h-[120px]
-                    rounded-2xl border border-dashed border-orange-200
-                    bg-orange-50/40 text-sm font-semibold text-stone-500
-                    transition-all duration-200
-                    hover:border-[var(--color-primary)]
-                    hover:bg-orange-50
-                    hover:text-[var(--color-accent)]
-                  "
+                        flex h-[100px] w-full items-center justify-center cursor-pointer sm:h-[120px]
+                        rounded-2xl border border-dashed border-orange-200
+                        bg-orange-50/40 text-sm font-semibold text-stone-500
+                        transition-all duration-200
+                        hover:border-[var(--color-primary)]
+                        hover:bg-orange-50
+                        hover:text-[var(--color-accent)]
+                      " 
                     >
                       + Add court
                     </button>

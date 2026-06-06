@@ -205,7 +205,7 @@ export default function PlayerCard({
             </span>
           </div>
 
-          <span className={`mt-0.5 text-[10px] ${timerStyle}`}>
+          <span className={`mt-0.5 text-[11.5px] ${timerStyle}`}>
             {formattedTimer}
           </span>
         </div>
